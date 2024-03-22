@@ -6,3 +6,5 @@
 /mail.bat
 /test.bat
 /test.py
+/.env
+/config/mail.config
