@@ -1,0 +1,251 @@
+html, body {
+    min-height: 100vh;
+    height: 100vh;
+    min-width: 1160px;
+}
+
+body {
+    margin: 0px;
+    background-color: #212121;
+    font-family: "Fira Sans", "Roboto", "Tahoma", "Calibri", sans-serif;
+    color: #e3e3e3;
+    display: flex;
+    flex-direction: column;
+}
+
+#page-content {
+    flex: 1 0 auto;
+}
+
+a:link, a:visited {
+    color: #e3e3e3;
+}
+
+#title {
+    width: 100%;
+    height:60px;
+    margin: 0px;
+    padding: 0px;
+    background-color: #171717;
+}
+
+#title-left {
+    height: 60px;
+    width: 305px;
+    float: left;
+    margin: 0px;
+    padding: 0px;
+}
+
+#title-left span {
+    padding-left: 15px;
+    padding-right: 0px;
+    padding-top: 18px;
+    padding-bottom: 18px;
+    text-align: left;
+    font-size: 20px;
+    float: left;
+}
+
+#title-right {
+    height: 60px;
+    width: 150px;
+    float: right;
+    margin: 0px;
+}
+#title-right span {
+    padding-right: 15px;
+    padding-left: 0px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    text-align: right;
+    font-size: 12px;
+    float: right;
+}
+
+#nav {
+    height: 39px;
+    margin: 0px;
+    padding-left: 5px;
+    background-color: #1c1c1c;
+    display: flex;
+}
+
+#nav a:link, #nav a:visited {
+    background-color: #1c1c1c;
+    color: #e3e3e3;
+    padding: 10px 15px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+}
+
+#nav a:hover {
+    background-color: #212121;
+}
+
+footer {
+    flex-shrink: 0;
+    background-color: #171717;
+    margin-top: 50px;
+}
+
+#footer-pad {
+    width: 100%;
+    height: 10px;
+    box-shadow: 0 10px 10px 0 #090909;
+    background-color: #212121;
+}
+
+#footer-content {
+    width: 100%;
+    height: 35px;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 14px;
+    padding-top: 15px;
+    padding-bottom: 15px;
+}
+
+#footer-content a {
+    font-weight: bold;
+}
+
+.nav-right-adjust {
+    margin-left: auto;
+    float: right;
+}
+
+#content {
+    padding-left: 30px;
+}
+
+.boxed {
+    background-color: rgb(49, 49, 49);
+    background-color: rgba(49, 49, 49, 0.7);
+    padding: 10px;
+    border-radius: 5px;
+    border: 3px solid #131313;
+}
+
+h2 {
+    margin-top: 20px;
+    margin-bottom: 5px;
+}
+
+h3 {
+    margin: 5px;
+}
+
+.align-center {
+    text-align: center;
+}
+
+.button {
+    padding: 5px;
+    border-radius: 3px;
+    border: 2px solid #999999;
+    background-color: #212121;
+    color: black;
+    text-decoration: none;
+    font-size: 16px;
+    display: inline-block;
+    vertical-align: middle;
+}
+.button:hover {
+    text-decoration: underline;
+}
+
+.button-red {
+    color: black;
+    border: 2px solid #620814;
+    background-color: #B10815;
+}
+
+.button-red:visited {
+    color: black;
+}
+
+.form-button {
+    color: black;
+    border: 2px solid #999999;
+    background-color: #F0F0F0;
+}
+
+.form-button:visited {
+    color: black;
+}
+
+#sub-nav {
+    height: 30px;
+    margin: 0px;
+    padding-left: 5px;
+    background-color: #525252;
+    display: flex;
+    font-size: 15px;
+}
+
+#sub-nav a:link, #sub-nav a:visited {
+    background-color: #525252;
+    color: #e3e3e3;
+    padding: 6px 15px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+}
+
+#sub-nav a:hover {
+    background-color: #5D5D5D;
+}
+
+.button-green {
+    color: #e3e3e3;
+    border: 2px solid #005C22;
+    background-color: #00872E;
+}
+
+.button-green:hover {
+    background-color: #007B2F;
+}
+
+.button-blue {
+    color: #e3e3e3;
+    border: 2px solid #2727AB;
+    background-color: #165DCB;
+}
+
+.button-blue:hover {
+    background-color: #1654A2;
+}
+
+.button-red {
+    color: #e3e3e3;
+    border: 2px solid #620814;
+    background-color: #B10815;
+}
+
+.button-red:hover {
+    background-color: #9B0815;
+}
+
+.center-div {
+    margin-left: auto;
+    margin-right: auto;
+    width: fit-content;
+}
+
+.grid-7-3 {
+    display: grid;
+      grid:
+        "left right" 10fr;
+        / 7fr 3fr;
+      gap: 0px;
+}
+
+.grid-left {
+    grid-section: left;
+}
+
+.grid-right {
+    grid-section: right;
+}

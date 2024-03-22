@@ -1,0 +1,44 @@
+.forms-auth {
+    background-color: rgb(49, 49, 49);
+    background-color: rgba(49, 49, 49, 0.7);
+    width: 300px;
+    text-align: center;
+    padding: 10px;
+    border-radius: 5px;
+    border: 3px solid #131313;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 30px;
+}
+
+.forms input[type=submit] {
+    border-radius: 3px;
+    height: 33px;
+    font-size: 16px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-top: -1px;
+    line-height: 23px;
+}
+
+.forms input[type=submit]:hover {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.forms-auth input[type=submit] {
+    border: 2px solid #999999;
+}
+
+#perms-list {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+    margin-top: 10px;
+}
+
+#delete {
+    color: #e3e3e3;
+    border: 2px solid #620814;
+    background-color: #B10815;
+}

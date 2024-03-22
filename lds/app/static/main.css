@@ -1,0 +1,63 @@
+#dash-left, #dash-right {
+    display: block;
+    height: 100%;
+    padding: 10px;
+    padding-top: 5px;
+}
+
+#dash-left {
+    float: left;
+    width: calc(75% - 20px);
+    margin: 0;
+}
+
+#dash-right {
+    float: right;
+    width: calc(25% - 20px);
+    margin: 0;
+}
+
+#account-actions {
+    margin-right: auto;
+    width: 70%;
+}
+
+#manage-users-content {
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#user-list {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+#user-list th {
+    border-style: solid;
+    border-color: #e3e3e3;
+    border-width: 1px;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    word-break: normal;
+    width: 50px;
+}
+
+#user-list tr {
+    border-style: solid;
+    border-color: #e3e3e3;
+    border-width: 1px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+#user-list td {
+    padding-left: 20px;
+    padding-right: 20px;
+    border-style: solid;
+    border-color: #e3e3e3;
+    border-width: 1px;
+    height: 36px;
+}

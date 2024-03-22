@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% if request.MOBILE %}
+{% block mobile_content %}
+<div id="content-mb">
+    <h2>Dashboard</h2>
+</div>
+{% endblock %}
+{% else %}
+{% block content %}
+<div id="dash" class="align-center">
+    <h2>Dashboard</h2>
+
+    <div id="dash-left">
+        {% include "dash_left.html" %}
+    </div>
+    <div id="dash-right">
+        {% include "dash_right.html" %}
+    </div>
+</div>
+{% endblock %}
+{% endif %}

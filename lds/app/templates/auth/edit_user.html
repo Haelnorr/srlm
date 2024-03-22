@@ -1,0 +1,66 @@
+{% extends "auth/base.html" %}
+{% block content %}
+
+<form id="edit-user" class="forms forms-auth" action="" method="post" novalidate>
+  <h3>Edit User</h3>
+  {{ form.hidden_tag() }}
+  <p>
+    Username: {{ user.username }}
+  </p>
+  <p>
+    {{ form.email.label }}<br>
+    {{ form.email(size=32) }}<br>
+    {% for error in form.email.errors %}
+    <span style="color: red;">[{{ error }}]</span>
+    {% endfor %}
+  </p>
+  <span>
+    Permissions:<br>
+    <table id="perms-list">
+      <!-- edit/add permissions to the edit user page following the format below -->
+      <tr>
+        <td>{{ form.perm_admin() }}</td>
+        <td>{{ form.perm_admin.label }}</td>
+      </tr>
+      <tr>
+        <td>{{ form.perm_unusedperm_1() }}</td>
+        <td>{{ form.perm_unusedperm_1.label }}</td>
+      </tr>
+      <tr>
+        <td>{{ form.perm_unusedperm_2() }}</td>
+        <td>{{ form.perm_unusedperm_2.label }}</td>
+      </tr>
+      <tr>
+        <td>{{ form.perm_unusedperm_3() }}</td>
+        <td>{{ form.perm_unusedperm_3.label }}</td>
+      </tr>
+    </table>
+  </span>
+  <p>
+    {{ form.reset_password() }} {{ form.reset_password.label }}<br>
+    Saving with this box ticked will send the user a password reset email
+  </p>
+  <p>
+    {{ form.save() }}
+    <span>{{ form.delete() }}</span>
+    <script type="text/javascript">
+      document.getElementById('delete').onclick = function confirmDelete(e) {
+        if (!confirm('Are you sure you wish to delete this user?'))
+          e.preventDefault();
+      };
+    </script>
+    <span>
+      <a class="form-button button" href="{{ url_for('auth.manage_users') }}">Back</a>
+    </span>
+  </p>
+  {% with messages = get_flashed_messages() %}
+  {% if messages %}
+  <p>
+    {% for message in messages %}
+    <span style="color: red;">{{ message }}</span>
+    {% endfor %}
+  </p>
+  {% endif %}
+  {% endwith %}
+</form>
+{% endblock %}

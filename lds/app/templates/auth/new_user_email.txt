@@ -1,0 +1,7 @@
+Hi {{ user.username }},
+
+An account has been created for you for {{ domain }}. Click the link below to set your password, and use the username {{ user.username }} to login
+
+{{ url_for('auth.reset_password', token=token, _external=True) }}
+
+Thanks
