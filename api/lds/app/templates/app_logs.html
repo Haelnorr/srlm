@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+{% if form != None %}
+<form id="clear-logs" action="" method="post" novalidate>
+    {{ form.hidden_tag() }}
+    {{ form.clear() }}
+</form>
+{% endif %}
+{% for event in events %}
+<p>{{ event['timestamp'] }} | {{ event['module'] }} | {{ event['message'] }} | {{ event['user'].username }}</p>
+{% endfor %}
+{% endblock %}

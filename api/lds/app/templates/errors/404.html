@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% if request.MOBILE %}
+{% block mobile_content %}
+<div id="content-mb">
+    <h1>File Not Found</h1>
+</div>
+{% endblock %}
+{% else %}
+{% block content %}
+<div id="content">
+    <h1>File Not Found</h1>
+</div>
+{% endblock %}
+{% endif %}

@@ -1,0 +1,77 @@
+{% extends "auth/base.html" %}
+{% block content %}
+{% if request.MOBILE %}
+<!--  MOBILE CONTENT  -->
+<div id="page-content-mb">
+    <div id="content-mb">
+        <form id="login-mb" class="forms forms-auth" action="" method="post" novalidate>
+            <h3>Login</h3>
+            {{ form.hidden_tag() }}
+            <p>
+                {{ form.username.label }}<br>
+                {{ form.username(class='textfield-mb') }}<br>
+                {% for error in form.username.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </p>
+            <p>
+                {{ form.password.label }}<br>
+                {{ form.password(class='textfield-mb') }}<br>
+                {% for error in form.password.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </p>
+            <p>{{ form.remember_me(class='checkbox-mb') }} {{ form.remember_me.label }}</p>
+            <p>
+                {{ form.submit() }} <br><br>
+                <a href="{{ url_for('auth.forgot_password') }}" id="forgot-password-mb">Forgot Password</a>
+            </p>
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <p>
+                {% for message in messages %}
+                <span style="color: red;">{{ message }}</span>
+                {% endfor %}
+            </p>
+            {% endif %}
+            {% endwith %}
+        </form>
+    </div>
+</div>
+{% else %}
+<!--  DESKTOP CONTENT  -->
+
+        <form id="login" class="forms forms-auth" action="" method="post" novalidate>
+            <h3>Login</h3>
+            {{ form.hidden_tag() }}
+            <p>
+                {{ form.username.label }}<br>
+                {{ form.username(size=32) }}<br>
+                {% for error in form.username.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </p>
+            <p>
+                {{ form.password.label }}<br>
+                {{ form.password(size=32) }}<br>
+                {% for error in form.password.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </p>
+            <p>{{ form.remember_me() }} {{ form.remember_me.label }}</p>
+            <p>
+                {{ form.submit() }}<br><br>
+                <a href="{{ url_for('auth.forgot_password') }}" id="forgot-password">Forgot Password</a>
+            </p>
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <p>
+                {% for message in messages %}
+                <span style="color: red;">{{ message }}</span>
+                {% endfor %}
+            </p>
+            {% endif %}
+            {% endwith %}
+        </form>
+{% endif %}
+{% endblock %}

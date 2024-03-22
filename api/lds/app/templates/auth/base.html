@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ page }} - LDS</title>
+  {% if icon %}
+  <link rel="shortcut icon" href="{{ url_for('static', filename='icon.ico') }}">
+  {% endif %}
+  {% if request.MOBILE %}
+  <!--  MOBILE CSS  -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style-mobile.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  {% else %}
+  <!--  DESKTOP CSS  -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='forms.css') }}">
+  {% endif %}
+</head>
+<body>
+  <div id="page-content">
+    <div id="main">
+    {% block content %}{% endblock %}
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,10 @@
+/venv/
+/logs/
+/db/app.db
+/DESIGNDOC.txt
+/.idea/
+/mail.bat
+/test.bat
+/test.py
+/.env
+/config/mail.config

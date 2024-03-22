@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="align-center">Manage Users</h2>
+<div id="manage-users-content" class="boxed align-center">
+    <table id="user-list">
+      <tr>
+        <th rowspan="2">User ID</th>
+        <th rowspan="2">Username</th>
+        <th rowspan="2">Email</th>
+        <th colspan="5">Permissions</th> <!-- change colspan to match number of permissions shown-->
+        <th rowspan="2">Edit</th>
+      </tr>
+      <tr>
+        <!-- list the permissions you want to show here-->
+        <th>Super User</th>
+        <th>Admin</th>
+        <th>Unused 1</th>
+        <th>Unused 2</th>
+        <th>Unused 3</th>
+      </tr>
+      {% for user in users %}
+      <tr>
+        <td>{{ user.id }}</td>
+        <td>{{ user.username }}</td>
+        <td>{{ user.email }}</td>
+        <!-- for each permission follow the format below - ensure you change the dict keys to match how its set in models.py-->
+        <td>
+          {% if user.get_permissions()['superuser'] %}
+          Yes{% else %}No
+          {% endif %}
+        </td>
+        <td>
+          {% if user.get_permissions()['admin'] %}
+          Yes{% else %}No
+          {% endif %}
+        </td>
+        <td>
+          {% if user.get_permissions()['unusedperm_1'] %}
+          Yes{% else %}No
+          {% endif %}
+        </td>
+        <td>
+          {% if user.get_permissions()['unusedperm_2'] %}
+          Yes{% else %}No
+          {% endif %}
+        </td>
+        <td>
+          {% if user.get_permissions()['unusedperm_3'] %}
+          Yes{% else %}No
+          {% endif %}
+        </td>
+        <td>
+          {% if (current_user.id != user.id and user.get_permissions()['superuser'] == False) %}
+          <a href="{{ url_for('auth.edit_user', user_id=user.id) }}" id="edit" class="button">Edit</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+      <a style="margin-top: 10px;" class="button" href="{{ url_for('auth.add_user') }}">
+        Add User
+      </a>
+
+</div>
+{% endblock %}

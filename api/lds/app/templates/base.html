@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>LDS | {{ page }}</title>
+    {% if icon %}
+    <link rel="shortcut icon" href="{{ url_for('static', filename='icon.ico') }}">
+    {% endif %}
+    {% if request.MOBILE %}
+    <!--  MOBILE CSS  -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style-mobile.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    {% else %}
+    <!--  DESKTOP CSS  -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='forms.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='minecraft.css') }}">
+    {% endif %}
+</head>
+<body>
+{% if request.MOBILE %}
+    <!--  MOBILE CONTENT  -->
+    <div id="page-content-mb">
+        <div class="title-mb">
+            <a href="{{ url_for('main.dashboard') }}" class="active">LDS Manager</a>
+            <div id="nav-mb">
+                <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
+                {% if permissions['admin'] %}
+                <a href="{{ url_for('auth.manage_users') }}">Manage Users</a>
+                <a href="{{ url_for('main.app_logs') }}">App Logs</a>
+                {% endif %}
+                <a href="{{ url_for('auth.logout') }}">Logout</a>
+            </div>
+            <a href="javascript:void(0);" class="icon" onclick="showNav()">
+                <i class="fa fa-bars"></i>
+            </a>
+        </div>
+        <script>
+            function showNav() {
+                var x = document.getElementById("nav-mb");
+                if (x.style.display === "block") {
+                    x.style.display = "none";
+                } else {
+                    x.style.display = "block";
+                }
+            }
+        </script>
+        {% block mobile_content %}{% endblock %}
+    </div>
+    <footer>
+        FOOTER
+    </footer>
+{% else %}
+    <!--  DESKTOP CONTENT  -->
+    <div id="page-content">
+        <div id="title">
+            <div id="title-left">
+                <span>LDS Manager</span>
+            </div>
+            <div id="title-right">
+                <span>Logged in as:<br>{{ current_user.username }}</span>
+            </div>
+        </div>
+        <div id="nav">
+            <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
+            {% if permissions['admin'] %}
+            <a href="{{ url_for('auth.manage_users') }}">Manage Users</a>
+            <a href="{{ url_for('main.app_logs') }}">App Logs</a>
+            {% endif %}
+            <!--{% if permissions['unusedperm_1'] %}
+            <a href="">unused</a>
+            {% endif %}
+            {% if permissions['unusedperm_2'] %}
+            <a href="">unused</a>
+            {% endif %}
+            {% if permissions['unusedperm_3'] %}
+            <a href="">unused</a>
+            {% endif %}
+            {% if permissions['unusedperm_4'] %}
+            <a href="">unused</a>
+            {% endif %}-->
+            <div class="nav-right-adjust">
+            <a href="{{ url_for('auth.logout') }}">Logout</a>
+            </div>
+        </div>
+        <div id="main">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    <footer>
+        <div id="footer-pad"></div>
+        <div id="footer-content">
+            FOOTER
+        </div>
+    </footer>
+{% endif %}
+</body>
+</html>

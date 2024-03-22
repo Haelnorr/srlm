@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% if request.MOBILE %}
+{% block mobile_content %}
+<div id="content-mb">
+    <h1>An unexpected error has occurred</h1>
+    <p>Please contact the site administrator to resolve this issue. Sorry for the inconvenience!</p>
+</div>
+{% endblock %}
+{% else %}
+{% block content %}
+<div id="content">
+    <h1>An unexpected error has occurred</h1>
+    <p>Please contact the site administrator to resolve this issue. Sorry for the inconvenience!</p>
+</div>
+{% endblock %}
+{% endif %}

@@ -1,0 +1,70 @@
+{% extends "auth/base.html" %}
+{% block content %}
+<form id="add-user" class="forms forms-auth" action="" method="post" novalidate>
+  <h3>Add User</h3>
+  {{ form.hidden_tag() }}
+  <p>
+    {{ form.username.label }}<br>
+    {{ form.username(size=32) }}<br>
+    {% for error in form.username.errors %}
+    <span style="color: red;">[{{ error }}]</span>
+    {% endfor %}
+  </p>
+  <p>
+    {{ form.email.label }}<br>
+    {{ form.email(size=32) }}<br>
+    {% for error in form.email.errors %}
+    <span style="color: red;">[{{ error }}]</span>
+    {% endfor %}
+  </p>
+  <span>
+    Permissions:<br>
+    <table id="perms-list">
+      <tr>
+        <td>{{ form.perm_minecraft() }}</td>
+        <td>{{ form.perm_minecraft.label }}</td>
+      </tr>
+      <tr>
+        <td>{{ form.perm_manage_users() }}</td>
+        <td>{{ form.perm_manage_users.label }}</td>
+      </tr>
+      <tr>
+        <td>{{ form.perm_system_logs() }}</td>
+        <td>{{ form.perm_system_logs.label }}</td>
+      </tr>
+      <tr>
+        <td>{{ form.perm_app_logs() }}</td>
+        <td>{{ form.perm_app_logs.label }}</td>
+      </tr>
+      <tr>
+        <td>{{ form.perm_unusedperm_1() }}</td>
+        <td>{{ form.perm_unusedperm_1.label }}</td>
+      </tr>
+      <tr>
+        <td>{{ form.perm_unusedperm_2() }}</td>
+        <td>{{ form.perm_unusedperm_2.label }}</td>
+      </tr>
+      <tr>
+        <td>{{ form.perm_unusedperm_3() }}</td>
+        <td>{{ form.perm_unusedperm_3.label }}</td>
+      </tr>
+      <tr>
+        <td>{{ form.perm_unusedperm_4() }}</td>
+        <td>{{ form.perm_unusedperm_4.label }}</td>
+      </tr>
+    </table>
+  </span>
+  <p>
+    {{ form.submit() }}
+  </p>
+  {% with messages = get_flashed_messages() %}
+  {% if messages %}
+  <p>
+    {% for message in messages %}
+    <span style="color: red;">{{ message }}</span>
+    {% endfor %}
+  </p>
+  {% endif %}
+  {% endwith %}
+</form>
+{% endblock %}
