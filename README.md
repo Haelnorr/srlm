@@ -21,3 +21,18 @@ Checks if a user can be authenticated given a username and password. Body should
     "password": "1234"
 }
 ```
+
+Examples of response:  
+```
+{
+    "authenticated": True,
+    "user_id": 1
+}
+```
+
+```
+{
+    "authenticated": False,
+    "reason": "Password invalid"
+}
+```
