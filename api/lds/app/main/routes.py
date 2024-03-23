@@ -6,7 +6,7 @@ from api.lds.app.models import Event
 from api.lds.app.main import bp
 from api.lds.logger import get_logger
 from api.lds.app.auth.forms import ClearLogs
-from api.lds.app.auth.functions import get_permissions
+# from api.lds.app.auth.functions import get_permissions
 from api.lds.app.events import get_events
 from api.lds.definitions import app_name
 
@@ -14,22 +14,22 @@ from api.lds.definitions import app_name
 log = get_logger(__name__)
 
 
-@bp.route('/index')
+"""@bp.route('/index')
 @bp.route('/dashboard')
 def dash_redirect():
     log.debug('Redirecting to Dashboard')
     return redirect('/')
+"""
 
-
-@bp.route('/')
+"""@bp.route('/')
 @login_required
 def dashboard():
     permissions = get_permissions(current_user.id)
     resp = make_response(render_template('dashboard.html', app_name=app_name, page='Dashboard', permissions=permissions))
     return resp
+"""
 
-
-@login_required
+"""@login_required
 @bp.route('/app_logs', methods=['GET', 'POST'])
 def app_logs():
     form = None
@@ -46,3 +46,4 @@ def app_logs():
     if not permissions['admin']:
         abort(403)
     return make_response(render_template('app_logs.html', app_name=app_name, page='App Logs', permissions=permissions, events=events, form=form))
+"""
