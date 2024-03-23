@@ -72,47 +72,6 @@ class User(UserMixin, db.Model):
         else:
             return False
 
-    """"# TO BE DEPRECIATED BY PERMISSIONS TABLE
-    def add_permission(self, permission):
-        self.permissions += permission
-
-    # TO BE DEPRECIATED BY PERMISSIONS TABLE
-    def remove_permission(self, permission):
-        self.permissions -= permission
-
-    # TO BE DEPRECIATED BY PERMISSIONS TABLE
-    def get_permissions(self):
-        none = True
-        superuser = False
-        if self.permissions is not PERMISSIONS.none:
-            none = False
-            if self.permissions & PERMISSIONS.superuser:
-                superuser = True
-        permissions = {
-            'none': none,
-            'superuser': superuser,
-            'admin': bool(self.permissions & PERMISSIONS.admin | superuser),
-            'unusedperm_1': bool(self.permissions & PERMISSIONS.unusedperm_1 | superuser),
-            'unusedperm_2': bool(self.permissions & PERMISSIONS.unusedperm_2 | superuser),
-            'unusedperm_3': bool(self.permissions & PERMISSIONS.unusedperm_3 | superuser),
-            'unusedperm_4': bool(self.permissions & PERMISSIONS.unusedperm_4 | superuser),
-            'unusedperm_5': bool(self.permissions & PERMISSIONS.unusedperm_5 | superuser),
-            'unusedperm_6': bool(self.permissions & PERMISSIONS.unusedperm_6 | superuser),
-            'unusedperm_7': bool(self.permissions & PERMISSIONS.unusedperm_7 | superuser)
-        }
-        return permissions
-
-    # TO BE DEPRECIATED BY PERMISSIONS TABLE
-    def list_permissions(self):
-        perms = self.get_permissions()
-        message = '<Permissions for user {}> Superuser: {}, Admin: {}, Unused1: {}, Unused2: {},' \
-                  ' Unused3: {}, Unused4: {}, Unused5: {}, Unused6: {}, Unused7: {}'
-        message = message.format(self.username, perms['superuser'], perms['admin'], perms['unusedperm_1'],
-                                 perms['unusedperm_2'], perms['unusedperm_3'], perms['unusedperm_4'],
-                                 perms['unusedperm_5'],
-                                 perms['unusedperm_6'], perms['unusedperm_7'])
-        return message"""
-
 
 class Permission(db.Model):
     id = db.Column(db.Integer, primary_key=True)

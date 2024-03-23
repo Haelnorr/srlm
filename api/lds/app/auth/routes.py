@@ -1,5 +1,7 @@
+import json
+
 from sqlalchemy import delete
-from flask import redirect, url_for, flash, render_template, make_response, abort
+from flask import redirect, url_for, flash, render_template, make_response, abort, request
 from flask_login import current_user, login_user, logout_user, login_required
 from api.lds.logger import get_logger
 from api.lds.definitions import PERMISSIONS, app_name
@@ -13,6 +15,44 @@ from api.lds.app.auth.email import send_password_reset_email, send_new_user_emai
 from api.lds.app.auth.functions import check_email_exists
 
 log = get_logger(__name__)
+
+
+@bp.route('/user/<user_id>', methods=['GET'])
+def get_user(user_id):
+    user = db.session.get(User, user_id)
+    perms = []
+    for permission in user.permissions:
+        perms.append(permission.key)
+    response = {
+        'user_id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'permissions': perms
+    }
+    json_response = json.dumps(response, indent=4)
+    return json_response
+
+
+@bp.route('/authenticate_user', methods=['POST'])
+def authenticate_user():
+    data = request.json
+    user = User.query.filter_by(username=data['username']).first()
+    password = data['password']
+
+    if user.check_password(password):
+        response = {
+            'authenticated': True,
+            'user_id': user.id
+        }
+    else:
+        response = {
+            'authenticated': False,
+            'reason': 'Password invalid'
+        }
+
+    return json.dumps(response, indent=4)
+
+
 
 
 """@bp.route('/login', methods=['GET', 'POST'])
