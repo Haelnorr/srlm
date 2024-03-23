@@ -120,6 +120,8 @@ class Permission(db.Model):
     description = db.Column(db.String(128))
     additional_modifiers = db.Column(db.String(128))  # optional field for modifiers, like specifying which team a player is manager of, or which leagues LC's can manage
 
+    users = db.relationship('User', secondary=user_permissions, back_populates='permissions', lazy=True)
+
 
 class Discord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -140,7 +142,7 @@ class Player(db.Model):
     next_name_change = db.Column(db.DateTime, nullable=False)
 
     user = db.relationship('User', back_populates='player')
-    first_season = db.relationship('SeasonDivision', back_populates='player')
+    first_season = db.relationship('SeasonDivision', back_populates='rookies')
     team_association = db.relationship('PlayerTeam', back_populates='player')
     teams = association_proxy('team_association', 'team')
     season_association = db.relationship('FreeAgent', back_populates='player')
@@ -169,14 +171,14 @@ class Team(db.Model):
     player_association = db.relationship('PlayerTeam', back_populates='team')
     players = association_proxy('player_association', 'player')
     season_divisions = db.relationship('SeasonDivision', secondary=season_division_team, back_populates='teams')
-    matches_won = db.relationship('MatchResult', back_populates='winner', lazy=True)
+    """matches_won = db.relationship('MatchResult', back_populates='winner', lazy=True)
     matches_lost = db.relationship('MatchResult', back_populates='loser', lazy=True)
     matches_home = db.relationship('Match', back_populates='home_team', lazy=True)
     matches_away = db.relationship('Match', back_populates='away_team', lazy=True)
     finals_won = db.relationship('FinalResult', back_populates='winner', lazy=True)
     finals_lost = db.relationship('FinalResult', back_populates='loser', lazy=True)
     finals_home = db.relationship('Final', back_populates='home_team', lazy=True)
-    finals_away = db.relationship('Final', back_populates='away_team', lazy=True)
+    finals_away = db.relationship('Final', back_populates='away_team', lazy=True)"""
     player_match_data = db.relationship('PlayerMatchData', back_populates='team')
     awards_association = db.relationship('TeamAward', back_populates='team', lazy=True)
     awards = association_proxy('awards_association', 'award')
@@ -191,8 +193,8 @@ class PlayerTeam(db.Model):
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
 
-    player = db.relationship('Player', back_populates='teams')
-    team = db.relationship('Team', back_populates='players')
+    player = db.relationship('Player', back_populates='team_association')
+    team = db.relationship('Team', back_populates='player_association')
 
 
 # this is a helper table for recording which players were free agents, for which seasons and when
@@ -203,8 +205,8 @@ class FreeAgent(db.Model):
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
 
-    player = db.relationship('Player', back_populates='seasons')
-    season_division = db.relationship('Team', back_populates='players')
+    player = db.relationship('Player', back_populates='season_association')
+    season_division = db.relationship('SeasonDivision', back_populates='free_agent_association')
 
 
 class League(db.Model):
@@ -224,11 +226,12 @@ class Season(db.Model):
     end_date = db.Column(db.DateTime)
     finals_start = db.Column(db.DateTime)
     finals_end = db.Column(db.DateTime)
-    match_type = db.Column(db.Integer, db.ForeignKey('matchtype.id'))
+    match_type_id = db.Column(db.Integer, db.ForeignKey('matchtype.id'))
 
-    league = db.relationship('League', back_populates='season')
+    league = db.relationship('League', back_populates='seasons')
     division_association = db.relationship('SeasonDivision', back_populates='season')
     divisions = association_proxy('division_association', 'division')
+    match_type = db.relationship('Matchtype', back_populates='seasons')
 
 
 class Division(db.Model):
@@ -237,7 +240,7 @@ class Division(db.Model):
     league_id = db.Column(db.Integer, db.ForeignKey('league.id'), nullable=False)
     description = db.Column(db.String(128))
 
-    league = db.relationship('League', back_populates='division')
+    league = db.relationship('League', back_populates='divisions')
     season_association = db.relationship('SeasonDivision', back_populates='division')
     seasons = association_proxy('season_association', 'season')
 
@@ -250,12 +253,13 @@ class SeasonDivision(db.Model):
     teams = db.relationship('Team', secondary=season_division_team, back_populates='season_divisions')
     free_agent_association = db.relationship('FreeAgent', back_populates='season_division')
     free_agents = association_proxy('free_agent_association', 'player')
-    season = db.relationship('Season', back_populates='divisions')
-    division = db.relationship('Division', back_populates='season')
+    season = db.relationship('Season', back_populates='division_association')
+    division = db.relationship('Division', back_populates='season_association')
     matches = db.relationship('Match', back_populates='season_division', lazy=True)
     finals = db.relationship('Final', back_populates='season_division', lazy=True)
     team_awards = db.relationship('TeamAward', back_populates='season_division')
     player_awards = db.relationship('PlayerAward', back_populates='season_division')
+    rookies = db.relationship('Player', back_populates='first_season')
 
 
 # info of a match between two registered league teams
@@ -271,13 +275,14 @@ class Match(db.Model):
     final_id = db.Column(db.Integer, db.ForeignKey('final.id'))
 
     season_division = db.relationship('SeasonDivision', back_populates='matches')
-    home_team = db.relationship('Team', back_populates='matches_home')
-    away_team = db.relationship('Team', back_populates='matches_away')
-    streamer = db.relationship('User', back_populates='matches_streamed')
+    home_team = db.relationship('Team', backref='matches_home', foreign_keys=home_team_id)
+    away_team = db.relationship('Team', backref='matches_away', foreign_keys=away_team_id)
+    streamer = db.relationship('User', back_populates='streamed_matches')
     final = db.relationship('Final', back_populates='matches')
     results = db.relationship('MatchResult', back_populates='match', lazy=True, uselist=False)  # null if not completed?
     schedule = db.relationship('MatchSchedule', back_populates='match', uselist=False)
-    team_availability = db.relationship('MatchSchedule', back_populates='match')
+    team_availability = db.relationship('MatchAvailability', back_populates='match')
+    lobbies = db.relationship('Lobby', back_populates='match', lazy=True)
 
 
 # result of a match between two registered league teams, one-to-one relationship with match
@@ -292,9 +297,9 @@ class MatchResult(db.Model):
     forfeit = db.Column(db.Boolean, nullable=False, default=False)
     vod = db.Column(db.String(128))
 
-    winner = db.relationship('Team', back_populates='matches_won')
-    loser = db.relationship('Team', back_populates='matches_lost')
-    lobbies = db.relationship('Lobby', back_populates='match', lazy=True)
+    match = db.relationship('Match', back_populates='results', uselist=False)
+    winner = db.relationship('Team', backref='matches_won', foreign_keys=winner_id)
+    loser = db.relationship('Team', backref='matches_lost', foreign_keys=loser_id)
 
 
 # presets for creating lobbies using different match types
@@ -342,7 +347,7 @@ class PlayerMatchData(db.Model):
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
     period = db.Column(db.Integer, default=0)
     source = db.Column(db.String(10))  # e.g. slap api, user, import
-    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    reviewed_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     recorded_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow())
     reviewed_date = db.Column(db.DateTime)
     valid = db.Column(db.Boolean, default=True)
@@ -368,6 +373,7 @@ class PlayerMatchData(db.Model):
     match = db.relationship('MatchData', back_populates='player_data_assoc')
     player = db.relationship('Player', back_populates='match_data_assoc')
     team = db.relationship('Team', back_populates='player_match_data')
+    reviewed_by = db.relationship('User', back_populates='reviewed_matches')
 
 
 class Final(db.Model):
@@ -381,8 +387,8 @@ class Final(db.Model):
     completed = db.Column(db.Boolean, nullable=False, default=False)
 
     season_division = db.relationship('SeasonDivision', back_populates='finals')
-    home_team = db.relationship('Team', back_populates='finals_home')
-    away_team = db.relationship('Team', back_populates='finals_away')
+    home_team = db.relationship('Team', backref='finals_home', foreign_keys=home_team_id)
+    away_team = db.relationship('Team', backref='finals_away', foreign_keys=away_team_id)
     matches = db.relationship('Match', back_populates='final', lazy=True)
     results = db.relationship('FinalResults', back_populates='final', lazy=True, uselist=False)
 
@@ -396,8 +402,8 @@ class FinalResults(db.Model):
     away_team_score = db.Column(db.Integer, nullable=False, default=0)
 
     final = db.relationship('Final', back_populates='results')
-    winner = db.relationship('Team', back_populates='finals_won')
-    loser = db.relationship('Team', back_populates='finals_lost')
+    winner = db.relationship('Team', backref='finals_won', foreign_keys=winner_id)
+    loser = db.relationship('Team', backref='finals_lost', foreign_keys=loser_id)
 
 
 class Award(db.Model):
