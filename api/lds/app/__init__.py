@@ -12,8 +12,6 @@ log = get_logger(__name__)
 db = SQLAlchemy()
 migrate = Migrate()
 login = LoginManager()
-#login.login_view = 'auth.login'
-#login.login_message = None
 mail = Mail()
 
 
@@ -41,12 +39,6 @@ def create_app(config_class=Config):
 
     from api.lds.app.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
-
-    from api.lds.app.errors import bp as errors_bp
-    app.register_blueprint(errors_bp)
-
-    from api.lds.app.main import bp as main_bp
-    app.register_blueprint(main_bp)
 
     if not app.debug and not app.testing:
         # only runs when app not in debug or testing mode

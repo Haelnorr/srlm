@@ -4,4 +4,4 @@ import api.lds.logger
 import api.lds.exceptions
 import api.lds.api_access
 
-from api.lds.wsgi import asgi_app as asgi
+from api.lds.run import asgi_app as asgi
