@@ -31,12 +31,6 @@ class PaginatedAPIMixin(object):
         return data
 
 
-user_permissions = db.Table('user_permissions',
-                            db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-                            db.Column('permission_id', db.Integer, db.ForeignKey('permission.id'), primary_key=True)
-                            )
-
-
 class User(PaginatedAPIMixin, UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True, nullable=False)
@@ -50,7 +44,8 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
     discord = db.relationship('Discord', back_populates='user', lazy=True, uselist=False)
     streamed_matches = db.relationship('Match', back_populates='streamer', lazy=True)
     reviewed_matches = db.relationship('PlayerMatchData', back_populates='reviewed_by')
-    permissions = db.relationship('Permission', secondary=user_permissions, back_populates='users', lazy=True)
+    permission_assoc = db.relationship('UserPermissions', back_populates='user', lazy=True)
+    permissions = association_proxy('permission_assoc', 'permission')
 
     def __repr__(self):
         return f'<User {self.username} | ID: {self.id}>'
@@ -142,9 +137,19 @@ class Permission(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(32), unique=True, index=True, nullable=False)
     description = db.Column(db.String(128))
+
+    user_assoc = db.relationship('UserPermissions', back_populates='permission', lazy=True)
+    users = association_proxy('user_assoc', 'user')
+
+
+class UserPermissions(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    permission_id = db.Column(db.Integer, db.ForeignKey('permission.id'))
     additional_modifiers = db.Column(db.String(128))  # optional field for modifiers, like specifying which team a player is manager of, or which leagues LC's can manage
 
-    users = db.relationship('User', secondary=user_permissions, back_populates='permissions', lazy=True)
+    user = db.relationship('User', back_populates='permission_assoc')
+    permission = db.relationship('Permission', back_populates='user_assoc')
 
 
 class Discord(db.Model):
