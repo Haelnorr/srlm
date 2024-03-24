@@ -1,12 +1,34 @@
 import jwt
-from time import time
-from datetime import datetime
+import secrets
+from time import time, timezone
+from datetime import datetime, timedelta
 
 from sqlalchemy.ext.associationproxy import association_proxy
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import current_app
+from flask import current_app, url_for
 from flask_login import UserMixin
 from api.lds.app import db, login
+
+
+class PaginatedAPIMixin(object):
+    @staticmethod
+    def to_collection_dict(query, page, per_page, endpoint, **kwargs):
+        resources = db.paginate(query, page=page, per_page=per_page, error_out=False)
+        data = {
+            'items': [item.to_dict() for item in resources.items],
+            '_meta': {
+                'page': page,
+                'per_page': per_page,
+                'total_pages': resources.pages,
+                'total_items': resources.total
+            },
+            '_links': {
+                'self': url_for(endpoint, page=page, per_page=per_page, **kwargs),
+                'next': url_for(endpoint, page=page+1, per_page=per_page, **kwargs) if resources.has_next else None,
+                'prev': url_for(endpoint, page=page-1, per_page=per_page, **kwargs) if resources.has_prev else None
+            }
+        }
+        return data
 
 
 user_permissions = db.Table('user_permissions',
@@ -15,12 +37,14 @@ user_permissions = db.Table('user_permissions',
                             )
 
 
-class User(UserMixin, db.Model):
+class User(PaginatedAPIMixin, UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True, nullable=False)
     email = db.Column(db.String(120), index=True, unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
     reset_pass = db.Column(db.Boolean)
+    token = db.Column(db.String(32), index=True, unique=True)
+    token_expiration = db.Column(db.DateTime)
 
     player = db.relationship('Player', back_populates='user', lazy=True, uselist=False)
     discord = db.relationship('Discord', back_populates='user', lazy=True, uselist=False)
@@ -52,18 +76,40 @@ class User(UserMixin, db.Model):
             return
         return load_user(user_id)
 
-    @staticmethod
-    def new(username=None, email=None, password=False, reset_pass=False):
-        if username is None:
-            username = input('Username: ')
-        if email is None:
-            email = input('Email: ')
-        if password is False:
-            password = input('Password:')
-        user = User(username=username, email=email, reset_pass=reset_pass)
-        if password is not None:
-            user.set_password(password)
-        return user
+    def permissions_list(self):
+        perms_list = []
+        for permission in self.permissions:
+            perms_list.append(permission.key)
+        return perms_list
+
+    def to_dict(self, include_email=False):
+        data = {
+            'id': self.id,
+            'username': self.username,
+            'player': self.player.id if self.player is not None else None,
+            'discord': self.discord.id if self.discord is not None else None,
+            'permissions': self.permissions_list(),
+            'matches_streamed': len(self.streamed_matches),
+            'matches_reviewed': len(self.reviewed_matches),
+            '_links': {
+                'self': url_for('api.get_user', user_id=self.id),
+                'player': url_for('api.get_player', player_id=self.player.id) if self.player is not None else None,
+                'discord': url_for('api.get_user_discord', user_id=self.id) if self.discord is not None else None,
+                'permissions': url_for('api.get_user_permissions', user_id=self.id),
+                'matches_streamed': url_for('api.get_user_matches_streamed', user_id=self.id),
+                'matches_reviewed': url_for('api.get_user_matches_reviewed', user_id=self.id)
+            }
+        }
+        if include_email:
+            data['email'] = self.email
+        return data
+
+    def from_dict(self, data, new_user=False):
+        for field in ['username', 'email']:
+            if field in data:
+                setattr(self, field, data[field])
+        if new_user and 'password' in data:
+            self.set_password(data['password'])
 
     def has_permission(self, key):
         for permission in self.permissions:
@@ -71,6 +117,25 @@ class User(UserMixin, db.Model):
                 return True
         else:
             return False
+
+    def get_token(self, expires_in=3600):
+        now = datetime.utcnow()
+        if self.token and self.token_expiration.replace(tzinfo=timezone.utc) > now + timedelta(seconds=60):
+            return self.token
+        self.token = secrets.token_hex(16)
+        self.token_expiration = now + timedelta(seconds=expires_in)
+        db.session.add(self)
+        return self.token
+
+    def revoke_token(self):
+        self.token_expiration = datetime.utcnow() - timedelta(seconds=1)
+
+    @staticmethod
+    def check_token(token):
+        user = db.session.query(User).filter(User.token == token).first()
+        if user is None or user.token_expiration.replace(tzinfo=timezone.utc) < datetime.utcnow():
+            return None
+        return user
 
 
 class Permission(db.Model):
