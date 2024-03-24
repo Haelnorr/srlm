@@ -1,19 +1,20 @@
 # TODO
 
 **Before next PR**
- - ~~token authentication system~~
- - ~~revisit blueprint/project structure to prepare for standardized endpoint urls~~
- - ~~finish auth/user endpoints~~
-
-**With next PR**
- - deploy to test server
+ - user password reset
+ - user password change
+ - app token reset
+ - remove all redundant code/templates
+ - permission and discord endpoints
+ - steam account link functionality + endpoints
+ - twitch account link functionality + endpoints
 
 
 **Future**
  - api endpoints for retrieving data
  - api endpoints for adding data
  - api endpoints for modifying data
- - remove all redundant code/templates
+
  - integration with Slapshot Public API for lobby creation and retrieving match data
  - document code
  - document endpoints

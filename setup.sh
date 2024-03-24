@@ -15,3 +15,4 @@ export LEAGUE_MANAGER_DB=league_manager
 export API_ACCESS_DB=api_access
 export MAIL_SERVER=localhost
 export MAIL_PORT=8025
+export SRLM_APP_NAME=
