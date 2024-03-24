@@ -1,6 +1,6 @@
-#Endpoints
+<h2>Endpoints</h2>
 
-###Auth
+<h3>Auth</h3>
 The API has a two key system for authorization. An app key required for all requests, and a user key required for requests that are sensitive to user authentication (i.e. changing account details).  
 The key is sent in the request header as a Bearer token.
 ```
@@ -34,7 +34,7 @@ Error:
 }</pre>
 </details>
 
-###Users
+<h3>Users</h3>
 <details>
     <summary>GET /api/users/{int:id}</summary>
     Gets the user data of a user specified by their user id
