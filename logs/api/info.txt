@@ -1,0 +1,2 @@
+Default location for the api log files.
+This file exists only to include the directory in VCS to prevent runtime exception when the directory does not exist
