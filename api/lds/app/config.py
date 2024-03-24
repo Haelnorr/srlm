@@ -10,7 +10,10 @@ mailing_list = config['MAIL']['MailingList'].split(', ')
 
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY') # or '4bcc9d9906fb680fd7ee0b4458f7d604eeb51dffbbabd65736a9272238a5dd2c'
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')  # or 'sqlite:///' + os.path.join(ROOT_DIR, 'db', 'app.db')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL') + os.getenv('LEAGUE_MANAGER_DB') # or 'sqlite:///' + os.path.join(ROOT_DIR, 'db', 'app.db')
+    SQLALCHEMY_BINDS = {
+        'api_access': os.getenv('DATABASE_URL') + os.getenv('API_ACCESS_DB')
+    }
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     MAIL_SERVER = os.getenv('MAIL_SERVER')
     MAIL_PORT = int(os.getenv('MAIL_PORT'))

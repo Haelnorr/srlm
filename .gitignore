@@ -8,3 +8,6 @@
 /test.py
 /.env
 /config/mail.config
+/api/mail.bat
+/api/test.bat
+/api/test.py

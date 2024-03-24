@@ -1,5 +1,7 @@
+import json
+
 from sqlalchemy import delete
-from flask import redirect, url_for, flash, render_template, make_response, abort
+from flask import redirect, url_for, flash, render_template, make_response, abort, request
 from flask_login import current_user, login_user, logout_user, login_required
 from api.lds.logger import get_logger
 from api.lds.definitions import PERMISSIONS, app_name
@@ -10,12 +12,50 @@ from api.lds.app.auth import bp
 from api.lds.app.auth.forms import Login, ForgotPassword, ResetPassword, ChangePassword, ChangeDetails, AddUserForm, \
     EditUserForm
 from api.lds.app.auth.email import send_password_reset_email, send_new_user_email
-from api.lds.app.auth.functions import get_permissions, check_email_exists
+from api.lds.app.auth.functions import check_email_exists
 
 log = get_logger(__name__)
 
 
-@bp.route('/login', methods=['GET', 'POST'])
+@bp.route('/user/<user_id>', methods=['GET'])
+def get_user(user_id):
+    user = db.session.get(User, user_id)
+    perms = []
+    for permission in user.permissions:
+        perms.append(permission.key)
+    response = {
+        'user_id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'permissions': perms
+    }
+    json_response = json.dumps(response, indent=4)
+    return json_response
+
+
+@bp.route('/authenticate_user', methods=['POST'])
+def authenticate_user():
+    data = request.json
+    user = User.query.filter_by(username=data['username']).first()
+    password = data['password']
+
+    if user.check_password(password):
+        response = {
+            'authenticated': True,
+            'user_id': user.id
+        }
+    else:
+        response = {
+            'authenticated': False,
+            'reason': 'Password invalid'
+        }
+
+    return json.dumps(response, indent=4)
+
+
+
+
+"""@bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
@@ -33,9 +73,9 @@ def login():
         log.debug('Login successful, redirecting to Dashboard')
         return redirect(url_for('main.dashboard'))
     return make_response(render_template('auth/login.html', app_name=app_name, page='Login', form=form))
+"""
 
-
-@bp.route('/forgot_password', methods=['GET', 'POST'])
+"""@bp.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
@@ -48,9 +88,9 @@ def forgot_password():
         flash('Check your email for instructions to reset your password')
         return redirect(url_for('auth.login'))
     return make_response(render_template('auth/forgot_password.html', app_name=app_name, page='Forgot Password', form=form))
+"""
 
-
-@bp.route('/reset_password/<token>', methods=['GET', 'POST'])
+"""@bp.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
@@ -68,9 +108,9 @@ def reset_password(token):
         flash('Your password has been reset')
         return redirect(url_for('auth.login'))
     return make_response(render_template('auth/reset_password.html', app_name=app_name, page='Reset Password', form=form))
+"""
 
-
-@bp.route('/change_password', methods=['GET', 'POST'])
+"""@bp.route('/change_password', methods=['GET', 'POST'])
 @login_required
 def change_password():
     form = ChangePassword()
@@ -91,9 +131,10 @@ def change_password():
         db.session.commit()
         return redirect(url_for('main.dashboard'))
     return make_response(render_template('auth/change_password.html', app_name=app_name, page='Change Password', form=form))
+"""
 
 
-@login_required
+"""@login_required
 @bp.route('/change_details', methods=['POST', 'GET'])
 def change_details():
     log.debug('Getting current_user data from db')
@@ -165,21 +206,21 @@ def change_details():
     form.email.data = user.email
     log.debug('Rendering template')
     return make_response(render_template('auth/change_details.html', app_name=app_name, page='View/Change Details', form=form))
+"""
 
-
-@login_required
+"""@login_required
 @bp.route('/manage')
 def manage_users():
     users = db.session.query(User).all()
-    permissions = get_permissions(current_user.id)
-    if not permissions['admin']:
+    user = db.session.query(User, current_user.id)
+    if not user.has_permission('admin'):
         abort(403)
 
     return make_response(
-        render_template('auth/manage_users.html', app_name=app_name, page="Manage Users", permissions=permissions, users=users))
+        render_template('auth/manage_users.html', app_name=app_name, page="Manage Users", permissions=permissions, users=users))"""
 
 
-@login_required
+"""@login_required
 @bp.route('/manage/edit_user/<user_id>', methods=['GET', 'POST'])
 def edit_user(user_id=None):
     permissions = get_permissions(current_user.id)
@@ -274,9 +315,9 @@ def edit_user(user_id=None):
     form.perm_unusedperm_7.data = user_perms['unusedperm_7']
 
     return make_response(render_template('auth/edit_user.html', app_name=app_name, page='Edit User', user=user, form=form))
+"""
 
-
-@login_required
+"""@login_required
 @bp.route('/manage/add', methods=['GET', 'POST'])
 def add_user():
     permissions = get_permissions(current_user.id)
@@ -338,9 +379,11 @@ def add_user():
         return redirect(url_for('auth.manage_users'))
 
     return make_response(render_template('auth/add_user.html', app_name=app_name, page="Add User", form=form))
+"""
 
 
-@bp.route('/logout')
+"""@bp.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('main.dashboard'))
+"""

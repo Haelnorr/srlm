@@ -1,11 +1,5 @@
 from api.lds.app import db
-from api.lds.app.models import load_user, User
-
-
-def get_permissions(user_id):
-    user = load_user(user_id)
-    permissions = user.get_permissions()
-    return permissions
+from api.lds.app.models import User
 
 
 def check_username_exists(username):

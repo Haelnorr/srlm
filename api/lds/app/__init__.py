@@ -12,11 +12,9 @@ log = get_logger(__name__)
 db = SQLAlchemy()
 migrate = Migrate()
 login = LoginManager()
-login.login_view = 'auth.login'
-login.login_message = None
+#login.login_view = 'auth.login'
+#login.login_message = None
 mail = Mail()
-# bootstrap = Bootstrap()
-# moment = Moment()
 
 
 def create_app(config_class=Config):
@@ -35,11 +33,12 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     login.init_app(app)
     mail.init_app(app)
-    # bootstrap.init_app(app)
-    # moment.init_app(app)
 
     # Registering blueprints
     log.info('Registering blueprints')
+    from api.lds.app.api import bp as api_bp
+    app.register_blueprint(api_bp, url_prefix='/api')
+
     from api.lds.app.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
 
@@ -59,3 +58,4 @@ def create_app(config_class=Config):
 
 
 from api.lds.app import models, events
+from api.lds.api_access import models
