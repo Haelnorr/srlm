@@ -3,8 +3,8 @@ from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_mail import Mail
-from api.lds.logger import get_logger
-from api.lds.app.config import Config
+from api.srlm.logger import get_logger
+from api.srlm.app.config import Config
 
 
 log = get_logger(__name__)
@@ -34,10 +34,10 @@ def create_app(config_class=Config):
 
     # Registering blueprints
     log.info('Registering blueprints')
-    from api.lds.app.api import bp as api_bp
+    from api.srlm.app.api import bp as api_bp
     app.register_blueprint(api_bp, url_prefix='/api')
 
-    from api.lds.app.auth import bp as auth_bp
+    from api.srlm.app.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
 
     if not app.debug and not app.testing:
@@ -49,5 +49,5 @@ def create_app(config_class=Config):
     return app
 
 
-from api.lds.app import models, events
-from api.lds.api_access import models
+from api.srlm.app import models, events
+from api.srlm.api_access import models

@@ -7,7 +7,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import current_app, url_for
 from flask_login import UserMixin
-from api.lds.app import db, login
+from api.srlm.app import db, login
 
 
 class PaginatedAPIMixin(object):

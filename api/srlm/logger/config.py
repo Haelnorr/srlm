@@ -1,6 +1,6 @@
 import os.path
 import configparser
-from api.lds.definitions import ROOT_DIR
+from api.srlm.definitions import ROOT_DIR
 
 
 class LogConfig:

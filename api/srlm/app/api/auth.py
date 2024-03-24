@@ -1,10 +1,10 @@
 import sqlalchemy as sa
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth
 
-from api.lds.api_access.models import AuthorizedApp
-from api.lds.app import db
-from api.lds.app.models import User
-from api.lds.app.api.errors import error_response
+from api.srlm.api_access.models import AuthorizedApp
+from api.srlm.app import db
+from api.srlm.app.models import User
+from api.srlm.app.api.errors import error_response
 from functools import wraps
 from flask import request, abort
 

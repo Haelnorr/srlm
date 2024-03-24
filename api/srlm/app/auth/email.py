@@ -1,7 +1,7 @@
 from flask import render_template
 from flask import current_app
-from api.lds.app import email
-from api.lds.definitions import app_name
+from api.srlm.app import email
+from api.srlm.definitions import app_name
 
 
 def send_password_reset_email(user):

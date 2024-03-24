@@ -1,14 +1,14 @@
 import sqlalchemy as sa
 from flask import request, url_for, abort
-from api.lds.app import db
-from api.lds.app.api import bp
-from api.lds.app.models import User
-from api.lds.app.api.errors import bad_request
-from api.lds.app.api.auth import user_auth, req_app_token
-from api.lds.app.auth.functions import check_username_exists, check_email_exists
+from api.srlm.app import db
+from api.srlm.app.api import bp
+from api.srlm.app.models import User
+from api.srlm.app.api.errors import bad_request
+from api.srlm.app.api.auth import user_auth, req_app_token
+from api.srlm.app.auth.functions import check_username_exists, check_email_exists
 
 # create a new logger for this module
-from api.lds.logger import get_logger
+from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
 

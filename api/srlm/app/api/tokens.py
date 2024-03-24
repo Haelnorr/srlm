@@ -1,6 +1,6 @@
-from api.lds.app import db
-from api.lds.app.api import bp
-from api.lds.app.api.auth import basic_auth, req_app_token
+from api.srlm.app import db
+from api.srlm.app.api import bp
+from api.srlm.app.api.auth import basic_auth, req_app_token
 
 
 @bp.route('/tokens', methods=['POST'])

@@ -1,4 +1,4 @@
-from api.lds.app import db
+from api.srlm.app import db
 from datetime import datetime, timezone, timedelta
 import secrets
 

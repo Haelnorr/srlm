@@ -1,6 +1,6 @@
 import os
 import configparser
-from api.lds.definitions import ROOT_DIR
+from api.srlm.definitions import ROOT_DIR
 
 
 config = configparser.ConfigParser()

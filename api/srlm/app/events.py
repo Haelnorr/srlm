@@ -1,6 +1,6 @@
 from sqlalchemy import and_
-from api.lds.app import db
-from api.lds.app.models import Event, load_user
+from api.srlm.app import db
+from api.srlm.app.models import Event, load_user
 
 
 def log_event(user, module, message):

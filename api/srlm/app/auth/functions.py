@@ -1,5 +1,5 @@
-from api.lds.app import db
-from api.lds.app.models import User
+from api.srlm.app import db
+from api.srlm.app.models import User
 
 
 def check_username_exists(username):

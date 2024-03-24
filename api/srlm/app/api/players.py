@@ -1,8 +1,8 @@
-from api.lds.app.api import bp
-from api.lds.app.api.auth import req_app_token
+from api.srlm.app.api import bp
+from api.srlm.app.api.auth import req_app_token
 
 # create a new logger for this module
-from api.lds.logger import get_logger
+from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
 

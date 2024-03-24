@@ -1,7 +1,7 @@
 from flask import current_app
 from flask_mail import Message
 from threading import Thread
-from api.lds.app import mail
+from api.srlm.app import mail
 
 
 # Sending mail with the context of the app

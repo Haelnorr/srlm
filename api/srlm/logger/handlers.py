@@ -2,7 +2,7 @@ import logging
 import sys
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler, SMTPHandler
-from api.lds.logger import LogConfig, MailConfig
+from api.srlm.logger import LogConfig, MailConfig
 FORMATTER = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 log_config = LogConfig()
 mail_config = MailConfig()

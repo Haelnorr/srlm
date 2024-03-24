@@ -1,7 +1,7 @@
 import sqlalchemy as sa
-from api.lds.logger import get_logger
-from api.lds.logger import LogConfig
-from api.lds.definitions import ROOT_DIR
+from api.srlm.logger import get_logger
+from api.srlm.logger import LogConfig
+from api.srlm.definitions import ROOT_DIR
 from datetime import datetime
 from dotenv import load_dotenv
 import os.path
@@ -19,9 +19,9 @@ if log_config.clean == 'true':
 log = get_logger(__name__)
 
 log.info('Starting web app')
-from api.lds.app import create_app, db, events
-import api.lds.app.models as md
-from api.lds.api_access.models import AuthorizedApp
+from api.srlm.app import create_app, db, events
+import api.srlm.app.models as md
+from api.srlm.api_access.models import AuthorizedApp
 app = create_app()
 log.info('Web app started, accepting requests')
 
