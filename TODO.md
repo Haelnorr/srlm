@@ -1,9 +1,9 @@
 # TODO
 
 **Before next PR**
- - token authentication system
- - revisit blueprint/project structure to prepare for standardized endpoint urls
- - finish auth/user endpoints
+ - ~~token authentication system~~
+ - ~~revisit blueprint/project structure to prepare for standardized endpoint urls~~
+ - ~~finish auth/user endpoints~~
 
 **With next PR**
  - deploy to test server

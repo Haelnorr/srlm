@@ -1,5 +1,39 @@
 #Endpoints
 
+###Auth
+The API has a two key system for authorization. An app key required for all requests, and a user key required for requests that are sensitive to user authentication (i.e. changing account details).  
+The key is sent in the request header as a Bearer token.
+```
+Authorization: Bearer AUTH_TOKEN
+```
+The app key is require for all requests (except for authenticating user details and getting the user key). 
+App keys are currently provided by the developer manually and expire after 3 months. 
+(In future there will be a way to get a new app key through the API. It will replace your existing one and 
+reset the expiry date)
+
+The user key is used to authenticate a specific user, and can be retreived by using the API request below. 
+For requests requiring a user key, append it directly to the app key when making your request. Total key length 
+should be 66 characters. User key can be included for requests that do not require it as it will be ignored.
+
+<details>
+<summary>
+POST /api/tokens
+</summary>
+Requests an auth token for a user, provided a valid username and password. Returns 401 error if unauthorized
+<pre>{
+    "username": "admin",
+    "password": "mypassword"
+}</pre>
+Response:
+<pre>{
+    "token": "a3b67df3547a49e6cd338a05c442d666"
+}</pre>
+Error:
+<pre>{
+    "error": "Unauthorized"
+}</pre>
+</details>
+
 ###Users
 <details>
     <summary>GET /api/users/{int:id}</summary>
@@ -73,6 +107,7 @@ Error example:
 </details>
 <details>
 <summary>PUT /api/users/{int:id}</summary>
+<b>Requires user auth token</b> - users are only authorized to change their own details<br>
 Modifies a user. Same format as creating a user, except fields are optional and password is excluded. # document how to change password.<br>
-Error also in same format as creating a user
+Error also in same format as creating a user<br>
 </details>

@@ -1,9 +1,10 @@
 import sqlalchemy as sa
-from flask import request, url_for
+from flask import request, url_for, abort
 from api.lds.app import db
 from api.lds.app.api import bp
 from api.lds.app.models import User
 from api.lds.app.api.errors import bad_request
+from api.lds.app.api.auth import user_auth, req_app_token
 from api.lds.app.auth.functions import check_username_exists, check_email_exists
 
 # create a new logger for this module
@@ -12,11 +13,13 @@ log = get_logger(__name__)
 
 
 @bp.route('/users/<int:user_id>', methods=['GET'])
+@req_app_token
 def get_user(user_id):
     return User.query.get_or_404(user_id).to_dict()
 
 
 @bp.route('/users', methods=['GET'])
+@req_app_token
 def get_users():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 10, type=int), 100)
@@ -24,6 +27,7 @@ def get_users():
 
 
 @bp.route('/users', methods=['POST'])
+@req_app_token
 def add_user():
     data = request.get_json()
     if 'username' not in data or 'email' not in data or 'password' not in data:
@@ -40,7 +44,11 @@ def add_user():
 
 
 @bp.route('/users/<int:user_id>', methods=['PUT'])
+@req_app_token
+@user_auth.login_required
 def update_user(user_id):
+    if user_auth.current_user().id != user_id:
+        abort(403)
     user = User.query.get_or_404(user_id)
     data = request.get_json()
     if 'username' in data and data['username'] != user.username and check_username_exists(data['username']):
@@ -53,20 +61,24 @@ def update_user(user_id):
 
 
 @bp.route('/users/<int:user_id>/matches_streamed', methods=['GET'])
+@req_app_token
 def get_user_matches_streamed(user_id):
     pass
 
 
 @bp.route('/users/<int:user_id>/matches_reviewed', methods=['GET'])
+@req_app_token
 def get_user_matches_reviewed(user_id):
     pass
 
 
 @bp.route('/users/<int:user_id>/permissions', methods=['GET'])
+@req_app_token
 def get_user_permissions(user_id):
     pass
 
 
 @bp.route('/users/<int:user_id>/discord', methods=['GET'])
+@req_app_token
 def get_user_discord(user_id):
     pass

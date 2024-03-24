@@ -1,7 +1,7 @@
 import jwt
 import secrets
-from time import time, timezone
-from datetime import datetime, timedelta
+from time import time
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.ext.associationproxy import association_proxy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -119,7 +119,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
             return False
 
     def get_token(self, expires_in=3600):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         if self.token and self.token_expiration.replace(tzinfo=timezone.utc) > now + timedelta(seconds=60):
             return self.token
         self.token = secrets.token_hex(16)
@@ -133,7 +133,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
     @staticmethod
     def check_token(token):
         user = db.session.query(User).filter(User.token == token).first()
-        if user is None or user.token_expiration.replace(tzinfo=timezone.utc) < datetime.utcnow():
+        if user is None or user.token_expiration.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
             return None
         return user
 

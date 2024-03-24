@@ -21,6 +21,7 @@ log = get_logger(__name__)
 log.info('Starting web app')
 from api.lds.app import create_app, db, events
 import api.lds.app.models as md
+from api.lds.api_access.models import AuthorizedApp
 app = create_app()
 log.info('Web app started, accepting requests')
 
@@ -36,6 +37,7 @@ def make_shell_context():
         'db': db,
         'sa': sa,
         'md': md,
-        'get_events': events.get_events,
+        'aa': AuthorizedApp,
+        'get_events': events.get_events
     }
 
