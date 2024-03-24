@@ -3,9 +3,9 @@
 <h3>Auth</h3>
 The API has a two key system for authorization. An app key required for all requests, and a user key required for requests that are sensitive to user authentication (i.e. changing account details).  
 The key is sent in the request header as a Bearer token.
-```
+<pre>
 Authorization: Bearer AUTH_TOKEN
-```
+</pre>
 The app key is require for all requests (except for authenticating user details and getting the user key). 
 App keys are currently provided by the developer manually and expire after 3 months. 
 (In future there will be a way to get a new app key through the API. It will replace your existing one and 
