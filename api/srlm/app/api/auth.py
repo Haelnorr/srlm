@@ -2,6 +2,7 @@ import sqlalchemy as sa
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth
 
 from api.srlm.api_access.models import AuthorizedApp
+from api.srlm.app.auth.functions import get_bearer_token
 from api.srlm.app import db
 from api.srlm.app.models import User
 from api.srlm.app.api.errors import error_response
@@ -41,14 +42,9 @@ def req_app_token(f):
         if 'Authorization' not in request.headers:
             abort(401)
 
-        authorized_app = None
-        data = request.headers['Authorization']
-        token = str.replace(str(data), 'Bearer ', '')
-        app_token = token[:34]
+        app_token = get_bearer_token(request.headers)['app']
 
-        # do proper token check, for now, test string
-        authorized_app = AuthorizedApp.check_token(app_token)
-        if authorized_app:
+        if AuthorizedApp.check_token(app_token):
             return f(*args, **kws)
         else:
             abort(401)

@@ -36,7 +36,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
     username = db.Column(db.String(64), index=True, unique=True, nullable=False)
     email = db.Column(db.String(120), index=True, unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
-    reset_pass = db.Column(db.Boolean)
+    reset_pass = db.Column(db.Boolean, nullable=False, default=False)
     token = db.Column(db.String(32), index=True, unique=True)
     token_expiration = db.Column(db.DateTime)
 
@@ -86,6 +86,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
             'permissions': self.permissions_list(),
             'matches_streamed': len(self.streamed_matches),
             'matches_reviewed': len(self.reviewed_matches),
+            'reset_pass': self.reset_pass,
             '_links': {
                 'self': url_for('api.get_user', user_id=self.id),
                 'player': url_for('api.get_player', player_id=self.player.id) if self.player is not None else None,
@@ -113,7 +114,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         else:
             return False
 
-    def get_token(self, expires_in=3600):
+    def get_token(self, expires_in=82800):
         now = datetime.now(timezone.utc)
         if self.token and self.token_expiration.replace(tzinfo=timezone.utc) > now + timedelta(seconds=60):
             return self.token

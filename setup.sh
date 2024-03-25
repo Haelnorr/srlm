@@ -17,3 +17,4 @@ export MAIL_SERVER=localhost
 export MAIL_PORT=8025
 export SRLM_APP_NAME=
 export FLASK_APP=api\srlm\run.py
+export DOMAIN=

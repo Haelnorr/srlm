@@ -17,17 +17,74 @@ should be 66 characters. User key can be included for requests that do not requi
 
 <details>
 <summary>
-POST /api/tokens
+POST /api/tokens/user
 </summary>
-Requests an auth token for a user, provided a valid username and password. Returns 401 error if unauthorized
-<pre>{
-    "username": "admin",
-    "password": "mypassword"
-}</pre>
+Requests an auth token for a user, provided a valid username and password. Returns 401 error if unauthorized.<br>
+Username:password should be submitted using a Basic Authorization header and DOES NOT require an app code<br>
+Tokens expire after 23 hours unless otherwise specified.
 Response:
 <pre>{
     "token": "a3b67df3547a49e6cd338a05c442d666"
 }</pre>
+Error:
+<pre>{
+    "error": "Unauthorized"
+}</pre>
+</details>
+<details>
+<summary>
+DELETE /api/tokens/user
+</summary>
+Revokes the auth token of the current user. <b>Requires user auth token</b><br>
+Useful for logging a user out<br>
+Successful operation will return <code>204 NO CONTENT</code>
+</details>
+<details>
+<summary>
+POST /api/tokens/user/validate
+</summary>
+Checks if a user auth token is still valid. <b>Requires user auth token</b><br>
+Useful for checking if user is logged in. Returns <code>{"error": "Unauthorized"}</code> if token is not valid.<br>
+<pre>{
+    "_links": {
+        "user": "/api/users/2"
+    },
+    "expires": "Tue, 26 Mar 2024 03:16:34 GMT",
+    "user": 2
+}
+</pre>
+</details>
+<details>
+<summary>
+GET /api/tokens/app
+</summary>
+Gets the token and expiry date of the current app token.<br>
+Since it requires a valid app token to access, 
+and only gives details on that token, only really useful for getting the expiry date<br>
+Response:
+<pre>{
+    "expiry": "Tue, 23 Apr 2024 23:02:17 GMT",
+    "token": "4ded8ce3796b368e93c5f87d36a7def051"
+}
+</pre>
+Error:
+<pre>{
+    "error": "Unauthorized"
+}</pre>
+</details>
+<details>
+<summary>
+POST /api/tokens/app
+</summary>
+Requests a new app token and resets the expiry date.<br>
+Requires a valid app token to access, 
+and only gives works on the app that token is assigned to.<br>
+Response:
+<pre>{
+    "expiry": "Tue, 23 Apr 2024 23:02:17 GMT",
+    "token": "4ded8ce3796b368e93c5f87d36a7def051"
+}
+</pre>
 Error:
 <pre>{
     "error": "Unauthorized"
@@ -52,6 +109,7 @@ Error:
     ],
     "matches_streamed": 0,
     "matches_reviewed": 0,
+    "reset_pass": false,
     "_links": {
         "self": "/api/users/1",
         "player": "/api/players/1",         # can be null
@@ -108,6 +166,39 @@ Error example:
 <details>
 <summary>PUT /api/users/{int:id}</summary>
 <b>Requires user auth token</b> - users are only authorized to change their own details<br>
-Modifies a user. Same format as creating a user, except fields are optional and password is excluded. # document how to change password.<br>
+Modifies a user. Same format as creating a user, except fields are optional and password cannot be changed using this method.<br>
+If a users password is change, it will set the <code>reset_pass</code> field on that user to False.<br>
 Error also in same format as creating a user<br>
+</details>
+<details>
+<summary>POST /api/users/{int:id}/new_password</summary>
+<b>Requires user auth token</b> - users are only authorized to change their own details<br>
+Changes the users password. Set the <code>password</code> field to specify the new password<br>
+Revokes the current token and returns a new one.
+This will also set the <code>reset_pass</code> field on the to False.<br>
+Error also in same format as creating a user<br>
+</details>
+<details>
+<summary>POST /api/users/forgot_password</summary>
+Requests a reset password email for the specified user. Specify the user by either <code>username</code> 
+or <code>email</code> field. Only one is required. On success will send a password reset token to the users email, 
+which can be used to receive a temporary token. <br>
+<pre>{
+    "_links": {
+        "user": "/api/users/2"
+    },
+    "result": "success",
+    "user": 2
+}</pre>
+</details>
+<details>
+<summary>GET /api/users/forgot_password/{temp_token}</summary>
+Uses a temporary token sent to a user via email to get a temporary auth token. This will revoke the current token for
+that user, and set an expiry on the new token of 5 minutes. Will also set a <code>reset_pass</code> boolean to true on that user. It is recommended to force the user to change their
+password after doing this.<br>
+<pre>{
+    "expires": "Mon, 25 Mar 2024 04:01:56 GMT",
+    "token": "e392ae1467472ee8a591a11915f723b0"
+}
+</pre>
 </details>
