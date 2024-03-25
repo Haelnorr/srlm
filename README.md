@@ -1,6 +1,7 @@
 <h2>Endpoints</h2>
 
-<h3>Auth</h3>
+<details>
+<summary><b>Auth</b></summary>
 The API has a two key system for authorization. An app key required for all requests, and a user key required for requests that are sensitive to user authentication (i.e. changing account details).  
 The key is sent in the request header as a Bearer token.
 <pre>
@@ -90,11 +91,13 @@ Error:
     "error": "Unauthorized"
 }</pre>
 </details>
-
-<h3>Users</h3>
+</details>
+<br><details>
+<summary><b>Users</b></summary>
 <details>
     <summary>GET /api/users/{int:id}</summary>
-    Gets the user data of a user specified by their user id
+    Gets the user data of a user specified by their user id. The list of permissions in this result returns the keys 
+only. For a full list see <code>GET /api/users/{int:id}/permissions</code>
     <br>
     Example response: 
     <pre>
@@ -201,4 +204,146 @@ password after doing this.<br>
     "token": "e392ae1467472ee8a591a11915f723b0"
 }
 </pre>
+</details>
+<details>
+<summary>GET /api/users/{int:id}/permissions</summary>
+Gets a detailed list of the users permissions
+<pre>{
+    "username": "Admin",
+    "permissions": [
+        {
+            "id": 1,
+            "key": "team_mgr",
+            "description": "Team Manager",
+            "modifiers": {
+                'team': 1
+            },
+            "_links": {
+                "self": "/api/permissions/1"
+            }
+        }
+    ],
+    "_links": {
+        "self": "/api/users/1/permissions"
+    }
+}</pre>
+</details>
+<details>
+<summary>POST /api/users/{int:id}/permissions</summary>
+Gives the user specified by {id} the permission defined by field <code>key</code>.
+<br>Input:
+<pre>{
+    'key': 'admin',
+    'modifiers': { # insert modifiers as a json }
+}</pre>
+On success returns the list of that users permissions.
+</details>
+<details>
+<summary>PUT /api/users/{int:id}/permissions</summary>
+Updates the the additional modifiers for user specified by {id} and the permission defined by field <code>key</code>.
+<b>Overrides the modifiers tag completely with the new input</b>
+<br>Input:
+<pre>{
+    'key': 'admin',
+    'modifiers': { # insert modifiers as a json }
+}</pre>
+On success returns the list of that users permissions.
+</details>
+<details>
+<summary>POST /api/users/{int:id}/permissions/revoke</summary>
+Revokes the permission specified by <code>key</code>  for user specified by {id}
+<br>Input:
+<pre>{
+    'key': 'admin'
+}</pre>
+On success returns the list of that users permissions.
+</details>
+
+
+</details>
+<br><details>
+<summary><b>Permissions</b></summary>
+This section is for requests regarding the permissions table. For assigning permissions to users, check the users section.
+<details>
+<summary>GET /api/permissions/{id}</summary>
+Returns a permission given its ID
+<pre>{
+    "id": 1,
+    "key": "admin",
+    "description": "Site Administrator",
+    "users_count": 1,
+    "_links": {
+        "self": "/api/permissions/1"
+    }
+}</pre>
+</details>
+<details>
+<summary>GET /api/permissions?page=1?per_page=10</summary>
+Get a list of all permissions. <code>page</code> and <code>per_page</code> are optional with defaults 1 and 10. Max per page is 100
+<pre>{
+    "items": [
+        { ... permission resource ... },
+        { ... permission resource ... },
+        ...
+    ]
+    "_meta": {
+        "page": 1,
+        "per_page": 10,
+        "total_items": 1,
+        "total_pages": 1
+    },
+    "_links": {
+        "self": "/api/permissions?page=1&per_page=10",
+        "next": null,
+        "prev": null
+    }
+}</pre>
+</details>
+<details>
+<summary>POST /api/permissions</summary>
+Creates a new permission. Input:
+<pre>{
+    'key': 'admin',
+    'description: 'Site Administrator' # optional
+}</pre>
+Example output:
+<pre>{
+    "id": 3,
+    "key": "leag_coord",
+    "description": "League Coordinator",
+    "users_count": 0,
+    "_links": {
+        "self": "/api/permissions/3"
+    }
+}</pre>
+Example error:
+<pre>{
+    "error": "Bad Request",
+    "message": "key already in use"
+}</pre>
+</details>
+<details>
+<summary>PUT /api/permissions/{id}</summary>
+Exact same format as for adding a new permission, except that specifying a key is option
+</details>
+<details>
+<summary>GET /api/permissions/{int:id}/users</summary>
+Lists all the users who have the specified permission
+<pre>{
+    "key": "admin",
+    "permission": "Site Administrator",
+    "users": [
+        {
+            "_links": {
+                "self": "/api/users/1"
+            },
+            "id": 1,
+            "username": "Admin"
+        }
+    ],
+    "_links": {
+        "self": "/api/permissions/1/users"
+    }    
+}</pre>
+</details>
 </details>

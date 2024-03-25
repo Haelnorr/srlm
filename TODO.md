@@ -5,7 +5,7 @@
  - ~~user password change~~
  - ~~app token reset~~
  - ~~remove all redundant code/templates~~
- - permission and discord endpoints
+ - ~~permission~~ and discord endpoints
  - steam account link functionality + endpoints
  - twitch account link functionality + endpoints
 

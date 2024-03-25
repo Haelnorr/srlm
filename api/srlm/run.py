@@ -20,7 +20,7 @@ log = get_logger(__name__)
 
 log.info('Starting web app')
 from api.srlm.app import create_app, db, events
-import api.srlm.app.models as md
+from api.srlm.app.models import User, Permission, UserPermissions
 from api.srlm.api_access.models import AuthorizedApp
 app = create_app()
 log.info('Web app started, accepting requests')
@@ -36,7 +36,9 @@ def make_shell_context():
     return {
         'db': db,
         'sa': sa,
-        'md': md,
+        'User': User,
+        'Permission': Permission,
+        'UserPermissions': UserPermissions,
         'aa': AuthorizedApp,
         'get_events': events.get_events
     }

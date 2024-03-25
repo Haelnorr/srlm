@@ -2,7 +2,7 @@ import sqlalchemy as sa
 from flask import request, url_for, abort
 from api.srlm.app import db
 from api.srlm.app.api import bp
-from api.srlm.app.models import User
+from api.srlm.app.models import User, Permission, UserPermissions
 from api.srlm.app.api.errors import bad_request
 from api.srlm.app.api.auth import user_auth, req_app_token
 from api.srlm.app.auth.functions import check_username_exists, check_email_exists, get_bearer_token
@@ -18,8 +18,6 @@ log = get_logger(__name__)
 def get_user(user_id):
     user_token = get_bearer_token(request.headers)['user']
     user = User.check_token(user_token)
-    print(user_token)
-    print(user_id)
 
     include_email = False
 
@@ -110,7 +108,107 @@ def get_user_matches_reviewed(user_id):
 @bp.route('/users/<int:user_id>/permissions', methods=['GET'])
 @req_app_token
 def get_user_permissions(user_id):
-    pass
+    user = db.session.get(User, user_id)
+    if not user:
+        abort(404)
+
+    permissions = []
+    for user_permission in user.permission_assoc:
+        permissions.append(user_permission.to_dict())
+
+    response = {
+        'username': user.username,
+        'permissions': permissions,
+        '_links': {
+            'self': url_for('api.get_user_permissions', user_id=user_id)
+        }
+    }
+
+    return response
+
+
+@bp.route('/users/<int:user_id>/permissions', methods=['POST'])
+@req_app_token
+def add_user_permissions(user_id):
+    user = db.session.get(User, user_id)
+    if not user:
+        abort(404)
+
+    data = request.get_json()
+    if 'key' not in data:
+        return bad_request('permission key not specified')
+    permission = db.session.query(Permission).filter(Permission.key == data['key']).first()
+    if permission is None:
+        return bad_request('invalid permission key')
+    if user.has_permission(permission.key):
+        return bad_request('user already has permission')
+
+    user_perm = UserPermissions(user=user, permission=permission)
+
+    if 'modifiers' in data:
+        modifiers = data['modifiers']
+        user_perm.additional_modifiers = modifiers
+
+    db.session.add(user_perm)
+    db.session.commit()
+
+    return get_user_permissions(user_id)
+
+
+@bp.route('/users/<int:user_id>/permissions', methods=['PUT'])
+@req_app_token
+def update_user_permissions(user_id):
+    user = db.session.get(User, user_id)
+    if not user:
+        abort(404)
+
+    data = request.get_json()
+    if 'key' not in data:
+        return bad_request('permission key not specified')
+    permission = db.session.query(Permission).filter(Permission.key == data['key']).first()
+    if permission is None:
+        return bad_request('invalid permission key')
+
+    if 'modifiers' not in data:
+        return bad_request('no modifiers provided')
+
+    user_perm = db.session.query(UserPermissions).filter_by(user_id=user.id, permission_id=permission.id).first()
+
+    if user_perm is None:
+        return bad_request('user does not have that permission')
+
+    modifiers = data['modifiers']
+    if data['modifiers'] == "":
+        modifiers = None
+    user_perm.additional_modifiers = modifiers
+    db.session.commit()
+
+    return get_user_permissions(user_id)
+
+
+@bp.route('/users/<int:user_id>/permissions/revoke', methods=['POST'])
+@req_app_token
+def revoke_user_permissions(user_id):
+    user = db.session.get(User, user_id)
+    if not user:
+        abort(404)
+
+    data = request.get_json()
+    if 'key' not in data:
+        return bad_request('permission key not specified')
+    permission = db.session.query(Permission).filter(Permission.key == data['key']).first()
+    if permission is None:
+        return bad_request('invalid permission key')
+
+    user_perm = db.session.query(UserPermissions).filter_by(user_id=user.id, permission_id=permission.id).first()
+
+    if user_perm is None:
+        return bad_request('user does not have that permission')
+
+    db.session.query(UserPermissions).filter_by(user_id=user.id, permission_id=permission.id).delete()
+    db.session.commit()
+
+    return get_user_permissions(user_id)
 
 
 @bp.route('/users/<int:user_id>/discord', methods=['GET'])

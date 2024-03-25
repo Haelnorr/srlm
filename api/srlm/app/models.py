@@ -134,13 +134,33 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         return user
 
 
-class Permission(db.Model):
+class Permission(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(32), unique=True, index=True, nullable=False)
     description = db.Column(db.String(128))
 
     user_assoc = db.relationship('UserPermissions', back_populates='permission', lazy=True)
     users = association_proxy('user_assoc', 'user')
+
+    def __repr__(self):
+        return f'<Perm {self.key} | {self.description}>'
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            'key': self.key,
+            'description': self.description,
+            'users_count': len(self.users),
+            '_links': {
+                'self': url_for('api.get_permission', perm_id=self.id)
+            }
+        }
+        return data
+
+    def from_dict(self, data):
+        for field in ['key', 'description']:
+            if field in data:
+                setattr(self, field, data[field])
 
 
 class UserPermissions(db.Model):
@@ -151,6 +171,18 @@ class UserPermissions(db.Model):
 
     user = db.relationship('User', back_populates='permission_assoc')
     permission = db.relationship('Permission', back_populates='user_assoc')
+
+    def to_dict(self):
+        data = {
+            'id': self.permission.id,
+            'key': self.permission.key,
+            'description': self.permission.description,
+            'modifiers': self.additional_modifiers,
+            '_links': {
+                'self': url_for('api.get_permission', perm_id=self.permission.id)
+            }
+        }
+        return data
 
 
 class Discord(db.Model):
