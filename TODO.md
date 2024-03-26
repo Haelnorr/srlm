@@ -1,24 +1,7 @@
 # TODO
 
 **Before next PR**
- - ~~user password reset~~
- - ~~user password change~~
- - ~~app token reset~~
- - ~~remove all redundant code/templates~~
- - ~~permission and discord endpoints~~
- - ~~twitch account database support and endpoints~~
- - ~~document error codes and formats~~
-
-
-**For next deployment**
- - ~~set env variable 'SRLM_APP_NAME' and DOMAIN~~
- - ~~change supervisor file for hypercorn - app moved from api.lds:asgi to api:asgi~~
- - ~~setup mail server~~
- - ~~configure mail server to work with the app~~
-
-
-**Future**
- - api endpoints (list incomplete)
+- api endpoints
    - league
    - division
    - season
@@ -26,6 +9,14 @@
    - team
    - player_team
    - free agent
+
+
+**For next deployment**
+ - fix mail server (SPF records, certificate, hostnames - no idea tbh)
+
+
+**Future**
+ - api endpoints (list incomplete)
    - match + match_result
    - final + final_result
    - lobby stuff
@@ -35,9 +26,6 @@
    - logging
  - get slapid and create/link player from steamID
  - integration with Slapshot Public API for lobby creation and retrieving match data
- - document code
- - document endpoints
- - document features
  - confirm user email
 
 **Completed**
@@ -47,3 +35,10 @@
  - permission endpoints
  - token authentication system
  - asgi support for hypercorn
+ - user password reset
+ - user password change
+ - app token reset
+ - remove all redundant code/templates
+ - permission and discord endpoints
+ - twitch account database support and endpoints
+ - document error codes and formats

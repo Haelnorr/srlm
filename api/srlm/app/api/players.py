@@ -28,3 +28,33 @@ def new_player():
 @req_app_token
 def update_player(player_id):
     pass
+
+
+@bp.route('/players/<int:player_id>/current_team', methods=['GET'])
+@req_app_token
+def get_player_current_team(player_id):
+    pass
+
+
+@bp.route('/players/<int:player_id>/teams', methods=['GET'])
+@req_app_token
+def get_player_teams(player_id):
+    pass
+
+
+@bp.route('/players/<int:player_id>/stats', methods=['GET'])
+@req_app_token
+def get_player_stats(player_id):
+    pass
+
+
+@bp.route('/players/<int:player_id>/teams', methods=['POST'])
+@req_app_token
+def register_player_team(player_id):
+    pass
+
+
+@bp.route('/players/<int:player_id>/free_agent', methods=['POST'])
+@req_app_token
+def register_player_free_agent(player_id):
+    pass

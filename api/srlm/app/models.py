@@ -349,6 +349,29 @@ class League(db.Model):
     seasons = db.relationship('Season', back_populates='league', lazy=True)
     divisions = db.relationship('Division', back_populates='league', lazy=True)
 
+    def __repr__(self):
+        return f'<League {self.name} | {self.acronym}>'
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'acronym': self.acronym,
+            'seasons_count': len(self.seasons),
+            'divisions_count': len(self.divisions),
+            '_links': {
+                'self': url_for('api.get_league', league_id=self.id),
+                'seasons': url_for('api.get_league_seasons', league_id=self.id),
+                'divisions': url_for('api.get_league_divisions', league_id=self.id)
+            }
+        }
+        return data
+
+    def from_dict(self, data):
+        for field in ['name', 'acronym']:
+            if field in data:
+                setattr(self, field, data[field])
+
 
 class Season(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -365,16 +388,69 @@ class Season(db.Model):
     divisions = association_proxy('division_association', 'division')
     match_type = db.relationship('Matchtype', back_populates='seasons')
 
+    def __repr__(self):
+        return f'<Season {self.name} | {self.league.acronym}>'
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'league': self.league.acronym,
+            'start_date': self.start_date,
+            'end_date': self.start_date,
+            'finals_start': self.finals_start,
+            'finals_end': self.finals_end,
+            'match_type': self.match_type.name,
+            'divisions_count': len(self.divisions),
+            '_links': {
+                'self': url_for('api.get_season', season_id=self.id),
+                'league': url_for('api.get_league', league_id=self.league_id),
+                'match_type': url_for('api.get_match_type', match_type_id=self.match_type_id),
+                'divisions': url_for('api.get_divisions_in_season', season_id=self.id)
+            }
+        }
+        return data
+
+    def from_dict(self, data):
+        for field in ['name', 'league', 'start_date', 'end_date', 'finals_start', 'finals_end', 'match_type']:
+            if field in data:
+                setattr(self, field, data[field])
+
 
 class Division(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)
     league_id = db.Column(db.Integer, db.ForeignKey('league.id'), nullable=False)
+    acronym = db.Column(db.String(5), nullable=False, unique=True, index=True)
     description = db.Column(db.String(128))
 
     league = db.relationship('League', back_populates='divisions')
     season_association = db.relationship('SeasonDivision', back_populates='division')
     seasons = association_proxy('season_association', 'season')
+
+    def __repr__(self):
+        return f'<Division {self.name} | {self.acronym} | {self.league.acronym}>'
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'acronym': self.acronym,
+            'league': self.league.acronym,
+            'description': self.description,
+            'seasons_count': len(self.seasons),
+            '_links': {
+                'self': url_for('api.get_league', league_id=self.id),
+                'league': url_for('api.get_league', league_id=self.league_id),
+                'seasons': url_for('api.get_seasons_of_division', division_id=self.id)
+            }
+        }
+        return data
+
+    def from_dict(self, data):
+        for field in ['name', 'acronym', 'league', 'description']:
+            if field in data:
+                setattr(self, field, data[field])
 
 
 class SeasonDivision(db.Model):
@@ -392,6 +468,34 @@ class SeasonDivision(db.Model):
     team_awards = db.relationship('TeamAward', back_populates='season_division')
     player_awards = db.relationship('PlayerAward', back_populates='season_division')
     rookies = db.relationship('Player', back_populates='first_season')
+
+    def __repr__(self):
+        return f'<SeasonDivision | {self.season.name} | Division: {self.division.name} | {self.league.acronym}>'
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            'season': self.season.name,
+            'division': self.division.name,
+            'league': self.season.league.acronym,
+            'teams_count': self.description,
+            'free_agents_count': len(self.free_agents),
+            'rookies_count': len(self.rookies),
+            'matches_count': len(self.matches),
+            'finals_count': len(self.finals),
+            '_links': {
+                'self': url_for('api.get_league', league_id=self.id),
+                'league': url_for('api.get_league', league_id=self.season.league_id),
+                'season': url_for('api.get_season', season_id=self.season_id),
+                'division': url_for('api.get_division', division_id=self.division_id),
+                'teams': url_for('api.get_teams_in_season_division', season_division_id=self.id),
+                'free_agents': url_for('api.get_free_agents_in_season_division', season_division_id=self.id),
+                'rookies': url_for('api.get_rookies_in_season_division', season_division_id=self.id),
+                'matches': url_for('api.get_matches_in_season_division', season_division_id=self.id),
+                'finals': url_for('api.get_finals_in_season_division', season_division_id=self.id)
+            }
+        }
+        return data
 
 
 # info of a match between two registered league teams
