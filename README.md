@@ -291,6 +291,47 @@ Removes a users discord information. User must be authenticated. Returns code 20
 </details>
 </ul>
 </details>
+<details>
+<summary><u>Twitch</u></summary>
+<ul>
+<details>
+<summary>GET /api/users/{int:id}/twitch</summary>
+Gets the user's linked Twitch profile. If request sent including user auth code, will also return
+the access and refresh tokens
+<pre>{
+    "user": "Haelnorr",
+    "twitch_id": "1230918231",
+    "token_expiration": "Tue, 26 Mar 2024 03:16:34 GMT",
+    "access_token": "132f4d1234df1234d123e4213df234f",
+    "refresh_token": "12387n293mo4if28734j9rm28d34r",
+    "_links": {
+        "self": "/api/users/2/twitch",
+        "user": "/api/users/2"
+    }
+}</pre>
+</details>
+<details>
+<summary>POST /api/users/{int:id}/twitch</summary>
+Creates a new entry in the database recording the users twitch information. User must be authenticated. Returns the GET
+result on success<br>
+Input:
+<pre>{
+    'twitch_id': '123491203481209348123',
+    'access_token': '31r234d123ecdx134fe234d',
+    'refresh_token': '12w1ce2f234cs243ew',
+    'expires_in': 604800
+}</pre>
+</details>
+<details>
+<summary>PUT /api/users/{int:id}/twitch</summary>
+Update a users twitch information. User must be authenticated. Input and output same as creating user, except only one input is required for success
+</details>
+<details>
+<summary>DELETE /api/users/{int:id}/twitch</summary>
+Removes a users twitch information. User must be authenticated. Returns code 200 response on success
+</details>
+</ul>
+</details>
 </ul>
 
 

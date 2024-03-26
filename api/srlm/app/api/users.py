@@ -2,7 +2,7 @@ import sqlalchemy as sa
 from flask import request, url_for
 from api.srlm.app import db
 from api.srlm.app.api import bp
-from api.srlm.app.models import User, Permission, UserPermissions, Discord
+from api.srlm.app.models import User, Permission, UserPermissions, Discord, Twitch
 from api.srlm.app.api.errors import UserAuthError, ResourceNotFound, BadRequest, error_response
 from api.srlm.app.api.auth import user_auth, req_app_token
 from api.srlm.app.auth.functions import check_username_exists, check_email_exists, get_bearer_token
@@ -225,7 +225,7 @@ def get_user_discord(user_id):
         raise ResourceNotFound(f'User with ID {user_id}')
 
     if user.discord is None:
-        raise ResourceNotFound(f'User with ID {user_id} does not have a linked discord account')
+        raise ResourceNotFound(f'User with ID {user_id} does not have a linked Discord account')
 
     return user.discord.to_dict(authenticated=authenticated)
 
@@ -242,12 +242,13 @@ def create_user_discord(user_id):
         raise UserAuthError()
 
     if user.discord:
-        raise BadRequest('User already has a linked discord account')
+        raise BadRequest('User already has a linked Discord account')
 
     data = request.get_json()
 
-    if ('discord_id' and 'access_token' and 'refresh_token' and 'expires_in') not in data:
-        raise BadRequest("Missing field(s) - requires discord_id, access_token, refresh_token, expires_in")
+    for field in ['discord_id', 'access_token', 'refresh_token', 'expires_in']:
+        if field not in data:
+            raise BadRequest(f"{field} field missing")
 
     discord = db.session.query(Discord).filter(Discord.discord_id == data['discord_id']).first()
     if discord is not None:
@@ -275,16 +276,22 @@ def update_user_discord(user_id):
         raise UserAuthError()
 
     if user.discord is None:
-        raise BadRequest('User does not have a linked discord account')
+        raise BadRequest('User does not have a linked Discord account')
 
     data = request.get_json()
 
-    if ('discord_id' or 'access_token' or 'refresh_token' or 'expires_in') not in data:
+    valid_fields = False
+    for field in ['discord_id', 'access_token', 'refresh_token', 'expires_in']:
+        if field in data:
+            valid_fields = True
+
+    if not valid_fields:
         raise BadRequest("No valid fields provided - provide one of the following: discord_id, access_token, refresh_token, expires_in")
 
-    discord = db.session.query(Discord).filter(Discord.discord_id == data['discord_id']).first()
-    if discord is not None:
-        raise BadRequest('Discord account is linked to another user')
+    if 'discord_id' in data:
+        discord = db.session.query(Discord).filter(Discord.discord_id == data['discord_id']).first()
+        if discord is not None:
+            raise BadRequest('Discord account is linked to another user')
 
     user.discord.from_dict(data)
     db.session.commit()
@@ -304,9 +311,117 @@ def delete_user_discord(user_id):
         raise UserAuthError()
 
     if user.discord is None:
-        raise BadRequest('User does not have a linked discord account')
+        raise BadRequest('User does not have a linked Discord account')
 
     db.session.query(Discord).filter(Discord.user_id == user.id).delete()
+    db.session.commit()
+
+    return '', 200
+
+
+@bp.route('/users/<int:user_id>/twitch', methods=['GET'])
+@req_app_token
+def get_user_twitch(user_id):
+    user_token = get_bearer_token(request.headers)['user']
+    user = db.session.get(User, user_id)
+
+    authenticated = False
+    if user is User.check_token(user_token):
+        authenticated = True
+
+    if not user:
+        raise ResourceNotFound(f'User with ID {user_id}')
+
+    if user.twitch is None:
+        raise ResourceNotFound(f'User with ID {user_id} does not have a linked Twitch account')
+
+    return user.twitch.to_dict(authenticated=authenticated)
+
+
+@bp.route('/users/<int:user_id>/twitch', methods=['POST'])
+@req_app_token
+@user_auth.login_required
+def create_user_twitch(user_id):
+    user = db.session.get(User, user_id)
+    if user is None:
+        raise ResourceNotFound(f'User with ID {user_id}')
+
+    if user.id is not user_auth.current_user().id:
+        raise UserAuthError()
+
+    if user.twitch:
+        raise BadRequest('User already has a linked Twitch account')
+
+    data = request.get_json()
+
+    for field in ['twitch_id', 'access_token', 'refresh_token', 'expires_in']:
+        if field not in data:
+            raise BadRequest(f"{field} field missing")
+
+    twitch = db.session.query(Twitch).filter(Twitch.twitch_id == data['twitch_id']).first()
+    if twitch is not None:
+        raise BadRequest('Twitch account is linked to another user')
+
+    twitch = Twitch()
+    twitch.from_dict(data)
+    twitch.user = user
+
+    db.session.add(twitch)
+    db.session.commit()
+
+    return user.twitch.to_dict(authenticated=True)
+
+
+@bp.route('/users/<int:user_id>/twitch', methods=['PUT'])
+@req_app_token
+@user_auth.login_required
+def update_user_twitch(user_id):
+    user = db.session.get(User, user_id)
+    if user is None:
+        raise ResourceNotFound(f'User with ID {user_id}')
+
+    if user.id is not user_auth.current_user().id:
+        raise UserAuthError()
+
+    if user.twitch is None:
+        raise BadRequest('User does not have a linked Twitch account')
+
+    data = request.get_json()
+
+    valid_fields = False
+    for field in ['twitch_id', 'access_token', 'refresh_token', 'expires_in']:
+        if field in data:
+            valid_fields = True
+
+    if not valid_fields:
+        raise BadRequest("No valid fields provided - provide one of the following: twitch_id, access_token, refresh_token, expires_in")
+
+    if 'twitch_id' in data:
+        twitch = db.session.query(Twitch).filter(Twitch.twitch_id == data['twitch_id']).first()
+        if twitch is not None:
+            raise BadRequest('Twitch account is linked to another user')
+
+    user.twitch.from_dict(data)
+    db.session.commit()
+
+    return user.twitch.to_dict(authenticated=True)
+
+
+@bp.route('/users/<int:user_id>/twitch', methods=['DELETE'])
+@req_app_token
+@user_auth.login_required
+def delete_user_twitch(user_id):
+    user = db.session.get(User, user_id)
+    if user is None:
+        raise ResourceNotFound(f'User with ID {user_id}')
+
+    if user.id is not user_auth.current_user().id:
+        raise UserAuthError()
+
+    if user.twitch is None:
+        raise BadRequest('User does not have a linked Twitch account')
+
+    db.session.query(Twitch).filter(Twitch.user_id == user.id).delete()
     db.session.commit()
 
     return '', 200

@@ -6,16 +6,15 @@
  - ~~app token reset~~
  - ~~remove all redundant code/templates~~
  - ~~permission and discord endpoints~~
- - steam account link functionality + endpoints
- - twitch account link functionality + endpoints
+ - ~~twitch account database support and endpoints~~
  - ~~document error codes and formats~~
 
 
 **For next deployment**
- - set env variable 'SRLM_APP_NAME' and DOMAIN
- - change supervisor file for hypercorn - app moved from api.lds:asgi to api:asgi
+ - ~~set env variable 'SRLM_APP_NAME' and DOMAIN~~
+ - ~~change supervisor file for hypercorn - app moved from api.lds:asgi to api:asgi~~
  - ~~setup mail server~~
- - configure mail server to work with the app
+ - ~~configure mail server to work with the app~~
 
 
 **Future**
@@ -34,7 +33,7 @@
    - scheduling
    - awards
    - logging
- - get slapid and create/link player from steam account  
+ - get slapid and create/link player from steamID
  - integration with Slapshot Public API for lobby creation and retrieving match data
  - document code
  - document endpoints

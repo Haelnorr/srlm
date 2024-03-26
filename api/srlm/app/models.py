@@ -39,9 +39,11 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
     reset_pass = db.Column(db.Boolean, nullable=False, default=False)
     token = db.Column(db.String(32), index=True, unique=True)
     token_expiration = db.Column(db.DateTime)
+    steam_id = db.Column(db.String(32))
 
     player = db.relationship('Player', back_populates='user', lazy=True, uselist=False)
     discord = db.relationship('Discord', back_populates='user', lazy=True, uselist=False)
+    twitch = db.relationship('Twitch', back_populates='user', lazy=True, uselist=False)
     streamed_matches = db.relationship('Match', back_populates='streamer', lazy=True)
     reviewed_matches = db.relationship('PlayerMatchData', back_populates='reviewed_by')
     permission_assoc = db.relationship('UserPermissions', back_populates='user', lazy=True)
@@ -222,7 +224,44 @@ class Discord(db.Model):
             if field in data:
                 setattr(self, field, data[field])
         now = datetime.now(timezone.utc)
-        self.token_expiration = now + timedelta(seconds=data['expires_in'])
+        self.token_expiration = now + timedelta(seconds=int(data['expires_in']))
+
+
+class Twitch(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    twitch_id = db.Column(db.String(32), unique=True, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    access_token = db.Column(db.String(64), nullable=False)
+    refresh_token = db.Column(db.String(64), nullable=False)
+    token_expiration = db.Column(db.DateTime, nullable=False)
+
+    user = db.relationship('User', back_populates='twitch')
+
+    def __repr__(self):
+        return f'<Twitch {self.user.username} | {self.twitch_id}>'
+
+    def to_dict(self, authenticated=False):
+        data = {
+            'user': self.user.username,
+            'twitch_id': self.twitch_id,
+            'token_expiration': self.token_expiration,
+            '_links': {
+                'self': url_for('api.get_user_twitch', user_id=self.user_id),
+                'user': url_for('api.get_user', user_id=self.user_id)
+            }
+        }
+        if authenticated:
+            data['access_token'] = self.access_token
+            data['refresh_token'] = self.refresh_token
+
+        return data
+
+    def from_dict(self, data):
+        for field in ['twitch_id', 'access_token', 'refresh_token']:
+            if field in data:
+                setattr(self, field, data[field])
+        now = datetime.now(timezone.utc)
+        self.token_expiration = now + timedelta(seconds=int(data['expires_in']))
 
 
 class Player(db.Model):
