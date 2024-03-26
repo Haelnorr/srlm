@@ -172,6 +172,9 @@ class UserPermissions(db.Model):
     user = db.relationship('User', back_populates='permission_assoc')
     permission = db.relationship('Permission', back_populates='user_assoc')
 
+    def __repr__(self):
+        return f'<UserPerm {self.user.username} | {self.permission.key}>'
+
     def to_dict(self):
         data = {
             'id': self.permission.id,
@@ -187,11 +190,35 @@ class UserPermissions(db.Model):
 
 class Discord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    discord_id = db.Column(db.String(32), unique=True, nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     access_token = db.Column(db.String(64))
     refresh_token = db.Column(db.String(64))
 
     user = db.relationship('User', back_populates='discord')
+
+    def __repr__(self):
+        return f'<Discord {self.user.username} | {self.discord_id}>'
+
+    def to_dict(self, authenticated=False):
+        data = {
+            'user': self.user.username,
+            'discord_id': self.discord_id,
+            '_links': {
+                'self': url_for('api.get_user_discord', user_id=self.user_id),
+                'user': url_for('api.get_user', user_id=self.user_id)
+            }
+        }
+        if authenticated:
+            data['access_token'] = self.access_token
+            data['refresh_token'] = self.refresh_token
+
+        return data
+
+    def from_dict(self, data):
+        for field in ['discord_id', 'access_token', 'refresh_token']:
+            if field in data:
+                setattr(self, field, data[field])
 
 
 class Player(db.Model):

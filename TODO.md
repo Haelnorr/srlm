@@ -5,9 +5,10 @@
  - ~~user password change~~
  - ~~app token reset~~
  - ~~remove all redundant code/templates~~
- - ~~permission~~ and discord endpoints
+ - ~~permission and discord endpoints~~
  - steam account link functionality + endpoints
  - twitch account link functionality + endpoints
+ - ~~document error codes and formats~~
 
 
 **For next deployment**
@@ -18,11 +19,32 @@
 
 
 **Future**
- - api endpoints for retrieving data
- - api endpoints for adding data
- - api endpoints for modifying data
+ - api endpoints (list incomplete)
+   - league
+   - division
+   - season
+   - player
+   - team
+   - player_team
+   - free agent
+   - match + match_result
+   - final + final_result
+   - lobby stuff
+   - match_data stuff
+   - scheduling
+   - awards
+   - logging
+ - get slapid and create/link player from steam account  
  - integration with Slapshot Public API for lobby creation and retrieving match data
  - document code
  - document endpoints
  - document features
- - confirm email
+ - confirm user email
+
+**Completed**
+ - database models implemented
+ - database built
+ - user endpoints
+ - permission endpoints
+ - token authentication system
+ - asgi support for hypercorn

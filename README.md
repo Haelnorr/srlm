@@ -27,10 +27,6 @@ Response:
 <pre>{
     "token": "a3b67df3547a49e6cd338a05c442d666"
 }</pre>
-Error:
-<pre>{
-    "error": "Unauthorized"
-}</pre>
 </details>
 <details>
 <summary>
@@ -68,10 +64,6 @@ Response:
     "token": "4ded8ce3796b368e93c5f87d36a7def051"
 }
 </pre>
-Error:
-<pre>{
-    "error": "Unauthorized"
-}</pre>
 </details>
 <details>
 <summary>
@@ -86,14 +78,14 @@ Response:
     "token": "4ded8ce3796b368e93c5f87d36a7def051"
 }
 </pre>
-Error:
-<pre>{
-    "error": "Unauthorized"
-}</pre>
 </details>
 </details>
 <br><details>
 <summary><b>Users</b></summary>
+<ul>
+<details>
+<summary><u>General</u></summary>
+<ul>
 <details>
     <summary>GET /api/users/{int:id}</summary>
     Gets the user data of a user specified by their user id. The list of permissions in this result returns the keys 
@@ -121,11 +113,6 @@ only. For a full list see <code>GET /api/users/{int:id}/permissions</code>
         "matches_streamed": "/api/users/1/matches_streamed",
         "matches_reviewed": "/api/users/1/matches_reviewed",
     }
-}</pre>
-    User not found:
-<pre>
-{
-  "error": "Not Found"
 }</pre>
 </details>
 <details>
@@ -160,26 +147,24 @@ Creates a new user and returns the user in the same form as <code>GET /api/users
     "email": string, must be unique,
     "password: string
 }</pre>
-Error example:
-<pre>{
-    "error": "Bad Request",
-    "message": "must include username, email and password fields"
-}</pre>
 </details>
 <details>
 <summary>PUT /api/users/{int:id}</summary>
 <b>Requires user auth token</b> - users are only authorized to change their own details<br>
 Modifies a user. Same format as creating a user, except fields are optional and password cannot be changed using this method.<br>
 If a users password is change, it will set the <code>reset_pass</code> field on that user to False.<br>
-Error also in same format as creating a user<br>
 </details>
+</ul>
+</details>
+<details>
+<summary><u>Passwords</u></summary>
+<ul>
 <details>
 <summary>POST /api/users/{int:id}/new_password</summary>
 <b>Requires user auth token</b> - users are only authorized to change their own details<br>
 Changes the users password. Set the <code>password</code> field to specify the new password<br>
 Revokes the current token and returns a new one.
 This will also set the <code>reset_pass</code> field on the to False.<br>
-Error also in same format as creating a user<br>
 </details>
 <details>
 <summary>POST /api/users/forgot_password</summary>
@@ -205,6 +190,11 @@ password after doing this.<br>
 }
 </pre>
 </details>
+</ul>
+</details>
+<details>
+<summary><u>Permissions</u></summary>
+<ul>
 <details>
 <summary>GET /api/users/{int:id}/permissions</summary>
 Gets a detailed list of the users permissions
@@ -258,12 +248,53 @@ Revokes the permission specified by <code>key</code>  for user specified by {id}
 }</pre>
 On success returns the list of that users permissions.
 </details>
+</ul>
+</details>
+<details>
+<summary><u>Discord</u></summary>
+<ul>
+<details>
+<summary>GET /api/users/{int:id}/discord</summary>
+Gets the user's linked discord profile. If request sent including user auth code, will also return
+the access and refresh tokens
+<pre>{
+    "user": "Haelnorr",
+    "discord_id": "1230918231",
+    "_links": {
+        "self": "/api/users/2/discord",
+        "user": "/api/users/2"
+    }
+}</pre>
+</details>
+<details>
+<summary>POST /api/users/{int:id}/discord</summary>
+Creates a new entry in the database recording the users discord information. User must be authenticated. Returns the GET
+result on success<br>
+Input:
+<pre>{
+    'discord_id': '123491203481209348123',
+    'access_token': '31r234d123ecdx134fe234d',
+    'refresh_token': '12w1ce2f234cs243ew'
+}</pre>
+</details>
+<details>
+<summary>PUT /api/users/{int:id}/discord</summary>
+Update a users discord information. User must be authenticated. Input and output same as creating user, except only one input is required for success
+</details>
+<details>
+<summary>DELETE /api/users/{int:id}/discord</summary>
+Removes a users discord information. User must be authenticated. Returns code 200 response on success
+</details>
+</ul>
+</details>
+</ul>
 
 
 </details>
 <br><details>
 <summary><b>Permissions</b></summary>
 This section is for requests regarding the permissions table. For assigning permissions to users, check the users section.
+<ul>
 <details>
 <summary>GET /api/permissions/{id}</summary>
 Returns a permission given its ID
@@ -316,11 +347,6 @@ Example output:
         "self": "/api/permissions/3"
     }
 }</pre>
-Example error:
-<pre>{
-    "error": "Bad Request",
-    "message": "key already in use"
-}</pre>
 </details>
 <details>
 <summary>PUT /api/permissions/{id}</summary>
@@ -346,4 +372,18 @@ Lists all the users who have the specified permission
     }    
 }</pre>
 </details>
+</ul>
+</details>
+<br><details>
+<summary><b>Error Responses</b></summary>
+All error responses should have the corresponding HTTP response code as well as a body that follows this format:
+<pre># Example 404 error response
+{
+    "error": "Not Found",
+    "message": "Requested resource cannot be found",
+    "missing_resource": "User with ID 5" # this field is only found on 404 errors
+}</pre>
+If an error occurs and you do not get a response that follows this format, please open an issue with details on how to 
+reproduce the problem.
+<ul></ul>
 </details>

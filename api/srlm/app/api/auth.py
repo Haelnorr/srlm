@@ -5,9 +5,9 @@ from api.srlm.api_access.models import AuthorizedApp
 from api.srlm.app.auth.functions import get_bearer_token
 from api.srlm.app import db
 from api.srlm.app.models import User
-from api.srlm.app.api.errors import error_response
+from api.srlm.app.api.errors import error_response, AppAuthError, UserAuthError
 from functools import wraps
-from flask import request, abort
+from flask import request
 
 basic_auth = HTTPBasicAuth()
 user_auth = HTTPTokenAuth()
@@ -22,7 +22,7 @@ def verify_password(username, password):
 
 @basic_auth.error_handler
 def basic_auth_error(status):
-    return error_response(status)
+    return error_response(status, 'User credentials invalid')
 
 
 @user_auth.verify_token
@@ -33,19 +33,19 @@ def verify_token(token):
 
 @user_auth.error_handler
 def token_auth_error(status):
-    return error_response(status)
+    raise UserAuthError()
 
 
 def req_app_token(f):
     @wraps(f)
     def decorated_function(*args, **kws):
         if 'Authorization' not in request.headers:
-            abort(401)
+            raise AppAuthError()
 
         app_token = get_bearer_token(request.headers)['app']
 
         if AuthorizedApp.check_token(app_token):
             return f(*args, **kws)
         else:
-            abort(401)
+            raise AppAuthError()
     return decorated_function
