@@ -1,20 +1,49 @@
 # TODO
 
 **Before next PR**
- - ~~token authentication system~~
- - ~~revisit blueprint/project structure to prepare for standardized endpoint urls~~
- - ~~finish auth/user endpoints~~
+ - ~~user password reset~~
+ - ~~user password change~~
+ - ~~app token reset~~
+ - ~~remove all redundant code/templates~~
+ - ~~permission and discord endpoints~~
+ - ~~twitch account database support and endpoints~~
+ - ~~document error codes and formats~~
 
-**With next PR**
- - deploy to test server
+
+**For next deployment**
+ - ~~set env variable 'SRLM_APP_NAME' and DOMAIN~~
+ - ~~change supervisor file for hypercorn - app moved from api.lds:asgi to api:asgi~~
+ - ~~setup mail server~~
+ - ~~configure mail server to work with the app~~
 
 
 **Future**
- - api endpoints for retrieving data
- - api endpoints for adding data
- - api endpoints for modifying data
- - remove all redundant code/templates
+ - api endpoints (list incomplete)
+   - league
+   - division
+   - season
+   - player
+   - team
+   - player_team
+   - free agent
+   - match + match_result
+   - final + final_result
+   - lobby stuff
+   - match_data stuff
+   - scheduling
+   - awards
+   - logging
+ - get slapid and create/link player from steamID
  - integration with Slapshot Public API for lobby creation and retrieving match data
  - document code
  - document endpoints
  - document features
+ - confirm user email
+
+**Completed**
+ - database models implemented
+ - database built
+ - user endpoints
+ - permission endpoints
+ - token authentication system
+ - asgi support for hypercorn

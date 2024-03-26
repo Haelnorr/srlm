@@ -1,7 +1,5 @@
 /venv/
-/logs/
-/db/app.db
-/DESIGNDOC.txt
+/logs/api/*.log
 /.idea/
 /mail.bat
 /test.bat
