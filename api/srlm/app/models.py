@@ -114,9 +114,9 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         else:
             return False
 
-    def get_token(self, expires_in=82800):
+    def get_token(self, expires_in=1209600):
         now = datetime.now(timezone.utc)
-        if self.token and self.token_expiration.replace(tzinfo=timezone.utc) > now + timedelta(seconds=60):
+        if self.token and self.token_expiration.replace(tzinfo=timezone.utc) > now + timedelta(seconds=86400):
             return self.token
         self.token = secrets.token_hex(16)
         self.token_expiration = now + timedelta(seconds=expires_in)
@@ -194,6 +194,7 @@ class Discord(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     access_token = db.Column(db.String(64))
     refresh_token = db.Column(db.String(64))
+    token_expiration = db.Column(db.DateTime)
 
     user = db.relationship('User', back_populates='discord')
 
@@ -204,6 +205,7 @@ class Discord(db.Model):
         data = {
             'user': self.user.username,
             'discord_id': self.discord_id,
+            'token_expiration': self.token_expiration,
             '_links': {
                 'self': url_for('api.get_user_discord', user_id=self.user_id),
                 'user': url_for('api.get_user', user_id=self.user_id)
@@ -219,6 +221,8 @@ class Discord(db.Model):
         for field in ['discord_id', 'access_token', 'refresh_token']:
             if field in data:
                 setattr(self, field, data[field])
+        now = datetime.now(timezone.utc)
+        self.token_expiration = now + timedelta(seconds=data['expires_in'])
 
 
 class Player(db.Model):

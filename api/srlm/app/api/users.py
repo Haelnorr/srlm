@@ -246,8 +246,8 @@ def create_user_discord(user_id):
 
     data = request.get_json()
 
-    if ('discord_id' and 'access_token' and 'refresh_token') not in data:
-        raise BadRequest("Missing field(s) - requires discord_id, access_token and refresh_token")
+    if ('discord_id' and 'access_token' and 'refresh_token' and 'expires_in') not in data:
+        raise BadRequest("Missing field(s) - requires discord_id, access_token, refresh_token, expires_in")
 
     discord = db.session.query(Discord).filter(Discord.discord_id == data['discord_id']).first()
     if discord is not None:
@@ -279,8 +279,8 @@ def update_user_discord(user_id):
 
     data = request.get_json()
 
-    if ('discord_id' or 'access_token' or 'refresh_token') not in data:
-        raise BadRequest("No valid fields provided - provide one of the following: discord_id, access_token, refresh_token")
+    if ('discord_id' or 'access_token' or 'refresh_token' or 'expires_in') not in data:
+        raise BadRequest("No valid fields provided - provide one of the following: discord_id, access_token, refresh_token, expires_in")
 
     discord = db.session.query(Discord).filter(Discord.discord_id == data['discord_id']).first()
     if discord is not None:

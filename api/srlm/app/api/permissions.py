@@ -37,9 +37,9 @@ def get_permissions():
 def new_permission():
     data = request.get_json()
     if 'key' not in data:
-        raise BadRequest('Permission key not specified')
+        raise BadRequest("Permission 'key' field missing")
     if check_key_exists(data['key']):
-        raise BadRequest('Permission key must be unique')
+        raise BadRequest('Permission key is not unique')
     permission = Permission()
     permission.from_dict(data)
     db.session.add(permission)
@@ -53,7 +53,7 @@ def update_permission(perm_id):
     permission = Permission.query.get_or_404(perm_id)
     data = request.get_json()
     if 'key' in data and data['key'] != permission.key and check_key_exists(data['key']):
-        raise BadRequest('Permission key must be unique')
+        raise BadRequest('Permission key is not unique')
     permission.from_dict(data)
     db.session.commit()
     return permission.to_dict()

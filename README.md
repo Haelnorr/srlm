@@ -2,19 +2,19 @@
 
 <details>
 <summary><b>Auth</b></summary>
-The API has a two key system for authorization. An app key required for all requests, and a user key required for requests that are sensitive to user authentication (i.e. changing account details).  
+The API has a two key system for authorization. An app key required for all requests, and a user key required for 
+requests that are sensitive to user authentication (i.e. changing account details).  
 The key is sent in the request header as a Bearer token.
 <pre>
 Authorization: Bearer AUTH_TOKEN
 </pre>
 The app key is require for all requests (except for authenticating user details and getting the user key). 
 App keys are currently provided by the developer manually and expire after 3 months. 
-(In future there will be a way to get a new app key through the API. It will replace your existing one and 
-reset the expiry date)
+A valid app key can be used to generate a new key, replacing the old one and resetting the expiry.
 
 The user key is used to authenticate a specific user, and can be retreived by using the API request below. 
 For requests requiring a user key, append it directly to the app key when making your request. Total key length 
-should be 66 characters. User key can be included for requests that do not require it as it will be ignored.
+should be 66 characters.
 
 <details>
 <summary>
@@ -22,7 +22,7 @@ POST /api/tokens/user
 </summary>
 Requests an auth token for a user, provided a valid username and password. Returns 401 error if unauthorized.<br>
 Username:password should be submitted using a Basic Authorization header and DOES NOT require an app code<br>
-Tokens expire after 23 hours unless otherwise specified.
+Tokens expire after 14 days unless otherwise specified.
 Response:
 <pre>{
     "token": "a3b67df3547a49e6cd338a05c442d666"
@@ -260,6 +260,9 @@ the access and refresh tokens
 <pre>{
     "user": "Haelnorr",
     "discord_id": "1230918231",
+    "token_expiration": "Tue, 26 Mar 2024 03:16:34 GMT",
+    "access_token": "132f4d1234df1234d123e4213df234f",
+    "refresh_token": "12387n293mo4if28734j9rm28d34r",
     "_links": {
         "self": "/api/users/2/discord",
         "user": "/api/users/2"
@@ -274,7 +277,8 @@ Input:
 <pre>{
     'discord_id': '123491203481209348123',
     'access_token': '31r234d123ecdx134fe234d',
-    'refresh_token': '12w1ce2f234cs243ew'
+    'refresh_token': '12w1ce2f234cs243ew',
+    'expires_in': 604800
 }</pre>
 </details>
 <details>
