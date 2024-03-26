@@ -441,12 +441,12 @@ def request_password_reset():
     if 'email' in data and check_email_exists(data['email']):
         raise ResourceNotFound(f"User with email {data['email']}")
 
-    user = db.session.query(User).filter(
-        sa.or_(
-            User.email == data['email'],
-            User.username == data['username']
-        )
-    ).first()
+    if 'email' in data:
+        query = (User.email == data['email'])
+    else:
+        query = (User.username == data['username'])
+
+    user = db.session.query(User).filter(query).first()
 
     if user is None:
         raise error_response(501, 'Username or email matched but unable to load the user')
