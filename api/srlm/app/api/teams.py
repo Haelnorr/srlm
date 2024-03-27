@@ -12,6 +12,7 @@ log = get_logger(__name__)
 @bp.route('/teams', methods=['GET'])
 @req_app_token
 def get_teams():
+    # handle ?player_id=
     pass
 
 

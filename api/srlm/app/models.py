@@ -2,7 +2,7 @@ import jwt
 import secrets
 from time import time
 from datetime import datetime, timedelta, timezone
-
+import sqlalchemy as sa
 from sqlalchemy.ext.associationproxy import association_proxy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import current_app, url_for
@@ -180,11 +180,13 @@ class UserPermissions(db.Model):
     def to_dict(self):
         data = {
             'id': self.permission.id,
+            'user': self.user.username,
             'key': self.permission.key,
             'description': self.permission.description,
             'modifiers': self.additional_modifiers,
             '_links': {
-                'self': url_for('api.get_permission', perm_id=self.permission.id)
+                'self': url_for('api.get_permission', perm_id=self.permission.id),
+                'user': url_for('api.get_user', user_id=self.user_id),
             }
         }
         return data
@@ -264,7 +266,7 @@ class Twitch(db.Model):
         self.token_expiration = now + timedelta(seconds=int(data['expires_in']))
 
 
-class Player(db.Model):
+class Player(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     slap_id = db.Column(db.Integer, unique=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -284,6 +286,41 @@ class Player(db.Model):
     awards_association = db.relationship('PlayerAward', back_populates='player', lazy=True)
     awards = association_proxy('awards_association', 'award')
 
+    def __repr__(self):
+        return f'<Player {self.player_name} ({self.user.username})>'
+
+    def to_dict(self):
+        now = datetime.now(timezone.utc)
+        current_team_q = self.teams.query.filter(sa.and_(self.team_association.has(PlayerTeam.start_date < now),
+                                                         self.team_association.is_(None)))
+        current_team = current_team_q.first()
+        data = {
+            'player_name': self.player_name,
+            'user': self.user.username,
+            'slap_id': self.slap_id,
+            'rookie': self.rookie,
+            'first_season': self.first_season.get_readable_name(),
+            'next_name_change': self.token_expiration,
+            'current_team': current_team.name,
+            'teams': self.teams.query.count(sa.distinct(PlayerTeam.team_id)),
+            'free_agent': None,
+            '_links': {
+                'self': url_for('api.get_player', player_id=self.id),
+                'user': url_for('api.get_user', user_id=self.user_id),
+                'first_season': url_for('api.get_season_division', season_division_id=self.first_season_id),
+                'current_team': url_for('api.get_team', team_id=current_team.id),
+                'teams': url_for('api.get_teams', player_id=self.id),
+                'free_agent': None
+            }
+        }
+
+        return data
+
+    def from_dict(self, data):
+        for field in ['player_name', 'slap_id', 'rookie', 'first_season', 'next_name_change']:
+            if field in data:
+                setattr(self, field, data[field])
+
 
 # this is a helper table for recording which teams played in which season and in which division
 season_division_team = db.Table('season_division_team',
@@ -292,7 +329,7 @@ season_division_team = db.Table('season_division_team',
                                 )
 
 
-class Team(db.Model):
+class Team(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True, unique=True, nullable=False)
     acronym = db.Column(db.String(5), index=True, unique=True, nullable=False)
@@ -303,14 +340,6 @@ class Team(db.Model):
     player_association = db.relationship('PlayerTeam', back_populates='team')
     players = association_proxy('player_association', 'player')
     season_divisions = db.relationship('SeasonDivision', secondary=season_division_team, back_populates='teams')
-    """matches_won = db.relationship('MatchResult', back_populates='winner', lazy=True)
-    matches_lost = db.relationship('MatchResult', back_populates='loser', lazy=True)
-    matches_home = db.relationship('Match', back_populates='home_team', lazy=True)
-    matches_away = db.relationship('Match', back_populates='away_team', lazy=True)
-    finals_won = db.relationship('FinalResult', back_populates='winner', lazy=True)
-    finals_lost = db.relationship('FinalResult', back_populates='loser', lazy=True)
-    finals_home = db.relationship('Final', back_populates='home_team', lazy=True)
-    finals_away = db.relationship('Final', back_populates='away_team', lazy=True)"""
     player_match_data = db.relationship('PlayerMatchData', back_populates='team')
     awards_association = db.relationship('TeamAward', back_populates='team', lazy=True)
     awards = association_proxy('awards_association', 'award')
@@ -376,6 +405,7 @@ class League(db.Model):
 class Season(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True, nullable=False)
+    acronym = db.Column(db.String(5), nullable=False)
     league_id = db.Column(db.Integer, db.ForeignKey('league.id'), nullable=False)
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
@@ -395,6 +425,7 @@ class Season(db.Model):
         data = {
             'id': self.id,
             'name': self.name,
+            'acronym': self.acronym,
             'league': self.league.acronym,
             'start_date': self.start_date,
             'end_date': self.start_date,
@@ -412,7 +443,7 @@ class Season(db.Model):
         return data
 
     def from_dict(self, data):
-        for field in ['name', 'league', 'start_date', 'end_date', 'finals_start', 'finals_end', 'match_type']:
+        for field in ['name', 'acronym', 'league', 'start_date', 'end_date', 'finals_start', 'finals_end', 'match_type']:
             if field in data:
                 setattr(self, field, data[field])
 
@@ -421,7 +452,7 @@ class Division(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)
     league_id = db.Column(db.Integer, db.ForeignKey('league.id'), nullable=False)
-    acronym = db.Column(db.String(5), nullable=False, unique=True, index=True)
+    acronym = db.Column(db.String(5), nullable=False)
     description = db.Column(db.String(128))
 
     league = db.relationship('League', back_populates='divisions')
@@ -471,6 +502,12 @@ class SeasonDivision(db.Model):
 
     def __repr__(self):
         return f'<SeasonDivision | {self.season.name} | Division: {self.division.name} | {self.league.acronym}>'
+
+    def get_readable_name(self):
+        return self.season.name + ' ' + self.division.name
+
+    def get_acronym(self):
+        return self.season.acronym + self.division.acronym
 
     def to_dict(self):
         data = {

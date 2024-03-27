@@ -54,6 +54,12 @@ def register_player_team(player_id):
     pass
 
 
+@bp.route('/players/<int:player_id>/teams', methods=['DELETE'])
+@req_app_token
+def deregister_player_team(player_id):
+    pass
+
+
 @bp.route('/players/<int:player_id>/free_agent', methods=['POST'])
 @req_app_token
 def register_player_free_agent(player_id):
