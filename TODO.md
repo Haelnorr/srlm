@@ -1,14 +1,16 @@
 # TODO
 
 **Before next PR**
-- api endpoints
-   - league
-   - division
-   - season
+ - api endpoints
+   - ~~league~~
+   - ~~division~~
+   - ~~season~~
    - player
    - team
    - player_team
    - free agent
+ - convert all old routes (users/permissions) to using new helper functions 
+ - change responses of POST/PUT (users/permissions) functions to new format (success code + link)
 
 
 **For next deployment**

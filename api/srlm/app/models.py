@@ -370,13 +370,13 @@ class FreeAgent(db.Model):
     season_division = db.relationship('SeasonDivision', back_populates='free_agent_association')
 
 
-class League(db.Model):
+class League(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True, unique=True, nullable=False)
     acronym = db.Column(db.String(5), unique=True, nullable=False)
 
-    seasons = db.relationship('Season', back_populates='league', lazy=True)
-    divisions = db.relationship('Division', back_populates='league', lazy=True)
+    seasons = db.relationship('Season', back_populates='league', lazy='dynamic')
+    divisions = db.relationship('Division', back_populates='league', lazy='dynamic')
 
     def __repr__(self):
         return f'<League {self.name} | {self.acronym}>'
@@ -386,7 +386,7 @@ class League(db.Model):
             'id': self.id,
             'name': self.name,
             'acronym': self.acronym,
-            'seasons_count': len(self.seasons),
+            'seasons_count': self.seasons.count(),
             'divisions_count': len(self.divisions),
             '_links': {
                 'self': url_for('api.get_league', league_id=self.id),
@@ -402,7 +402,7 @@ class League(db.Model):
                 setattr(self, field, data[field])
 
 
-class Season(db.Model):
+class Season(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True, nullable=False)
     acronym = db.Column(db.String(5), nullable=False)
@@ -414,7 +414,7 @@ class Season(db.Model):
     match_type_id = db.Column(db.Integer, db.ForeignKey('matchtype.id'))
 
     league = db.relationship('League', back_populates='seasons')
-    division_association = db.relationship('SeasonDivision', back_populates='season')
+    division_association = db.relationship('SeasonDivision', back_populates='season', lazy='dynamic')
     divisions = association_proxy('division_association', 'division')
     match_type = db.relationship('Matchtype', back_populates='seasons')
 
@@ -436,19 +436,19 @@ class Season(db.Model):
             '_links': {
                 'self': url_for('api.get_season', season_id=self.id),
                 'league': url_for('api.get_league', league_id=self.league_id),
-                'match_type': url_for('api.get_match_type', match_type_id=self.match_type_id),
+                'match_type': None, #url_for('api.get_match_type', match_type_id=self.match_type_id),
                 'divisions': url_for('api.get_divisions_in_season', season_id=self.id)
             }
         }
         return data
 
     def from_dict(self, data):
-        for field in ['name', 'acronym', 'league', 'start_date', 'end_date', 'finals_start', 'finals_end', 'match_type']:
+        for field in ['name', 'acronym', 'league_id', 'start_date', 'end_date', 'finals_start', 'finals_end', 'match_type']:
             if field in data:
                 setattr(self, field, data[field])
 
 
-class Division(db.Model):
+class Division(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)
     league_id = db.Column(db.Integer, db.ForeignKey('league.id'), nullable=False)
@@ -456,7 +456,7 @@ class Division(db.Model):
     description = db.Column(db.String(128))
 
     league = db.relationship('League', back_populates='divisions')
-    season_association = db.relationship('SeasonDivision', back_populates='division')
+    season_association = db.relationship('SeasonDivision', back_populates='division', lazy='dynamic')
     seasons = association_proxy('season_association', 'season')
 
     def __repr__(self):
@@ -479,12 +479,12 @@ class Division(db.Model):
         return data
 
     def from_dict(self, data):
-        for field in ['name', 'acronym', 'league', 'description']:
+        for field in ['name', 'acronym', 'league_id', 'description']:
             if field in data:
                 setattr(self, field, data[field])
 
 
-class SeasonDivision(db.Model):
+class SeasonDivision(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     season_id = db.Column(db.Integer, db.ForeignKey('season.id'))
     division_id = db.Column(db.Integer, db.ForeignKey('division.id'))
@@ -515,7 +515,7 @@ class SeasonDivision(db.Model):
             'season': self.season.name,
             'division': self.division.name,
             'league': self.season.league.acronym,
-            'teams_count': self.description,
+            'teams_count': len(self.teams),
             'free_agents_count': len(self.free_agents),
             'rookies_count': len(self.rookies),
             'matches_count': len(self.matches),
@@ -581,10 +581,10 @@ class Matchtype(db.Model):
     name = db.Column(db.String(32), nullable=False, unique=True)
     description = db.Column(db.String(128))
     periods = db.Column(db.Boolean, nullable=False, default=True)
-    arena = db.Column(db.String(32), nullable=False, default='Slapstadium')
+    arena = db.Column(db.String(32), db.ForeignKey('arena.value'), nullable=False)
     mercy_rule = db.Column(db.Integer, nullable=False, default=0)
     match_length = db.Column(db.Integer, nullable=False, default=300)
-    game_mode = db.Column(db.String(32), nullable=False, default='hockey')
+    game_mode = db.Column(db.String(32), db.ForeignKey('game_mode.value'), nullable=False)
 
     seasons = db.relationship('Season', back_populates='match_type', lazy=True)
 

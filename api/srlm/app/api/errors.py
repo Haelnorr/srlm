@@ -1,5 +1,5 @@
 from werkzeug.http import HTTP_STATUS_CODES
-from werkzeug.exceptions import HTTPException, abort
+from werkzeug.exceptions import HTTPException
 from api.srlm.app.api import bp
 
 
