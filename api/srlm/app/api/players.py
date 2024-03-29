@@ -62,7 +62,7 @@ def update_player(player_id):
     unique_fields = ['slap_id', 'player_name']
     valid_fields = ['slap_id', 'player_name', 'rookie', 'first_season_id']
 
-    force_unique(Player, data, unique_fields)
+    force_unique(Player, data, unique_fields, self_id=player.id)
     cleaned_data = clean_data(data, valid_fields)
 
     if 'first_season_id' in cleaned_data:
@@ -103,7 +103,20 @@ def deregister_player_team(player_id):
 def get_player_free_agent(player_id):
     pass
 
+
 @bp.route('/players/<int:player_id>/free_agent', methods=['POST'])
 @req_app_token
 def register_player_free_agent(player_id):
+    pass
+
+
+@bp.route('/players/<int:player_id>/awards', methods=['GET'])
+@req_app_token
+def get_player_awards(player_id):
+    pass
+
+
+@bp.route('/players/<int:player_id>/awards', methods=['POST'])
+@req_app_token
+def give_player_award(player_id):
     pass

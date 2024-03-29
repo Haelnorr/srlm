@@ -760,6 +760,7 @@ Gets a list of divisions in the specified season. Optional args and defaults: <c
 <summary><code>GET /api/players/{id}</code></summary>
 Gets the specified player.
 <pre>{
+    "id": 1,
     "player_name": "Eagle",
     "slap_id": 155,
     "user": null,
@@ -770,18 +771,19 @@ Gets the specified player.
     "free_agent_seasons": 0,
     "next_name_change": null,
     "_links": {
+        "self": "/api/players/1",
+        "user": "/api/users/1",
         "current_team": null,
         "first_season": "/api/season_division/1",
         "free_agent_seasons": "/api/players/1/free_agent",
-        "self": "/api/players/1",
         "teams": "/api/players/1/teams",
-        "user": "/api/users/1"
+        "awards": "/api/teams/1/awards"
     }
 }</pre>
 </details>
 <details>
 <summary><code>GET /api/players</code></summary>
-Gets the collection of all players
+Gets the collection of all players. Optional args and defaults:<code>page=1, per_page=10 (max 100)</code>
 <pre>{
     "items": [
         { ... player item ... }
@@ -814,13 +816,86 @@ Creates a new user.
 </details>
 <details>
 <summary><code>PUT /api/players/{id}</code></summary>
-Updates a user.
+Updates a player.
 <pre># Italicised fields are optional
 {
     <em>"player_name": "BestRookie",</em>
     <em>"slap_id": 1213456,</em>
     <em>"rookie": true,</em>
     <em>"first_season_id": 42</em>
+}</pre>
+</details>
+</ul>
+</details>
+<br><details>
+<summary><b>Teams</b></summary>
+<ul>
+<details>
+<summary><code>GET /api/teams/{id}</code></summary>
+Gets the specified team.
+<pre>{
+    "id": 3,
+    "name": "100 Throws",
+    "acronym": "100",
+    "active_players": 0,
+    "awards": 0,
+    "color": "9cd9e0",
+    "founded_date": null,
+    "logo": false,
+    "seasons_played": 0,
+    "_links": {
+        "active_players": "/api/teams/3/players?current=True",
+        "awards": "/api/teams/3/awards",
+        "logo": null,
+        "seasons_played": "/api/teams/3/seasons",
+        "self": "/api/teams/3"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>GET /api/teams</code></summary>
+Gets the collection of all teams. Optional args and defaults:<code>page=1, per_page=10 (max 100)</code>
+<pre>{
+    "items": [
+        { ... team item ... }
+        { ... team item ... }
+        ...
+    ],
+    "_meta": {
+        "page": 1,
+        "per_page": 10,
+        "total_items": 1,
+        "total_pages": 1
+    },
+    "_links": {
+        "next": null,
+        "prev": null,
+        "self": "/api/teams?page=1&per_page=10"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>POST /api/teams</code></summary>
+Creates a new team.
+<pre># Italicised fields are optional
+{
+    "name": "Best New Team",
+    "acronym": "BNT",
+    <em>"color": "9cd9e0",</em>
+    <em>"logo": "/path/to/logo",</em> 
+    <em>"founded_date": 2024-03-29</em>
+}</pre>
+</details>
+<details>
+<summary><code>PUT /api/teams/{id}</code></summary>
+Updates a team.
+<pre># Italicised fields are optional
+{
+    <em>"name": "Best New Team",</em>
+    <em>"acronym": "BNT",</em>
+    <em>"color": "9cd9e0",</em>
+    <em>"logo": "/path/to/logo",</em> 
+    <em>"founded_date": 2024-03-29</em>
 }</pre>
 </details>
 </ul>

@@ -299,6 +299,7 @@ class Player(PaginatedAPIMixin, db.Model):
             if team.id not in unique_teams:
                 unique_teams.append(team.id)
         data = {
+            'id': self.id,
             'player_name': self.player_name,
             'user': self.user.username if self.user else None,
             'slap_id': self.slap_id,
@@ -308,13 +309,15 @@ class Player(PaginatedAPIMixin, db.Model):
             'current_team': current_team.team.name if current_team else None,
             'teams': len(unique_teams),
             'free_agent_seasons': len(self.seasons),
+            'awards': len(self.awards_association),
             '_links': {
                 'self': url_for('api.get_player', player_id=self.id),
                 'user': url_for('api.get_user', user_id=self.user_id) if self.user else None,
                 'first_season': url_for('api.get_season_division', season_division_id=self.first_season_id),
                 'current_team': url_for('api.get_team', team_id=current_team.team.id) if current_team else None,
                 'teams': url_for('api.get_player_teams', player_id=self.id),
-                'free_agent_seasons': url_for('api.get_player_free_agent', player_id=self.id)
+                'free_agent_seasons': url_for('api.get_player_free_agent', player_id=self.id),
+                'awards': url_for('api.get_team_awards', team_id=self.id)
             }
         }
 
@@ -341,13 +344,45 @@ class Team(PaginatedAPIMixin, db.Model):
     logo = db.Column(db.String(128))
     founded_date = db.Column(db.DateTime)
 
-    player_association = db.relationship('PlayerTeam', back_populates='team')
+    player_association = db.relationship('PlayerTeam', back_populates='team', lazy='dynamic')
     players = association_proxy('player_association', 'player')
     season_divisions = db.relationship('SeasonDivision', secondary=season_division_team, back_populates='teams')
     player_match_data = db.relationship('PlayerMatchData', back_populates='team')
     awards_association = db.relationship('TeamAward', back_populates='team', lazy=True)
     awards = association_proxy('awards_association', 'award')
     match_availability = db.relationship('MatchAvailability', back_populates='team', lazy=True)
+
+    def __repr__(self):
+        return f'<Team {self.name} ({self.acronym})>'
+
+    def to_dict(self):
+        now = datetime.now(timezone.utc)
+        active_players = self.player_association.filter(sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'acronym': self.acronym,
+            'founded_date': self.founded_date,
+            'color': self.color,
+            'logo': True if self.logo else False,
+            'active_players': active_players.count(),
+            'seasons_played': len(self.season_divisions),
+            'awards': len(self.awards_association),
+            '_links': {
+                'self': url_for('api.get_team', team_id=self.id),
+                'logo': self.logo,
+                'active_players': url_for('api.get_team_players', team_id=self.id, current=True),
+                'seasons_played': url_for('api.get_team_seasons', team_id=self.id),
+                'awards': url_for('api.get_team_awards', team_id=self.id)
+            }
+        }
+
+        return data
+
+    def from_dict(self, data):
+        for field in ['name', 'acronym', 'color', 'logo', 'founded_date']:
+            if field in data:
+                setattr(self, field, data[field])
 
 
 # this is a helper table for recording which players were a part of which team and when (aka 'roster')
