@@ -154,7 +154,7 @@ class Permission(PaginatedAPIMixin, db.Model):
             'description': self.description,
             'users_count': len(self.users),
             '_links': {
-                'self': url_for('api.get_permission', perm_id=self.id)
+                'self': url_for('api.get_permission', perm_id_or_key=self.id)
             }
         }
         return data
@@ -185,7 +185,7 @@ class UserPermissions(db.Model):
             'description': self.permission.description,
             'modifiers': self.additional_modifiers,
             '_links': {
-                'self': url_for('api.get_permission', perm_id=self.permission.id),
+                'self': url_for('api.get_permission', perm_id_or_key=self.permission.id),
                 'user': url_for('api.get_user', user_id=self.user_id),
             }
         }
@@ -374,9 +374,11 @@ class League(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True, unique=True, nullable=False)
     acronym = db.Column(db.String(5), unique=True, nullable=False)
+    server_region_value = db.Column(db.String(32), db.ForeignKey('server_region.value'))
 
     seasons = db.relationship('Season', back_populates='league', lazy='dynamic')
     divisions = db.relationship('Division', back_populates='league', lazy='dynamic')
+    server_region = db.relationship('ServerRegion', back_populates='leagues')
 
     def __repr__(self):
         return f'<League {self.name} | {self.acronym}>'
@@ -387,11 +389,11 @@ class League(PaginatedAPIMixin, db.Model):
             'name': self.name,
             'acronym': self.acronym,
             'seasons_count': self.seasons.count(),
-            'divisions_count': len(self.divisions),
+            'divisions_count': self.divisions.count(),
             '_links': {
-                'self': url_for('api.get_league', league_id=self.id),
-                'seasons': url_for('api.get_league_seasons', league_id=self.id),
-                'divisions': url_for('api.get_league_divisions', league_id=self.id)
+                'self': url_for('api.get_league', league_id_or_acronym=self.id),
+                'seasons': url_for('api.get_league_seasons', league_id_or_acronym=self.id),
+                'divisions': url_for('api.get_league_divisions', league_id_or_acronym=self.id)
             }
         }
         return data
@@ -407,10 +409,10 @@ class Season(PaginatedAPIMixin, db.Model):
     name = db.Column(db.String(64), index=True, nullable=False)
     acronym = db.Column(db.String(5), nullable=False)
     league_id = db.Column(db.Integer, db.ForeignKey('league.id'), nullable=False)
-    start_date = db.Column(db.DateTime)
-    end_date = db.Column(db.DateTime)
-    finals_start = db.Column(db.DateTime)
-    finals_end = db.Column(db.DateTime)
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+    finals_start = db.Column(db.Date)
+    finals_end = db.Column(db.Date)
     match_type_id = db.Column(db.Integer, db.ForeignKey('matchtype.id'))
 
     league = db.relationship('League', back_populates='seasons')
@@ -432,10 +434,10 @@ class Season(PaginatedAPIMixin, db.Model):
             'finals_start': self.finals_start,
             'finals_end': self.finals_end,
             'match_type': self.match_type.name,
-            'divisions_count': len(self.divisions),
+            'divisions_count': self.division_association.count(),
             '_links': {
                 'self': url_for('api.get_season', season_id=self.id),
-                'league': url_for('api.get_league', league_id=self.league_id),
+                'league': url_for('api.get_league', league_id_or_acronym=self.league_id),
                 'match_type': None, #url_for('api.get_match_type', match_type_id=self.match_type_id),
                 'divisions': url_for('api.get_divisions_in_season', season_id=self.id)
             }
@@ -443,7 +445,7 @@ class Season(PaginatedAPIMixin, db.Model):
         return data
 
     def from_dict(self, data):
-        for field in ['name', 'acronym', 'league_id', 'start_date', 'end_date', 'finals_start', 'finals_end', 'match_type']:
+        for field in ['name', 'acronym', 'league_id', 'start_date', 'end_date', 'finals_start', 'finals_end', 'match_type_id']:
             if field in data:
                 setattr(self, field, data[field])
 
@@ -469,10 +471,10 @@ class Division(PaginatedAPIMixin, db.Model):
             'acronym': self.acronym,
             'league': self.league.acronym,
             'description': self.description,
-            'seasons_count': len(self.seasons),
+            'seasons_count': self.season_association.count(),
             '_links': {
-                'self': url_for('api.get_league', league_id=self.id),
-                'league': url_for('api.get_league', league_id=self.league_id),
+                'self': url_for('api.get_league', league_id_or_acronym=self.id),
+                'league': url_for('api.get_league', league_id_or_acronym=self.league_id),
                 'seasons': url_for('api.get_seasons_of_division', division_id=self.id)
             }
         }
@@ -521,8 +523,8 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
             'matches_count': len(self.matches),
             'finals_count': len(self.finals),
             '_links': {
-                'self': url_for('api.get_league', league_id=self.id),
-                'league': url_for('api.get_league', league_id=self.season.league_id),
+                'self': url_for('api.get_league', league_id_or_acronym=self.id),
+                'league': url_for('api.get_league', league_id_or_acronym=self.season.league_id),
                 'season': url_for('api.get_season', season_id=self.season_id),
                 'division': url_for('api.get_division', division_id=self.division_id),
                 'teams': url_for('api.get_teams_in_season_division', season_division_id=self.id),
@@ -738,6 +740,9 @@ class ServerRegion(db.Model):
     value = db.Column(db.String(32), primary_key=True)
     label = db.Column(db.String(32), unique=True, nullable=False)
     info = db.Column(db.String(64))
+    utc_offset = db.Column(db.String(7))
+
+    leagues = db.relationship('League', back_populates='server_region')
 
 
 class Arena(db.Model):

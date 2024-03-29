@@ -21,10 +21,10 @@ def get_leagues():
     return League.to_collection_dict(sa.select(League), page, per_page, 'api.get_leagues')
 
 
-@bp.route('/leagues/<int:league_id>', methods=['GET'])
+@bp.route('/leagues/<league_id_or_acronym>', methods=['GET'])
 @req_app_token
-def get_league(league_id):
-    league = ensure_exists(League, id=league_id)
+def get_league(league_id_or_acronym):
+    league = ensure_exists(League, join_method='or', id=league_id_or_acronym, acronym=league_id_or_acronym)
     if league:
         return league.to_dict()
 
@@ -45,15 +45,15 @@ def add_leagues():
     db.session.add(league)
     db.session.commit()
 
-    return responses.create_success(f'League {league.name} added', 'api.get_league', league_id=league.id)
+    return responses.create_success(f'League {league.name} added', 'api.get_league', league_id_or_acronym=league.id)
 
 
-@bp.route('/leagues/<int:league_id>', methods=['PUT'])
+@bp.route('/leagues/<league_id_or_acronym>', methods=['PUT'])
 @req_app_token
-def update_leagues(league_id):
+def update_leagues(league_id_or_acronym):
     data = request.get_json()
 
-    league = ensure_exists(League, id=league_id)
+    league = ensure_exists(League, join_method='or', id=league_id_or_acronym, acronym=league_id_or_acronym)
 
     unique_fields = valid_fields = ['name', 'acronym']
     force_unique(League, data, unique_fields)
@@ -63,20 +63,20 @@ def update_leagues(league_id):
 
     db.session.commit()
 
-    return responses.update_success(f'League {league.name} updated', 'api.get_league', league_id=league.id)
+    return responses.request_success(f'League {league.name} updated', 'api.get_league', league_id_or_acronym=league.id)
 
 
-@bp.route('/leagues/<int:league_id>/seasons', methods=['GET'])
+@bp.route('/leagues/<league_id_or_acronym>/seasons', methods=['GET'])
 @req_app_token
-def get_league_seasons(league_id):
+def get_league_seasons(league_id_or_acronym):
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 10, type=int), 100)
 
-    league = ensure_exists(League, id=league_id)
+    league = ensure_exists(League, join_method='or', id=league_id_or_acronym, acronym=league_id_or_acronym)
 
     query = league.seasons.order_by(Season.start_date.desc())
 
-    seasons = Season.to_collection_dict(query, page, per_page, 'api.get_league_seasons', league_id=league_id)
+    seasons = Season.to_collection_dict(query, page, per_page, 'api.get_league_seasons', league_id_or_acronym=league.id)
 
     response = {
         'league': league.name,
@@ -87,15 +87,15 @@ def get_league_seasons(league_id):
     return response
 
 
-@bp.route('/leagues/<int:league_id>/divisions', methods=['GET'])
+@bp.route('/leagues/<league_id_or_acronym>/divisions', methods=['GET'])
 @req_app_token
-def get_league_divisions(league_id):
+def get_league_divisions(league_id_or_acronym):
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 10, type=int), 100)
 
-    league = ensure_exists(League, id=league_id)
+    league = ensure_exists(League, join_method='or', id=league_id_or_acronym, acronym=league_id_or_acronym)
 
-    divisions = Division.to_collection_dict(league.divisions, page, per_page, 'api.get_league_divisions', league_id=league_id)
+    divisions = Division.to_collection_dict(league.divisions, page, per_page, 'api.get_league_divisions', league_id_or_acronym=league.id)
 
     response = {
         'league': league.name,

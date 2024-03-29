@@ -11,7 +11,7 @@ def create_success(message, api, **kwargs):
     return payload, 201
 
 
-def update_success(message, api, **kwargs):
+def request_success(message, api, **kwargs):
     payload = {
         'result': HTTP_STATUS_CODES.get(200),
         'message': message,

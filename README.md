@@ -1,5 +1,6 @@
 <h2>Endpoints</h2>
-
+All requests return a JSON with some information on the outcome. Successful GET requests are documented under their 
+respective headings. For more details on success/error responses, see the sections at the bottom.
 <details>
 <summary><b>Auth</b></summary>
 The API has a two key system for authorization. An app key required for all requests, and a user key required for 
@@ -18,47 +19,45 @@ should be 66 characters.
 
 <details>
 <summary>
-POST /api/tokens/user
+<code>POST /api/tokens/user</code>
 </summary>
 Requests an auth token for a user, provided a valid username and password. Returns 401 error if unauthorized.<br>
 Username:password should be submitted using a Basic Authorization header and DOES NOT require an app code<br>
 Tokens expire after 14 days unless otherwise specified.
-Response:
 <pre>{
     "token": "a3b67df3547a49e6cd338a05c442d666"
 }</pre>
 </details>
 <details>
 <summary>
-DELETE /api/tokens/user
+<code>DELETE /api/tokens/user</code>
 </summary>
 Revokes the auth token of the current user. <b>Requires user auth token</b><br>
 Useful for logging a user out<br>
-Successful operation will return <code>204 NO CONTENT</code>
 </details>
 <details>
 <summary>
-POST /api/tokens/user/validate
+<code>POST /api/tokens/user/validate</code>
 </summary>
-Checks if a user auth token is still valid. <b>Requires user auth token</b><br>
-Useful for checking if user is logged in. Returns <code>{"error": "Unauthorized"}</code> if token is not valid.<br>
+Checks if user auth token submitted is still valid. <b>Requires user auth token</b><br>
+Useful for checking if user is logged in. Returns <code>403 FORBIDDEN</code> if token is not valid.<br>
 <pre>{
+    "user": 2,
+    "expires": "Tue, 26 Mar 2024 03:16:34 GMT",
     "_links": {
         "user": "/api/users/2"
-    },
-    "expires": "Tue, 26 Mar 2024 03:16:34 GMT",
-    "user": 2
+    }
 }
 </pre>
 </details>
 <details>
 <summary>
-GET /api/tokens/app
+<code>GET /api/tokens/app</code>
 </summary>
 Gets the token and expiry date of the current app token.<br>
 Since it requires a valid app token to access, 
 and only gives details on that token, only really useful for getting the expiry date<br>
-Response:
+
 <pre>{
     "expiry": "Tue, 23 Apr 2024 23:02:17 GMT",
     "token": "4ded8ce3796b368e93c5f87d36a7def051"
@@ -67,12 +66,11 @@ Response:
 </details>
 <details>
 <summary>
-POST /api/tokens/app
+<code>POST /api/tokens/app</code>
 </summary>
 Requests a new app token and resets the expiry date.<br>
 Requires a valid app token to access, 
-and only gives works on the app that token is assigned to.<br>
-Response:
+and cannot be used to reset another authorized app's token.<br>
 <pre>{
     "expiry": "Tue, 23 Apr 2024 23:02:17 GMT",
     "token": "4ded8ce3796b368e93c5f87d36a7def051"
@@ -87,37 +85,8 @@ Response:
 <summary><u>General</u></summary>
 <ul>
 <details>
-    <summary>GET /api/users/{int:id}</summary>
-    Gets the user data of a user specified by their user id. The list of permissions in this result returns the keys 
-only. For a full list see <code>GET /api/users/{int:id}/permissions</code>
-    <br>
-    Example response: 
-    <pre>
-{
-    "id": 1,
-    "username": "Admin",
-    "email": "admin@email.com", # only returned if the user requested their own data
-    "player": 1,                # can be null
-    "discord": 34234523452345,  # can be null
-    "permissions": [
-        "admin"
-    ],
-    "matches_streamed": 0,
-    "matches_reviewed": 0,
-    "reset_pass": false,
-    "_links": {
-        "self": "/api/users/1",
-        "player": "/api/players/1",         # can be null
-        "discord": "/api/users/1/discord",  # can be null
-        "permissions": "/api/users/1/permissions",
-        "matches_streamed": "/api/users/1/matches_streamed",
-        "matches_reviewed": "/api/users/1/matches_reviewed",
-    }
-}</pre>
-</details>
-<details>
-    <summary>GET /api/users?page=1&per_page=10</summary>
-    Gets list of all users. <code>page</code> and <code>per_page</code> are optional with defaults 1 and 10. Max per page is 100
+    <summary><code>GET /api/users</code></summary>
+    Gets list of all users. Optional args and defaults:<code>page=1, per_page=10 (max 100)</code>
     <pre>
 {
     "items": [
@@ -139,8 +108,35 @@ only. For a full list see <code>GET /api/users/{int:id}/permissions</code>
 }</pre>
 </details>
 <details>
-<summary>POST /api/users</summary>
-Creates a new user and returns the user in the same form as <code>GET /api/users/{int:id}</code>; or returns an error. All fields listed below are mandatory
+    <summary><code>GET /api/users/{id}</code></summary>
+    Gets the user data of a user specified by their user id. The list of permissions in this result returns the keys 
+only. For a full list see <code>GET /api/users/{int:id}/permissions</code><br>
+<code>email</code> is only returned if that user's token is submitted in the request
+    <pre>{
+    "id": 1,
+    "username": "Admin",
+    "email": "admin@email.com", # only returned if the user requested their own data
+    "player": 1,
+    "discord": 34234523452345,
+    "permissions": [
+        "admin"
+    ],
+    "matches_streamed": 0,
+    "matches_reviewed": 0,
+    "reset_pass": false,
+    "_links": {
+        "self": "/api/users/1",
+        "player": "/api/players/1",
+        "discord": "/api/users/1/discord",
+        "permissions": "/api/users/1/permissions",
+        "matches_streamed": "/api/users/1/matches_streamed",
+        "matches_reviewed": "/api/users/1/matches_reviewed",
+    }
+}</pre>
+</details>
+<details>
+<summary><code>POST /api/users</code></summary>
+Creates a new user. Returns a <code>201 CREATED</code>
 <pre>
 {
     "username": string, must be unique,
@@ -149,10 +145,14 @@ Creates a new user and returns the user in the same form as <code>GET /api/users
 }</pre>
 </details>
 <details>
-<summary>PUT /api/users/{int:id}</summary>
+<summary><code>PUT /api/users/{int:id}</code></summary>
 <b>Requires user auth token</b> - users are only authorized to change their own details<br>
-Modifies a user. Same format as creating a user, except fields are optional and password cannot be changed using this method.<br>
-If a users password is change, it will set the <code>reset_pass</code> field on that user to False.<br>
+Modifies a user. Returns <code>200 OK</code><br>
+<pre># <em>italicised</em> fields are optional 
+{
+    <em>"username": "Admin"</em>,
+    <em>"email": "admin@email.com"</em>
+}</pre>
 </details>
 </ul>
 </details>
@@ -160,14 +160,17 @@ If a users password is change, it will set the <code>reset_pass</code> field on 
 <summary><u>Passwords</u></summary>
 <ul>
 <details>
-<summary>POST /api/users/{int:id}/new_password</summary>
+<summary><code>POST /api/users/{id}/new_password</code></summary>
 <b>Requires user auth token</b> - users are only authorized to change their own details<br>
-Changes the users password. Set the <code>password</code> field to specify the new password<br>
-Revokes the current token and returns a new one.
-This will also set the <code>reset_pass</code> field on the to False.<br>
+Changes the users password. 
+This will also set the re-issue the user token and set the <code>reset_pass</code> field on the user to False.<br>
+Response is the new token.
+<pre>{
+    "password": "newpassword"
+}</pre>
 </details>
 <details>
-<summary>POST /api/users/forgot_password</summary>
+<summary><code>POST /api/users/forgot_password</code></summary>
 Requests a reset password email for the specified user. Specify the user by either <code>username</code> 
 or <code>email</code> field. Only one is required. On success will send a password reset token to the users email, 
 which can be used to receive a temporary token. <br>
@@ -180,7 +183,7 @@ which can be used to receive a temporary token. <br>
 }</pre>
 </details>
 <details>
-<summary>GET /api/users/forgot_password/{temp_token}</summary>
+<summary><code>GET /api/users/forgot_password/{temp_token}</code></summary>
 Uses a temporary token sent to a user via email to get a temporary auth token. This will revoke the current token for
 that user, and set an expiry on the new token of 5 minutes. Will also set a <code>reset_pass</code> boolean to true on that user. It is recommended to force the user to change their
 password after doing this.<br>
@@ -196,7 +199,7 @@ password after doing this.<br>
 <summary><u>Permissions</u></summary>
 <ul>
 <details>
-<summary>GET /api/users/{int:id}/permissions</summary>
+<summary><code>GET /api/users/{id}/permissions</code></summary>
 Gets a detailed list of the users permissions
 <pre>{
     "username": "Admin",
@@ -219,34 +222,29 @@ Gets a detailed list of the users permissions
 }</pre>
 </details>
 <details>
-<summary>POST /api/users/{int:id}/permissions</summary>
-Gives the user specified by {id} the permission defined by field <code>key</code>.
-<br>Input:
+<summary><code>POST /api/users/{id}/permissions</code></summary>
+Gives the user the permission defined by field <code>key</code>.<br>
+Success returns <code>201 CREATED</code>
 <pre>{
     'key': 'admin',
     'modifiers': { # insert modifiers as a json }
 }</pre>
-On success returns the list of that users permissions.
 </details>
 <details>
-<summary>PUT /api/users/{int:id}/permissions</summary>
-Updates the the additional modifiers for user specified by {id} and the permission defined by field <code>key</code>.
+<summary><code>PUT /api/users/{id}/permissions</code></summary>
+Updates the additional modifiers for user specified by {id} and the permission defined by field <code>key</code>.
 <b>Overrides the modifiers tag completely with the new input</b>
-<br>Input:
 <pre>{
     'key': 'admin',
     'modifiers': { # insert modifiers as a json }
 }</pre>
-On success returns the list of that users permissions.
 </details>
 <details>
-<summary>POST /api/users/{int:id}/permissions/revoke</summary>
+<summary><code>POST /api/users/{id}/permissions/revoke</code></summary>
 Revokes the permission specified by <code>key</code>  for user specified by {id}
-<br>Input:
 <pre>{
     'key': 'admin'
 }</pre>
-On success returns the list of that users permissions.
 </details>
 </ul>
 </details>
@@ -254,7 +252,7 @@ On success returns the list of that users permissions.
 <summary><u>Discord</u></summary>
 <ul>
 <details>
-<summary>GET /api/users/{int:id}/discord</summary>
+<summary><code>GET /api/users/{id}/discord</code></summary>
 Gets the user's linked discord profile. If request sent including user auth code, will also return
 the access and refresh tokens
 <pre>{
@@ -270,10 +268,8 @@ the access and refresh tokens
 }</pre>
 </details>
 <details>
-<summary>POST /api/users/{int:id}/discord</summary>
-Creates a new entry in the database recording the users discord information. User must be authenticated. Returns the GET
-result on success<br>
-Input:
+<summary><code>POST /api/users/{id}/discord</code></summary>
+Creates a new entry in the database recording the users discord information. User must be authenticated.<br>
 <pre>{
     'discord_id': '123491203481209348123',
     'access_token': '31r234d123ecdx134fe234d',
@@ -282,12 +278,19 @@ Input:
 }</pre>
 </details>
 <details>
-<summary>PUT /api/users/{int:id}/discord</summary>
-Update a users discord information. User must be authenticated. Input and output same as creating user, except only one input is required for success
+<summary><code>PUT /api/users/{id}/discord</code></summary>
+Update a users discord information. User must be authenticated.
+<pre># All fields optional
+{
+    'discord_id': '123491203481209348123',
+    'access_token': '31r234d123ecdx134fe234d',
+    'refresh_token': '12w1ce2f234cs243ew',
+    'expires_in': 604800
+}</pre>
 </details>
 <details>
-<summary>DELETE /api/users/{int:id}/discord</summary>
-Removes a users discord information. User must be authenticated. Returns code 200 response on success
+<summary><code>DELETE /api/users/{id}/discord</code></summary>
+Removes a users discord information. User must be authenticated. Returns <code>200 OK</code> on success
 </details>
 </ul>
 </details>
@@ -295,7 +298,7 @@ Removes a users discord information. User must be authenticated. Returns code 20
 <summary><u>Twitch</u></summary>
 <ul>
 <details>
-<summary>GET /api/users/{int:id}/twitch</summary>
+<summary><code>GET /api/users/{id}/twitch</code></summary>
 Gets the user's linked Twitch profile. If request sent including user auth code, will also return
 the access and refresh tokens
 <pre>{
@@ -311,10 +314,8 @@ the access and refresh tokens
 }</pre>
 </details>
 <details>
-<summary>POST /api/users/{int:id}/twitch</summary>
-Creates a new entry in the database recording the users twitch information. User must be authenticated. Returns the GET
-result on success<br>
-Input:
+<summary><code>POST /api/users/{id}/twitch</code></summary>
+Creates a new entry in the database recording the users twitch information. User must be authenticated. Returns <code>201 CREATED</code> on success<br>
 <pre>{
     'twitch_id': '123491203481209348123',
     'access_token': '31r234d123ecdx134fe234d',
@@ -323,12 +324,19 @@ Input:
 }</pre>
 </details>
 <details>
-<summary>PUT /api/users/{int:id}/twitch</summary>
-Update a users twitch information. User must be authenticated. Input and output same as creating user, except only one input is required for success
+<summary><code>PUT /api/users/{id}/twitch</code></summary>
+Update a users twitch information. User must be authenticated. Returns <code>200 OK</code> on success
+<pre># all fields optional
+{
+    'twitch_id': '123491203481209348123',
+    'access_token': '31r234d123ecdx134fe234d',
+    'refresh_token': '12w1ce2f234cs243ew',
+    'expires_in': 604800
+}</pre>
 </details>
 <details>
-<summary>DELETE /api/users/{int:id}/twitch</summary>
-Removes a users twitch information. User must be authenticated. Returns code 200 response on success
+<summary><code>DELETE /api/users/{id}/twitch</code></summary>
+Removes a users twitch information. User must be authenticated. Returns <code>200 OK</code> response on success
 </details>
 </ul>
 </details>
@@ -341,8 +349,8 @@ Removes a users twitch information. User must be authenticated. Returns code 200
 This section is for requests regarding the permissions table. For assigning permissions to users, check the users section.
 <ul>
 <details>
-<summary>GET /api/permissions/{id}</summary>
-Returns a permission given its ID
+<summary><code>GET /api/permissions/{id_or_key}</code></summary>
+Returns a permission given its ID or unique key
 <pre>{
     "id": 1,
     "key": "admin",
@@ -354,8 +362,8 @@ Returns a permission given its ID
 }</pre>
 </details>
 <details>
-<summary>GET /api/permissions?page=1?per_page=10</summary>
-Get a list of all permissions. <code>page</code> and <code>per_page</code> are optional with defaults 1 and 10. Max per page is 100
+<summary><code>GET /api/permissions</code></summary>
+Get a list of all permissions. Optional args and defaults:<code>page=1, per_page=10 (max 100)</code>
 <pre>{
     "items": [
         { ... permission resource ... },
@@ -376,29 +384,25 @@ Get a list of all permissions. <code>page</code> and <code>per_page</code> are o
 }</pre>
 </details>
 <details>
-<summary>POST /api/permissions</summary>
-Creates a new permission. Input:
-<pre>{
+<summary><code>POST /api/permissions</code></summary>
+Creates a new permission.
+<pre># Italicised fields are optional
+{
     'key': 'admin',
-    'description: 'Site Administrator' # optional
-}</pre>
-Example output:
-<pre>{
-    "id": 3,
-    "key": "leag_coord",
-    "description": "League Coordinator",
-    "users_count": 0,
-    "_links": {
-        "self": "/api/permissions/3"
-    }
+    <em>'description: 'Site Administrator'</em>
 }</pre>
 </details>
 <details>
-<summary>PUT /api/permissions/{id}</summary>
-Exact same format as for adding a new permission, except that specifying a key is option
+<summary><code>PUT /api/permissions/{id_or_key}</code></summary>
+Updates an existing permission
+<pre># Italicised fields are optional
+{
+    <em>'key': 'admin',</em>
+    <em>'description: 'Site Administrator'</em>
+}</pre>
 </details>
 <details>
-<summary>GET /api/permissions/{int:id}/users</summary>
+<summary><code>GET /api/permissions/{id_or_key}/users</code></summary>
 Lists all the users who have the specified permission
 <pre>{
     "key": "admin",
@@ -418,6 +422,346 @@ Lists all the users who have the specified permission
 }</pre>
 </details>
 </ul>
+</details>
+<br><details>
+<summary><b>Leagues</b></summary>
+<ul>
+<details>
+<summary><code>GET /api/leagues</code></summary>
+Returns a list of all leagues. Optional args and defaults:<code>page=1, per_page=10 (max 100)</code>
+<pre>{
+    "items": [
+        { ... league item ... },
+        { ... league item ... },
+        ...
+    ],
+    "_meta": {
+        "page": 1,
+        "per_page": 10,
+        "total_items": 2,
+        "total_pages": 1
+    },
+    "_links": {
+        "next": null,
+        "prev": null,
+        "self": "/api/leagues?page=1&per_page=10"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>GET /api/leagues/{id_or_acronym}</code></summary>
+Returns a specified league
+<pre>{
+    "id": 1,
+    "name": "Oceanic Slapshot League",
+    "acronym": "OSL",
+    "seasons_count": 18,
+    "divisions_count": 3,
+    "_links": {
+        "self": "/api/leagues/1",
+        "seasons": "/api/leagues/1/seasons",
+        "divisions": "/api/leagues/1/divisions"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>POST /api/leagues</code></summary>
+Creates a new league with the specified details.
+<pre>{
+    "name": "Oceanic Slapshot League",
+    "acronym": "OSL"
+}</pre>
+<pre>{
+    "id": 1,
+    "name": "Oceanic Slapshot League",
+    "acronym": "OSL",
+    "seasons_count": 18,
+    "divisions_count": 3,
+    "_links": {
+        "self": "/api/leagues/1",
+        "seasons": "/api/leagues/1/seasons",
+        "divisions": "/api/leagues/1/divisions"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>PUT /api/leagues/{id_or_acronym}</code></summary>
+Updates a league with the specified details.
+<pre># Italicised fields are optional
+{
+    <em>"name": "Oceanic Slapshot League",</em>
+    <em>"acronym": "OSL"</em>
+}</pre>
+<pre>{
+    "id": 1,
+    "name": "Oceanic Slapshot League",
+    "acronym": "OSL",
+    "seasons_count": 18,
+    "divisions_count": 3,
+    "_links": {
+        "self": "/api/leagues/1",
+        "seasons": "/api/leagues/1/seasons",
+        "divisions": "/api/leagues/1/divisions"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>GET /api/leagues/{id_or_acronym}/seasons</code></summary>
+Gets a list of seasons in the specified league. Optional args and defaults: <code>page=1, per_page=10 (max 100)</code>
+<pre>{
+    "league": "Oceanic Slapshot League",
+    "acronym": "OSL",
+    "items": [
+        { ... season item ... },
+        { ... season item ... },
+        ...
+    ],
+    "_meta": {
+        "page": 1,
+        "per_page": 10,
+        "total_items": 18,
+        "total_pages": 2
+    },
+    "_links": {
+        "next": "/api/leagues/1/seasons?page=2&per_page=10",
+        "prev": null,
+        "self": "/api/leagues/1/seasons?page=1&per_page=10"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>GET /api/leagues/{id_or_acronym}/divisions</code></summary>
+Gets a list of divisions in the specified league. Optional args and defaults: <code>page=1, per_page=10 (max 100)</code>
+<pre>{
+    "league": "Oceanic Slapshot League",
+    "acronym": "OSL",
+    "items": [
+        { ... division item ... },
+        { ... division item ... },
+        ...
+    ],
+    "_meta": {
+        "page": 1,
+        "per_page": 10,
+        "total_items": 3,
+        "total_pages": 1
+    },
+    "_links": {
+        "next": null,
+        "prev": null,
+        "self": "/api/leagues/1/divisions?page=1&per_page=10"
+    }
+}</pre>
+</details>
+</ul>
+</details>
+<br><details>
+<summary><b>Seasons</b></summary>
+<ul>
+<details>
+<summary><code>GET /api/seasons</code></summary>
+Returns a list of all seasons. Optional args and defaults:<code>page=1, per_page=10 (max 100)</code>
+<pre>{
+    "items": [
+        { ... season item ... },
+        { ... season item ... },
+        ...
+    ],
+    "_meta": {
+        "page": 1,
+        "per_page": 10,
+        "total_items": 2,
+        "total_pages": 1
+    },
+    "_links": {
+        "next": null,
+        "prev": null,
+        "self": "/api/seasons?page=1&per_page=10"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>GET /api/seasons/{id}</code></summary>
+Returns a specified season
+<pre>{
+    "id": 1,
+    "name": "Season 1",
+    "acronym": "S1",
+    "league": "OSL",
+    "match_type": "League",
+    "divisions_count": 1,
+    "start_date": null
+    "end_date": null,
+    "finals_end": null,
+    "finals_start": null,
+    "_links": {
+        "divisions": "/api/seasons/1/divisions",
+        "league": "/api/leagues/1",
+        "match_type": null,
+        "self": "/api/seasons/1"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>POST /api/seasons</code></summary>
+Creates a new season with the specified details. <code>match_type</code> specifies the preset for lobby settings 
+(i.e. periods, length, game type etc.)<br>
+There can be multiple seasons with the same name or acronym, but not in the same league.
+<pre># Italicised fields are optional
+# Date input should be in the format YYYY-MM-DD
+{
+    "name": "Season 18",
+    "acronym": "S18",
+    "league": "osl", # can be ID or acronym
+    "match_type": "league", # can be ID or name
+    <em>"start_date": "2024-04-24",</em>
+    <em>"end_date": "2024-05-24",</em>
+    <em>"finals_start": "2024-05-24",</em>
+    <em>"finals_end": "2024-06-15"</em>
+}</pre>
+</details>
+<details>
+<summary><code>PUT /api/seasons/{id}</code></summary>
+Updates a season with the specified details.
+<pre># Italicised fields are optional
+# Date input should be in the format YYYY-MM-DD
+{
+    <em>"name": "Season 18",</em>
+    <em>"acronym": "S18",</em>
+    <em>"start_date": "2024-04-24",</em>
+    <em>"end_date": "2024-05-24",</em>
+    <em>"finals_start": "2024-05-24",</em>
+    <em>"finals_end": "2024-06-15"</em>
+}</pre>
+</details>
+<details>
+<summary><code>GET /api/seasons/{id}/divisions</code></summary>
+Gets a list of divisions in the specified season. Optional args and defaults: <code>page=1, per_page=10 (max 100)</code>
+<pre>{
+    "season": "Season 1",
+    "acronym": "S1",
+    "league": "OSL",
+    "items": [
+        { ... season_division item ... }
+        { ... season_division item ... }
+        ...
+    ],
+    "_meta": {
+        "page": 1,
+        "per_page": 10,
+        "total_items": 1,
+        "total_pages": 1
+    },
+    "_links": {
+        "next": null,
+        "prev": null,
+        "self": "/api/seasons/1/divisions?page=1&per_page=10"
+    }
+}</pre>
+</details>
+</ul>
+</details>
+<br><details>
+<summary><b>Divisions</b></summary>
+<ul>
+<details>
+<summary><code>GET /api/divisions</code></summary>
+Returns a list of all divisions. Optional args and defaults:<code>page=1, per_page=10 (max 100)</code>
+<pre>{
+    "items": [
+        { ... division item ... },
+        { ... division item ... },
+        ...
+    ],
+    "_meta": {
+        "page": 1,
+        "per_page": 10,
+        "total_items": 3,
+        "total_pages": 1
+    },
+    "_links": {
+        "next": null,
+        "prev": null,
+        "self": "/api/divisions?page=1&per_page=10"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>GET /api/divisions/{id}</code></summary>
+Returns a specified division
+<pre>{
+    "id": 1,
+    "name": "Pro League",
+    "acronym": "PL",
+    "league": "OSL",
+    "description": "Where the Pros at",
+    "seasons_count": 1,
+    "_links": {
+        "league": "/api/leagues/1",
+        "seasons": "/api/divisions/1/seasons",
+        "self": "/api/leagues/1"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>POST /api/divisions</code></summary>
+Creates a new division with the specified details. <br>
+There can be multiple divisions with the same name or acronym, but not in the same league.
+<pre># Italicised fields are optional
+{
+    "name": "Open League",
+    "acronym": "OL",
+    "league": "osl", # can be ID or acronym
+    <em>"description": "Where players new to the game can start"</em>
+}</pre>
+</details>
+<details>
+<summary><code>PUT /api/divisions/{id}</code></summary>
+Updates a division with the specified details.
+<pre># Italicised fields are optional
+{
+    <em>"name": "Open League",</em>
+    <em>"acronym": "OL",</em>
+    <em>"description": "Where players new to the game can start"</em>
+}</pre>
+</details>
+<details>
+<summary><code>GET /api/divisions/{id}/seasons</code></summary>
+Gets a list of divisions in the specified season. Optional args and defaults: <code>page=1, per_page=10 (max 100)</code>
+<pre>{
+    "division": "Pro League",
+    "acronym": "PL",
+    "league": "OSL",
+    "seasons": [
+        {
+            "name": "Season 1",
+            "acronym": "S1",
+            "id": 1,
+            "_links": {
+                "self": "/api/seasons/1"
+            }
+        }
+    ],
+    "_links": {
+        "league": "/api/leagues/1",
+        "self": "/api/divisions/1/seasons"
+    }
+}</pre>
+</details>
+</ul>
+</details>
+
+<br>
+<details>
+<summary><b>Success Responses</b></summary>
+Some requests will respond with a more generic response format instead of a detailed object with lots of information.
+Information from these responses are still helpful, and follow this format:
+<pre># Example of a '200 OK' response
+{
+    "result": "OK",
+    "message": "Division Open League updated",
+    "location": "/api/divisions/3"
+}</pre>
 </details>
 <br><details>
 <summary><b>Error Responses</b></summary>

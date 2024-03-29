@@ -1,9 +1,9 @@
 from api.srlm.app import db
 from api.srlm.app.api import bp, responses
-from flask import request, url_for
-
-from api.srlm.app.api.functions import force_fields, clean_data, force_unique, ensure_exists
-from api.srlm.app.models import Season, League, Division, SeasonDivision
+from flask import request
+from api.srlm.app.api.functions import force_fields, clean_data, force_unique, ensure_exists, \
+    force_date_format
+from api.srlm.app.models import Season, League, SeasonDivision, Matchtype
 from api.srlm.app.api.auth import req_app_token
 import sqlalchemy as sa
 
@@ -34,14 +34,19 @@ def add_season():
     data = request.get_json()
 
     unique_fields = ['name', 'acronym']
-    required_fields = ['name', 'acronym', 'league']
-    valid_fields = ['name', 'acronym', 'league_id', 'start_date', 'end_date', 'finals_start', 'finals_end', 'match_type']
+    required_fields = ['name', 'acronym', 'league', 'match_type']
+    valid_fields = ['name', 'acronym', 'league_id', 'start_date', 'end_date', 'finals_start', 'finals_end', 'match_type_id']
 
     force_fields(data, required_fields)
     league = ensure_exists(League, join_method='or', id=data['league'], acronym=data['league'])
+    match_type = ensure_exists(Matchtype, join_method='or', id=data['match_type'], name=data['match_type'])
     data['league_id'] = league.id
+    data['match_type_id'] = match_type.id
 
     force_unique(Season, data, unique_fields, restrict_query={'league_id': league.id})
+
+    date_fields = ['start_date', 'end_date', 'finals_start', 'finals_end']
+    force_date_format(data, date_fields)
 
     cleaned_data = clean_data(data, valid_fields)
 
@@ -62,15 +67,19 @@ def update_season(season_id):
     season = ensure_exists(Season, id=season_id)
 
     unique_fields = ['name', 'acronym']
-    valid_fields = ['name', 'acronym', 'start_date', 'start_date', 'end_date', 'finals_start', 'finals_end']
+    valid_fields = ['name', 'acronym', 'start_date', 'end_date', 'finals_start', 'finals_end']
     force_unique(Season, data, unique_fields, restrict_query={'league_id': season.league.id})
+
+    date_fields = ['start_date', 'end_date', 'finals_start', 'finals_end']
+    force_date_format(data, date_fields)
+
     cleaned_data = clean_data(data, valid_fields)
 
     season.from_dict(cleaned_data)
 
     db.session.commit()
 
-    return responses.update_success(f'Season {season.name} updated', 'api.get_season', season_id=season.id)
+    return responses.request_success(f'Season {season.name} updated', 'api.get_season', season_id=season.id)
 
 
 @bp.route('/seasons/<int:season_id>/divisions', methods=['GET'])

@@ -70,7 +70,7 @@ def update_division(division_id):
 
     db.session.commit()
 
-    return responses.update_success(f'Division {division.name} updated', 'api.get_division', division_id=division.id)
+    return responses.request_success(f'Division {division.name} updated', 'api.get_division', division_id=division.id)
 
 
 @bp.route('/divisions/<int:division_id>/seasons', methods=['GET'])
@@ -98,7 +98,7 @@ def get_seasons_of_division(division_id):
         'seasons': seasons,
         '_links': {
             'self': url_for('api.get_seasons_of_division', division_id=division_id),
-            'league': url_for('api.get_league', league_id=division.league.id)
+            'league': url_for('api.get_league', league_id_or_acronym=division.league.id)
         }
     }
 

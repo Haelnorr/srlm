@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from api.srlm.app import db
 from api.srlm.app.api.errors import BadRequest, ResourceNotFound
 import sqlalchemy as sa
@@ -33,7 +35,7 @@ def force_fields(data, required_fields):
         raise BadRequest(f"Required fields are missing: {missing}")
 
 
-def force_unique(model, data, unique_fields, restrict_query=None):
+def force_unique(model, data, unique_fields, self_id=0, restrict_query=None):
     not_unique = []
     for key, value in data.items():
         if key in unique_fields:
@@ -41,9 +43,9 @@ def force_unique(model, data, unique_fields, restrict_query=None):
                 query = db.session.query(model).filter_by(
                     **{key: value},
                     **restrict_query
-                )
+                ).filter(model.id != self_id)
             else:
-                query = db.session.query(model).filter_by(**{key: value})
+                query = db.session.query(model).filter_by(**{key: value}).filter(model.id != self_id)
             exists = db.session.query(query.exists()).scalar()
             if exists:
                 not_unique.append(key)
@@ -55,6 +57,19 @@ def force_unique(model, data, unique_fields, restrict_query=None):
             value = restrict_query[key]
             message = message + f' (matches another record with {key}={value})'
         raise BadRequest(message)
+
+
+def force_date_format(data, valid_fields):
+    date_format = "%Y-%m-%d"
+    bad_fields = []
+    for date_input in data:
+        if date_input in valid_fields:
+            try:
+                datetime.strptime(data[date_input], date_format)
+            except ValueError:
+                bad_fields.append(date_input)
+    if bad_fields:
+        raise BadRequest(f'Date fields are in the wrong format. Should be YYYY-MM-DD. Fields: {bad_fields}')
 
 
 def clean_data(data, valid_fields):
