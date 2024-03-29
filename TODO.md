@@ -9,8 +9,8 @@
    - team
    - player_team
    - free agent
- - convert all old routes (users/permissions) to using new helper functions 
- - change responses of POST/PUT (users/permissions) functions to new format (success code + link)
+ - ~~convert all old routes (users/permissions) to using new helper functions~~
+ - ~~change responses of POST/PUT (users/permissions) functions to new format (success code + link)~~
 
 
 **For next deployment**

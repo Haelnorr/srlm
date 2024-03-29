@@ -22,9 +22,10 @@ if log_config.clean == 'true':
 log = get_logger(__name__)
 
 log.info('Starting web app')
-from api.srlm.app import create_app, db, events
+from api.srlm.app import create_app, db
 from api.srlm.app.models import User, Permission, UserPermissions, League, Season, Division
 from api.srlm.api_access.models import AuthorizedApp
+from api.srlm.app.api import import_dict
 app = create_app()
 log.info('Web app started, accepting requests')
 
@@ -51,6 +52,7 @@ def make_shell_context():
         'Season': Season,
         'Division': Division,
         'aa': AuthorizedApp,
-        'ee': ensure_exists
+        'ee': ensure_exists,
+        'import_dict': import_dict
     }
 

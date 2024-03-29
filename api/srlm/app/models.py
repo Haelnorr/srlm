@@ -24,8 +24,8 @@ class PaginatedAPIMixin(object):
             },
             '_links': {
                 'self': url_for(endpoint, page=page, per_page=per_page, **kwargs),
-                'next': url_for(endpoint, page=page+1, per_page=per_page, **kwargs) if resources.has_next else None,
-                'prev': url_for(endpoint, page=page-1, per_page=per_page, **kwargs) if resources.has_prev else None
+                'next': url_for(endpoint, page=page + 1, per_page=per_page, **kwargs) if resources.has_next else None,
+                'prev': url_for(endpoint, page=page - 1, per_page=per_page, **kwargs) if resources.has_prev else None
             }
         }
         return data
@@ -169,7 +169,8 @@ class UserPermissions(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     permission_id = db.Column(db.Integer, db.ForeignKey('permission.id'))
-    additional_modifiers = db.Column(db.String(128))  # optional field for modifiers, like specifying which team a player is manager of, or which leagues LC's can manage
+    additional_modifiers = db.Column(db.String(
+        128))  # optional field for modifiers, like specifying which team a player is manager of, or which leagues LC's can manage
 
     user = db.relationship('User', back_populates='permission_assoc')
     permission = db.relationship('Permission', back_populates='user_assoc')
@@ -273,11 +274,11 @@ class Player(PaginatedAPIMixin, db.Model):
     player_name = db.Column(db.String(64), nullable=False, unique=True)
     rookie = db.Column(db.Boolean, nullable=False, default=True)
     first_season_id = db.Column(db.Integer, db.ForeignKey('season_division.id'))
-    next_name_change = db.Column(db.DateTime, nullable=False)
+    next_name_change = db.Column(db.DateTime)
 
     user = db.relationship('User', back_populates='player')
     first_season = db.relationship('SeasonDivision', back_populates='rookies')
-    team_association = db.relationship('PlayerTeam', back_populates='player')
+    team_association = db.relationship('PlayerTeam', back_populates='player', lazy='dynamic')
     teams = association_proxy('team_association', 'team')
     season_association = db.relationship('FreeAgent', back_populates='player')
     seasons = association_proxy('season_association', 'season_division')
@@ -287,37 +288,40 @@ class Player(PaginatedAPIMixin, db.Model):
     awards = association_proxy('awards_association', 'award')
 
     def __repr__(self):
-        return f'<Player {self.player_name} ({self.user.username})>'
+        return f'<Player {self.player_name} ({self.user.username if self.user else None})>'
 
     def to_dict(self):
         now = datetime.now(timezone.utc)
-        current_team_q = self.teams.query.filter(sa.and_(self.team_association.has(PlayerTeam.start_date < now),
-                                                         self.team_association.is_(None)))
+        current_team_q = self.team_association.filter(sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))
         current_team = current_team_q.first()
+        unique_teams = []
+        for team in self.teams:
+            if team.id not in unique_teams:
+                unique_teams.append(team.id)
         data = {
             'player_name': self.player_name,
-            'user': self.user.username,
+            'user': self.user.username if self.user else None,
             'slap_id': self.slap_id,
             'rookie': self.rookie,
             'first_season': self.first_season.get_readable_name(),
-            'next_name_change': self.token_expiration,
-            'current_team': current_team.name,
-            'teams': self.teams.query.count(sa.distinct(PlayerTeam.team_id)),
-            'free_agent': None,
+            'next_name_change': self.next_name_change,
+            'current_team': current_team.team.name if current_team else None,
+            'teams': len(unique_teams),
+            'free_agent_seasons': len(self.seasons),
             '_links': {
                 'self': url_for('api.get_player', player_id=self.id),
-                'user': url_for('api.get_user', user_id=self.user_id),
+                'user': url_for('api.get_user', user_id=self.user_id) if self.user else None,
                 'first_season': url_for('api.get_season_division', season_division_id=self.first_season_id),
-                'current_team': url_for('api.get_team', team_id=current_team.id),
-                'teams': url_for('api.get_teams', player_id=self.id),
-                'free_agent': None
+                'current_team': url_for('api.get_team', team_id=current_team.team.id) if current_team else None,
+                'teams': url_for('api.get_player_teams', player_id=self.id),
+                'free_agent_seasons': url_for('api.get_player_free_agent', player_id=self.id)
             }
         }
 
         return data
 
     def from_dict(self, data):
-        for field in ['player_name', 'slap_id', 'rookie', 'first_season', 'next_name_change']:
+        for field in ['player_name', 'slap_id', 'rookie', 'first_season_id', 'next_name_change']:
             if field in data:
                 setattr(self, field, data[field])
 
@@ -438,14 +442,15 @@ class Season(PaginatedAPIMixin, db.Model):
             '_links': {
                 'self': url_for('api.get_season', season_id=self.id),
                 'league': url_for('api.get_league', league_id_or_acronym=self.league_id),
-                'match_type': None, #url_for('api.get_match_type', match_type_id=self.match_type_id),
+                'match_type': None,  # url_for('api.get_match_type', match_type_id=self.match_type_id),
                 'divisions': url_for('api.get_divisions_in_season', season_id=self.id)
             }
         }
         return data
 
     def from_dict(self, data):
-        for field in ['name', 'acronym', 'league_id', 'start_date', 'end_date', 'finals_start', 'finals_end', 'match_type_id']:
+        for field in ['name', 'acronym', 'league_id', 'start_date', 'end_date', 'finals_start', 'finals_end',
+                      'match_type_id']:
             if field in data:
                 setattr(self, field, data[field])
 

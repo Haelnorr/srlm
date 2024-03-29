@@ -1,6 +1,7 @@
 <h2>Endpoints</h2>
 All requests return a JSON with some information on the outcome. Successful GET requests are documented under their 
 respective headings. For more details on success/error responses, see the sections at the bottom.
+<h3>Site Access</h3>
 <details>
 <summary><b>Auth</b></summary>
 The API has a two key system for authorization. An app key required for all requests, and a user key required for 
@@ -423,6 +424,8 @@ Lists all the users who have the specified permission
 </details>
 </ul>
 </details>
+<br>
+<h3>League Management</h3>
 <br><details>
 <summary><b>Leagues</b></summary>
 <ul>
@@ -750,8 +753,81 @@ Gets a list of divisions in the specified season. Optional args and defaults: <c
 </details>
 </ul>
 </details>
-
+<br><details>
+<summary><b>Players</b></summary>
+<ul>
+<details>
+<summary><code>GET /api/players/{id}</code></summary>
+Gets the specified player.
+<pre>{
+    "player_name": "Eagle",
+    "slap_id": 155,
+    "user": null,
+    "current_team": null,
+    "teams": 0,
+    "first_season": "Season 1 Single League",
+    "rookie": true,
+    "free_agent_seasons": 0,
+    "next_name_change": null,
+    "_links": {
+        "current_team": null,
+        "first_season": "/api/season_division/1",
+        "free_agent_seasons": "/api/players/1/free_agent",
+        "self": "/api/players/1",
+        "teams": "/api/players/1/teams",
+        "user": "/api/users/1"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>GET /api/players</code></summary>
+Gets the collection of all players
+<pre>{
+    "items": [
+        { ... player item ... }
+        { ... player item ... }
+        ...
+    ],
+    "_meta": {
+        "page": 1,
+        "per_page": 10,
+        "total_items": 363,
+        "total_pages": 37
+    },
+    "_links": {
+        "next": "/api/players?page=2&per_page=10",
+        "prev": null,
+        "self": "/api/players?page=1&per_page=10"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>POST /api/players</code></summary>
+Creates a new user.
+<pre># Italicised fields are optional
+{
+    "player_name": "BestRookie",
+    <em>"slap_id": 1213456,</em>
+    <em>"rookie": true,</em>
+    <em>"first_season_id": 42</em>
+}</pre>
+</details>
+<details>
+<summary><code>PUT /api/players/{id}</code></summary>
+Updates a user.
+<pre># Italicised fields are optional
+{
+    <em>"player_name": "BestRookie",</em>
+    <em>"slap_id": 1213456,</em>
+    <em>"rookie": true,</em>
+    <em>"first_season_id": 42</em>
+}</pre>
+</details>
+</ul>
+</details>
 <br>
+
+<h3>Responses</h3>
 <details>
 <summary><b>Success Responses</b></summary>
 Some requests will respond with a more generic response format instead of a detailed object with lots of information.
