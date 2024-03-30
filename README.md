@@ -825,6 +825,58 @@ Updates a player.
     <em>"first_season_id": 42</em>
 }</pre>
 </details>
+<details>
+<summary><code>GET /api/players/{id}/teams</code></summary>
+Gets a list of teams the player has been on, with dates. Can specify the optional arg <code>?current=true</code>
+to retrieve only the players current team.
+<pre>All teams the player has been on
+{
+    "player": "Spar",
+    "teams": {
+        "55": {
+            "name": "Such Is Life",
+            "acronym": "SIL",
+            "color": "dd73ff",
+            "dates": [
+                {
+                    "end": "Tue, 25 Jan 2022 00:00:00 GMT",
+                    "start": "Mon, 25 May 2020 00:00:00 GMT"
+                },
+                {
+                    "end": "Sun, 12 Mar 2023 00:00:00 GMT",
+                    "start": "Mon, 19 Sep 2022 00:00:00 GMT"
+                },
+                {
+                    "end": null,
+                    "start": "Mon, 28 Aug 2023 00:00:00 GMT"
+                }
+            ],
+            "_links": {
+                "self": "/api/teams/55"
+            }
+        },
+        "team_id": { .. team info and dates ... }
+    },
+    "_links": {
+        "self": "/api/players/113/teams"
+    }
+}</pre>
+<pre>The players current team
+{
+    "player": "Spar",
+    "current_team": {
+        "acronym": "SIL",
+        "color": "dd73ff",
+        "name": "Such Is Life",
+        "start_date": "Mon, 28 Aug 2023 00:00:00 GMT"
+    },
+    "_links": {
+        "current_team": "/api/teams/55",
+        "self": "/api/players/113/teams"
+    }
+}
+</pre>
+</details>
 </ul>
 </details>
 <br><details>
