@@ -5,7 +5,7 @@ from api.srlm.app.api import bp, responses
 from flask import request, url_for
 import sqlalchemy as sa
 from api.srlm.app.api.functions import ensure_exists, force_fields, force_unique, clean_data
-from api.srlm.app.models import Team
+from api.srlm.app.models import Team, SeasonDivision
 from api.srlm.app.api.auth import req_app_token
 
 # create a new logger for this module
@@ -81,41 +81,41 @@ def get_team_players(team_id):
 
     if current:
         players = {}
-        for team_assoc in team.player_association:
+        for player_assoc in team.player_association:
             now = datetime.now(timezone.utc)
-            if team_assoc.start_date.replace(tzinfo=timezone.utc) < now and (team_assoc.end_date is None or team_assoc.end_date.replace(tzinfo=timezone.utc) > now):
+            if player_assoc.start_date.replace(tzinfo=timezone.utc) < now and (player_assoc.end_date is None or player_assoc.end_date.replace(tzinfo=timezone.utc) > now):
                 player = {
-                    'name': team_assoc.player.player_name,
-                    'start_date': team_assoc.start_date,
+                    'name': player_assoc.player.player_name,
+                    'start_date': player_assoc.start_date,
                     '_links': {
-                        'self': url_for('api.get_player', player_id=team_assoc.player.id)
+                        'self': url_for('api.get_player', player_id=player_assoc.player.id)
                     }
                 }
-                players[team_assoc.player.id] = player
+                players[player_assoc.player.id] = player
 
     else:
         players = {}
-        for team_assoc in team.player_association:
-            if team_assoc.player.id not in players:
+        for player_assoc in team.player_association:
+            if player_assoc.player.id not in players:
                 player_data = {
-                    'name': team_assoc.player.player_name,
+                    'name': player_assoc.player.player_name,
                     'dates': [
                         {
-                            'start': team_assoc.start_date,
-                            'end': team_assoc.end_date
+                            'start': player_assoc.start_date,
+                            'end': player_assoc.end_date
                         }
                     ],
                     '_links': {
-                        'self': url_for('api.get_player', player_id=team_assoc.player.id)
+                        'self': url_for('api.get_player', player_id=player_assoc.player.id)
                     }
                 }
-                players[team_assoc.player.id] = player_data
+                players[player_assoc.player.id] = player_data
             else:
                 dates = {
-                    'start': team_assoc.start_date,
-                    'end': team_assoc.end_date
+                    'start': player_assoc.start_date,
+                    'end': player_assoc.end_date
                 }
-                players[team_assoc.player.id]['dates'].append(dates)
+                players[player_assoc.player.id]['dates'].append(dates)
 
     response = {
         'team': team.name,
@@ -130,10 +130,46 @@ def get_team_players(team_id):
     return response
 
 
-@bp.route('/teams/<int:team_id>/current_players', methods=['GET'])
+@bp.route('/teams/<int:team_id>/players/season/<int:season_division_id>', methods=['GET'])
 @req_app_token
-def get_team_current_players(team_id):
-    pass
+def get_team_players_in_season(team_id, season_division_id):
+    # get team
+    team = ensure_exists(Team, id=team_id)
+    # get season_division
+    season_division = ensure_exists(SeasonDivision, id=season_division_id)
+
+    # query the teams playerlist for players active during the season
+    # uses (player_start_date is earlier than season_end) and (player_end_date is later than season_start)
+    season_start = datetime.combine(season_division.season.start_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+    season_end = datetime.combine(season_division.season.end_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+
+    players = {}
+    for player_assoc in team.player_association:
+        player_start_date = player_assoc.start_date.replace(tzinfo=timezone.utc)
+        player_end_date = player_assoc.end_date.replace(tzinfo=timezone.utc) if player_assoc.end_date is not None else None
+        if player_start_date < season_end and (player_end_date is None or player_end_date > season_start):
+            player = {
+                'name': player_assoc.player.player_name,
+                'start_date': player_assoc.start_date,
+                'end_date': player_assoc.end_date,
+                '_links': {
+                    'self': url_for('api.get_player', player_id=player_assoc.player.id)
+                }
+            }
+            players[player_assoc.player.id] = player
+
+    response = {
+        'season_division': f'{season_division.get_readable_name()} ({season_division.season.league.acronym})',
+        'team': team.name,
+        'acronym': team.acronym,
+        'color': team.color,
+        'players': players,
+        '_links': {
+            'self': url_for('api.get_team_players_in_season', team_id=team.id, season_division_id=season_division.id),
+            'team': url_for('api.get_team', team_id=team.id)
+        }
+    }
+    return response
 
 
 @bp.route('/teams/<int:team_id>/seasons', methods=['GET'])

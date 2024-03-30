@@ -1037,6 +1037,46 @@ to retrieve only the current players.
 }
 </pre>
 </details>
+<details>
+<summary><code>GET /api/teams/{pid}/players/season/{sid}</code></summary>
+Gets the list of players for a team specified by <code>pid</code> in the season_division specified by <code>sid</code>
+<pre>{
+    "season_division": "Season 12 Pro League (OSL)",
+    "team": "Such Is Life",
+    "acronym": "SIL",
+    "color": "dd73ff",
+    "players": {
+        "116": {
+            "_links": {
+                "self": "/api/players/116"
+            },
+            "end_date": "Sun, 21 Aug 2022 00:00:00 GMT",
+            "name": "aha yeah baby",
+            "start_date": "Mon, 28 Feb 2022 00:00:00 GMT"
+        },
+        "160": {
+            "_links": {
+                "self": "/api/players/160"
+            },
+            "end_date": "Sun, 01 May 2022 00:00:00 GMT",
+            "name": "kubix",
+            "start_date": "Mon, 01 Nov 2021 00:00:00 GMT"
+        },
+        "161": {
+            "_links": {
+                "self": "/api/players/161"
+            },
+            "end_date": "Sun, 01 May 2022 00:00:00 GMT",
+            "name": "miniskirt",
+            "start_date": "Mon, 28 Feb 2022 00:00:00 GMT"
+        }
+    },
+    "_links": {
+        "self": "/api/teams/55/players/season/23",
+        "team": "/api/teams/55"
+    }
+}</pre>
+</details>
 </ul>
 </details>
 <br>
