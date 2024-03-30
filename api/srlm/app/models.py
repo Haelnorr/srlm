@@ -328,6 +328,12 @@ class Player(PaginatedAPIMixin, db.Model):
             if field in data:
                 setattr(self, field, data[field])
 
+    def current_team(self):
+        now = datetime.now(timezone.utc)
+        current_team_q = self.team_association.filter(sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))
+        return current_team_q.first()
+
+
 
 # this is a helper table for recording which teams played in which season and in which division
 season_division_team = db.Table('season_division_team',

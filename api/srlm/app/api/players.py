@@ -8,8 +8,9 @@ from api.srlm.app.api import bp, responses
 from api.srlm.app.api.auth import req_app_token
 
 # create a new logger for this module
+from api.srlm.app.api.errors import BadRequest, ResourceNotFound
 from api.srlm.app.api.functions import ensure_exists, force_fields, force_unique, clean_data
-from api.srlm.app.models import Player, SeasonDivision
+from api.srlm.app.models import Player, SeasonDivision, Team, PlayerTeam
 from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
@@ -95,11 +96,12 @@ def get_player_teams(player_id):
                         'start_date': team_assoc.start_date
                     },
                     '_links': {
-                        'self': url_for('api.get_player_teams', player_id=player.id),
+                        'self': url_for('api.get_player_teams', player_id=player.id, current=True),
                         'current_team': url_for('api.get_team', team_id=team_assoc.team.id)
                     }
                 }
                 return response
+        raise ResourceNotFound('Player does not have a current team')
 
     else:
         teams = {}
@@ -131,7 +133,8 @@ def get_player_teams(player_id):
             'player': player.player_name,
             'teams': teams,
             '_links': {
-                'self': url_for('api.get_player_teams', player_id=player.id)
+                'self': url_for('api.get_player_teams', player_id=player.id),
+                'player': url_for('api.get_player', player_id=player.id)
             }
         }
         return response
@@ -146,13 +149,51 @@ def get_player_stats(player_id):
 @bp.route('/players/<int:player_id>/teams', methods=['POST'])
 @req_app_token
 def register_player_team(player_id):
-    pass
+    # get the player
+    player = ensure_exists(Player, id=player_id)
+    current_team = player.current_team()
+
+    # check if player has current team
+    if player.current_team():
+        raise BadRequest(f'Player already registered to {current_team.team.name} - cannot be registered to multiple teams at once.')
+
+    # validate the data
+    data = request.get_json()
+    force_fields(data, ['team'])
+
+    # get the team
+    team = ensure_exists(Team, join_method='or', id=data['team'], acronym=data['team'])
+
+    # register the player to the team
+    player_team = PlayerTeam()
+    player_team.player = player
+    player_team.team = team
+    player_team.start_date = datetime.now(timezone.utc)
+
+    db.session.add(player_team)
+    db.session.commit()
+
+    return responses.request_success(f'Player {player.player_name} registered to team {team.name}', 'api.get_team', team_id=team.id)
 
 
 @bp.route('/players/<int:player_id>/teams', methods=['DELETE'])
 @req_app_token
 def deregister_player_team(player_id):
-    pass
+    # get the player
+    player = ensure_exists(Player, id=player_id)
+
+    # check if player has current team
+    current_team = player.current_team()
+
+    if not current_team:
+        raise BadRequest('Player is not registered to a team')
+
+    # de-register the player from the team (add end date)
+    current_team.end_date = datetime.now(timezone.utc)
+
+    db.session.commit()
+
+    return responses.request_success(f'Player {player.player_name} de-registered from team {current_team.team.name}', 'api.get_player', player_id=player.id)
 
 
 @bp.route('/players/<int:player_id>/free_agent', methods=['GET'])
