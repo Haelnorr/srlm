@@ -764,6 +764,66 @@ links together entries from the 'Seasons' and 'Divisions' tables, and is where m
 is stored (teams, matches, finals etc).
 <ul>
 <details>
+<summary><code>GET /api/season_division/{id}</code></summary>
+Gets info a specific SeasonDivision
+<pre>{
+    "id": 39,
+    "season": "Season 18",
+    "division": "Open League",
+    "league": "OSL",
+    "teams_count": 10,
+    "free_agents_count": 5,
+    "rookies_count": 26,
+    "matches_count": 0,
+    "finals_count": 0,
+    "_links": {
+        "division": "/api/divisions/3",
+        "finals": "/api/season_division/39/finals",
+        "free_agents": "/api/season_division/39/free_agents",
+        "league": "/api/leagues/1",
+        "matches": "/api/season_division/39/matches",
+        "rookies": "/api/season_division/39/rookies",
+        "season": "/api/seasons/18",
+        "self": "/api/leagues/39",
+        "teams": "/api/season_division/39/teams"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>POST /api/season_division</code></summary>
+Creates a new SeasonDivision. Input:
+<pre>{
+    "season_id": 4,
+    "division_id": 2
+}</pre>
+</details>
+<details>
+<summary><code>GET /api/season_division/{id}/teams</code></summary>
+Gets a list of teams in the SeasonDivision
+<pre>{
+    "division": "Open League",
+    "id": 39,
+    "league": "OSL",
+    "season": "Season 18",
+    "teams": [
+        {
+            "_links": {
+                "self": "/api/teams/242"
+            },
+            "acronym": "2C1F",
+            "color": null,
+            "name": "2 Cousins 1 Friend"
+        },
+        { ... team info ... },
+        ...
+    ],
+    "_links": {
+        "season_division": "/api/season_division/39",
+        "self": "/api/season_division/39/teams"
+    }
+}</pre>
+</details>
+<details>
 <summary><code>GET /api/season_division/{id}/free_agents</code></summary>
 Returns a list of all the free agents in the specified season. Will return <code>404 NOT FOUND</code> if season had no 
 free agents
@@ -786,6 +846,35 @@ free agents
         "league": "/api/leagues/1",
         "season_division": "/api/season_division/2",
         "self": "/api/season_division/2/free_agents"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>GET /api/season_division/{id}/rookies</code></summary>
+Lists the players who are playing for the first time in this season.
+<pre>{
+    "season": "Season 18",
+    "division": "Open League",
+    "id": 39,
+    "league": "OSL",
+    "rookies": [
+        {
+            "_links": {
+                "current_team": "/api/teams/242",
+                "self": "/api/players/338",
+                "user": null
+            },
+            "current_team": "2 Cousins 1 Friend",
+            "player_name": "Pluto",
+            "slap_id": 552377,
+            "user": null
+        },
+        { ...  player info ... },
+        ...
+    ],
+    "_links": {
+        "season_division": "/api/season_division/39",
+        "self": "/api/season_division/39/rookies"
     }
 }</pre>
 </details>

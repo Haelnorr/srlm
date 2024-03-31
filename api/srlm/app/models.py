@@ -323,6 +323,24 @@ class Player(PaginatedAPIMixin, db.Model):
 
         return data
 
+    def to_simple_dict(self):
+        now = datetime.now(timezone.utc)
+        current_team_q = self.team_association.filter(sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))
+        current_team = current_team_q.first()
+        data = {
+            'player_name': self.player_name,
+            'user': self.user.username if self.user else None,
+            'slap_id': self.slap_id,
+            'current_team': current_team.team.name if current_team else None,
+            '_links': {
+                'self': url_for('api.get_player', player_id=self.id),
+                'user': url_for('api.get_user', user_id=self.user_id) if self.user else None,
+                'current_team': url_for('api.get_team', team_id=current_team.team.id) if current_team else None
+            }
+        }
+
+        return data
+
     def from_dict(self, data):
         for field in ['player_name', 'slap_id', 'rookie', 'first_season_id', 'next_name_change']:
             if field in data:
@@ -812,6 +830,20 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
         links = {
             'self': url_for('api.get_team_seasons', team_id=team.id),
             'team': url_for('api.get_team', team_id=team.id)
+        }
+        response['_links'] = links
+        return response
+
+    def get_rookies_dict(self):
+        rookies = []
+        for rookie in self.rookies:
+            rookies.append(rookie.to_simple_dict())
+
+        response = self.to_simple_dict()
+        response['rookies'] = rookies
+        links = {
+            'self': url_for('api.get_rookies_in_season_division', season_division_id=self.id),
+            'season_division': url_for('api.get_season_division', season_division_id=self.id)
         }
         response['_links'] = links
         return response
