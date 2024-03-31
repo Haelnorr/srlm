@@ -1,4 +1,7 @@
 import sqlalchemy as sa
+
+from api.srlm.app.api.errors import error_response
+from api.srlm.app.api.functions import ensure_exists
 from api.srlm.logger import get_logger
 from api.srlm.logger import LogConfig
 from api.srlm.definitions import ROOT_DIR
@@ -19,13 +22,19 @@ if log_config.clean == 'true':
 log = get_logger(__name__)
 
 log.info('Starting web app')
-from api.srlm.app import create_app, db, events
-from api.srlm.app.models import User, Permission, UserPermissions
+from api.srlm.app import create_app, db
+from api.srlm.app.models import User, Permission, UserPermissions, League, Season, Division, SeasonDivision, Player, Team
 from api.srlm.api_access.models import AuthorizedApp
+from api.srlm.app.api import import_dict
 app = create_app()
 log.info('Web app started, accepting requests')
 
 asgi_app = WsgiToAsgi(app)
+
+
+@app.errorhandler(404)
+def handle_404(e):
+    return error_response(e.code, 'Requested resource cannot be found. Check that the URL is correct')
 
 
 # Shell context processor for development purposes
@@ -39,7 +48,14 @@ def make_shell_context():
         'User': User,
         'Permission': Permission,
         'UserPermissions': UserPermissions,
+        'League': League,
+        'Season': Season,
+        'Division': Division,
+        'SeasonDivision': SeasonDivision,
+        'Player': Player,
+        'Team': Team,
         'aa': AuthorizedApp,
-        'get_events': events.get_events
+        'ee': ensure_exists,
+        'import_dict': import_dict
     }
 

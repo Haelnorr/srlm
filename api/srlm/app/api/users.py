@@ -1,7 +1,8 @@
 import sqlalchemy as sa
 from flask import request, url_for
 from api.srlm.app import db
-from api.srlm.app.api import bp
+from api.srlm.app.api import bp, responses
+from api.srlm.app.api.functions import force_fields, force_unique, clean_data, ensure_exists
 from api.srlm.app.models import User, Permission, UserPermissions, Discord, Twitch
 from api.srlm.app.api.errors import UserAuthError, ResourceNotFound, BadRequest, error_response
 from api.srlm.app.api.auth import user_auth, req_app_token
@@ -16,15 +17,16 @@ log = get_logger(__name__)
 @bp.route('/users/<int:user_id>', methods=['GET'])
 @req_app_token
 def get_user(user_id):
+    user = ensure_exists(User, id=user_id)
     user_token = get_bearer_token(request.headers)['user']
-    user = User.check_token(user_token)
+    current_user = User.check_token(user_token)
 
     include_email = False
 
-    if user and user.id == user_id:
+    if current_user and current_user.id == user.id:
         include_email = True
 
-    return User.query.get_or_404(user_id).to_dict(include_email=include_email)
+    return user.to_dict(include_email=include_email)
 
 
 @bp.route('/users', methods=['GET'])
@@ -39,17 +41,21 @@ def get_users():
 @req_app_token
 def add_user():
     data = request.get_json()
-    if 'username' not in data or 'email' not in data or 'password' not in data:
-        raise BadRequest('Username, Email or Password field missing')
-    if check_username_exists(data['username']):
-        raise BadRequest('Username is not unique')
-    if check_email_exists(data['email']):
-        raise BadRequest('Email is not unique')
+
+    required_fields = valid_fields = ['username', 'email', 'password']
+    unique_fields = ['username', 'email']
+
+    force_fields(data, required_fields)
+    force_unique(User, data, unique_fields)
+    cleaned_data = clean_data(data, valid_fields)
+
     user = User()
-    user.from_dict(data, new_user=True)
+    user.from_dict(cleaned_data, new_user=True)
+
     db.session.add(user)
     db.session.commit()
-    return user.to_dict(), 201, {'Location': url_for('api.get_user', user_id=user.id)}
+
+    return responses.create_success(f'User {user.username} added', 'api.get_user', user_id=user.id)
 
 
 @bp.route('/users/<int:user_id>', methods=['PUT'])
@@ -58,15 +64,17 @@ def add_user():
 def update_user(user_id):
     if user_auth.current_user().id != user_id:
         raise UserAuthError()
-    user = User.query.get_or_404(user_id)
     data = request.get_json()
-    if 'username' in data and data['username'] != user.username and check_username_exists(data['username']):
-        raise BadRequest('Username is not unique')
-    if 'email' in data and data['email'] != user.email and check_email_exists(data['email']):
-        raise BadRequest('Email is not unique')
-    user.from_dict(data, new_user=False)
+
+    user = ensure_exists(User, id=user_id)
+
+    unique_fields = valid_fields = ['username', 'email']
+
+    force_unique(User, data, unique_fields, self_id=user.id)
+
+    user.from_dict(clean_data(data, valid_fields))
     db.session.commit()
-    return user.to_dict()
+    return responses.request_success(f'User {user.username} updated', 'api.get_user', user_id=user.id)
 
 
 @bp.route('/users/<int:user_id>/new_password', methods=['POST'])
@@ -75,7 +83,7 @@ def update_user(user_id):
 def update_user_password(user_id):
     if user_auth.current_user().id != user_id:
         raise UserAuthError()
-    user = User.query.get_or_404(user_id)
+    user = ensure_exists(User, id=user_id)
     data = request.get_json()
     if 'password' not in data:
         raise BadRequest('Password field missing')
@@ -108,9 +116,7 @@ def get_user_matches_reviewed(user_id):
 @bp.route('/users/<int:user_id>/permissions', methods=['GET'])
 @req_app_token
 def get_user_permissions(user_id):
-    user = db.session.get(User, user_id)
-    if not user:
-        raise ResourceNotFound(f'User with ID {user_id}')
+    user = ensure_exists(User, id=user_id)
 
     permissions = []
     for user_permission in user.permission_assoc:
@@ -130,9 +136,7 @@ def get_user_permissions(user_id):
 @bp.route('/users/<int:user_id>/permissions', methods=['POST'])
 @req_app_token
 def add_user_permissions(user_id):
-    user = db.session.get(User, user_id)
-    if not user:
-        raise ResourceNotFound(f'User with ID {user_id}')
+    user = ensure_exists(User, id=user_id)
 
     data = request.get_json()
     if 'key' not in data:
@@ -152,30 +156,22 @@ def add_user_permissions(user_id):
     db.session.add(user_perm)
     db.session.commit()
 
-    return get_user_permissions(user_id)
+    return responses.create_success(f'Permission {user_perm.permssion.key} added to user {user_perm.user.username}', 'api.get_user_permissions', user_id=user_id)
 
 
 @bp.route('/users/<int:user_id>/permissions', methods=['PUT'])
 @req_app_token
 def update_user_permissions(user_id):
-    user = db.session.get(User, user_id)
-    if not user:
-        raise ResourceNotFound(f'User with ID {user_id}')
-
+    user = ensure_exists(User, id=user_id)
     data = request.get_json()
-    if 'key' not in data:
-        raise BadRequest("Permission 'key' field missing")
-    permission = db.session.query(Permission).filter(Permission.key == data['key']).first()
-    if permission is None:
-        raise ResourceNotFound(f"Permission with key {data['key']}")
 
-    if 'modifiers' not in data:
-        raise BadRequest('Modifiers field missing')
+    required_fields = ['key', 'modifiers']
 
-    user_perm = db.session.query(UserPermissions).filter_by(user_id=user.id, permission_id=permission.id).first()
+    force_fields(data, required_fields)
 
-    if user_perm is None:
-        raise BadRequest('User does not have that permission')
+    permission = ensure_exists(Permission, key=data['key'])
+
+    user_perm = ensure_exists(UserPermissions, user_id=user.id, permission_id=permission.id)
 
     modifiers = data['modifiers']
     if data['modifiers'] == "":
@@ -183,46 +179,38 @@ def update_user_permissions(user_id):
     user_perm.additional_modifiers = modifiers
     db.session.commit()
 
-    return get_user_permissions(user_id)
+    return responses.create_success(f'Permission {user_perm.permssion.key} updated for user {user_perm.user.username}', 'api.get_user_permissions', user_id=user_id)
 
 
 @bp.route('/users/<int:user_id>/permissions/revoke', methods=['POST'])
 @req_app_token
 def revoke_user_permissions(user_id):
-    user = db.session.get(User, user_id)
-    if not user:
-        raise ResourceNotFound(f'User with ID {user_id}')
-
+    user = ensure_exists(User, id=user_id)
     data = request.get_json()
-    if 'key' not in data:
-        raise BadRequest("Permission 'key' field missing")
-    permission = db.session.query(Permission).filter(Permission.key == data['key']).first()
-    if permission is None:
-        raise ResourceNotFound(f"Permission with key {data['key']}")
 
-    user_perm = db.session.query(UserPermissions).filter_by(user_id=user.id, permission_id=permission.id).first()
+    force_fields(data, ['key'])
 
+    permission = ensure_exists(Permission, key=data['key'])
+
+    user_perm = ensure_exists(UserPermissions, return_none=True, user_id=user.id, permission_id=permission.id)
     if user_perm is None:
-        raise BadRequest('User does not have that permission')
+        raise ResourceNotFound(f"User {user.username} does not have the '{permission.key}' permission")
 
     db.session.query(UserPermissions).filter_by(user_id=user.id, permission_id=permission.id).delete()
     db.session.commit()
 
-    return get_user_permissions(user_id)
+    return responses.create_success(f'Permission {permission.key} revoked from user {user.username}', 'api.get_user_permissions', user_id=user_id)
 
 
 @bp.route('/users/<int:user_id>/discord', methods=['GET'])
 @req_app_token
 def get_user_discord(user_id):
     user_token = get_bearer_token(request.headers)['user']
-    user = db.session.get(User, user_id)
+    user = ensure_exists(User, id=user_id)
 
     authenticated = False
     if user is User.check_token(user_token):
         authenticated = True
-
-    if not user:
-        raise ResourceNotFound(f'User with ID {user_id}')
 
     if user.discord is None:
         raise ResourceNotFound(f'User with ID {user_id} does not have a linked Discord account')
@@ -234,9 +222,7 @@ def get_user_discord(user_id):
 @req_app_token
 @user_auth.login_required
 def create_user_discord(user_id):
-    user = db.session.get(User, user_id)
-    if user is None:
-        raise ResourceNotFound(f'User with ID {user_id}')
+    user = ensure_exists(User, id=user_id)
 
     if user.id is not user_auth.current_user().id:
         raise UserAuthError()
@@ -246,9 +232,8 @@ def create_user_discord(user_id):
 
     data = request.get_json()
 
-    for field in ['discord_id', 'access_token', 'refresh_token', 'expires_in']:
-        if field not in data:
-            raise BadRequest(f"{field} field missing")
+    required_fields = ['discord_id', 'access_token', 'refresh_token', 'expires_in']
+    force_fields(data, required_fields)
 
     discord = db.session.query(Discord).filter(Discord.discord_id == data['discord_id']).first()
     if discord is not None:
@@ -261,16 +246,14 @@ def create_user_discord(user_id):
     db.session.add(discord)
     db.session.commit()
 
-    return user.discord.to_dict(authenticated=True)
+    return responses.create_success('Discord account linked', 'api.get_user_discord', user_id=user_id)
 
 
 @bp.route('/users/<int:user_id>/discord', methods=['PUT'])
 @req_app_token
 @user_auth.login_required
 def update_user_discord(user_id):
-    user = db.session.get(User, user_id)
-    if user is None:
-        raise ResourceNotFound(f'User with ID {user_id}')
+    user = ensure_exists(User, id=user_id)
 
     if user.id is not user_auth.current_user().id:
         raise UserAuthError()
@@ -296,16 +279,14 @@ def update_user_discord(user_id):
     user.discord.from_dict(data)
     db.session.commit()
 
-    return user.discord.to_dict(authenticated=True)
+    return responses.request_success('Discord account updated', 'api.get_user_discord', user_id=user_id)
 
 
 @bp.route('/users/<int:user_id>/discord', methods=['DELETE'])
 @req_app_token
 @user_auth.login_required
 def delete_user_discord(user_id):
-    user = db.session.get(User, user_id)
-    if user is None:
-        raise ResourceNotFound(f'User with ID {user_id}')
+    user = ensure_exists(User, id=user_id)
 
     if user.id is not user_auth.current_user().id:
         raise UserAuthError()
@@ -316,21 +297,18 @@ def delete_user_discord(user_id):
     db.session.query(Discord).filter(Discord.user_id == user.id).delete()
     db.session.commit()
 
-    return '', 200
+    return responses.request_success('Discord account unlinked', 'api.get_user', user_id=user_id)
 
 
 @bp.route('/users/<int:user_id>/twitch', methods=['GET'])
 @req_app_token
 def get_user_twitch(user_id):
     user_token = get_bearer_token(request.headers)['user']
-    user = db.session.get(User, user_id)
+    user = ensure_exists(User, id=user_id)
 
     authenticated = False
     if user is User.check_token(user_token):
         authenticated = True
-
-    if not user:
-        raise ResourceNotFound(f'User with ID {user_id}')
 
     if user.twitch is None:
         raise ResourceNotFound(f'User with ID {user_id} does not have a linked Twitch account')
@@ -342,9 +320,7 @@ def get_user_twitch(user_id):
 @req_app_token
 @user_auth.login_required
 def create_user_twitch(user_id):
-    user = db.session.get(User, user_id)
-    if user is None:
-        raise ResourceNotFound(f'User with ID {user_id}')
+    user = ensure_exists(User, id=user_id)
 
     if user.id is not user_auth.current_user().id:
         raise UserAuthError()
@@ -354,22 +330,22 @@ def create_user_twitch(user_id):
 
     data = request.get_json()
 
-    for field in ['twitch_id', 'access_token', 'refresh_token', 'expires_in']:
-        if field not in data:
-            raise BadRequest(f"{field} field missing")
+    required_fields = valid_fields = ['twitch_id', 'access_token', 'refresh_token', 'expires_in']
+
+    force_fields(data, required_fields)
 
     twitch = db.session.query(Twitch).filter(Twitch.twitch_id == data['twitch_id']).first()
     if twitch is not None:
         raise BadRequest('Twitch account is linked to another user')
 
     twitch = Twitch()
-    twitch.from_dict(data)
+    twitch.from_dict(clean_data(data, valid_fields))
     twitch.user = user
 
     db.session.add(twitch)
     db.session.commit()
 
-    return user.twitch.to_dict(authenticated=True)
+    return responses.create_success('Twitch account linked', 'api.get_user_twitch', user_id=user_id)
 
 
 @bp.route('/users/<int:user_id>/twitch', methods=['PUT'])
@@ -404,7 +380,7 @@ def update_user_twitch(user_id):
     user.twitch.from_dict(data)
     db.session.commit()
 
-    return user.twitch.to_dict(authenticated=True)
+    return responses.request_success('Twitch account updated', 'api.get_user_twitch', user_id=user_id)
 
 
 @bp.route('/users/<int:user_id>/twitch', methods=['DELETE'])
@@ -424,32 +400,21 @@ def delete_user_twitch(user_id):
     db.session.query(Twitch).filter(Twitch.user_id == user.id).delete()
     db.session.commit()
 
-    return '', 200
+    return responses.request_success('Twitch account unlinked', 'api.get_user', user_id=user_id)
 
 
 @bp.route('/users/forgot_password', methods=['POST'])
 @req_app_token
 def request_password_reset():
     data = request.get_json()
-    user = None
+
     if 'username' not in data and 'email' not in data:
-        raise BadRequest('Username or Email field missing')
+        raise BadRequest("No valid fields provided. Provide either 'username' or 'email'")
 
-    if 'username' in data and not check_username_exists(data['username']):
-        raise ResourceNotFound(f"User with username {data['username']}")
+    valid_fields = ['username', 'email']
+    search_args = clean_data(data, valid_fields)
 
-    if 'email' in data and check_email_exists(data['email']):
-        raise ResourceNotFound(f"User with email {data['email']}")
-
-    if 'email' in data:
-        query = (User.email == data['email'])
-    else:
-        query = (User.username == data['username'])
-
-    user = db.session.query(User).filter(query).first()
-
-    if user is None:
-        raise error_response(501, 'Username or email matched but unable to load the user')
+    user = ensure_exists(User, join_method='or', **search_args)
 
     send_password_reset_email(user)
 

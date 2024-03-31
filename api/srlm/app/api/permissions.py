@@ -1,8 +1,9 @@
 from flask import request, url_for
 import sqlalchemy as sa
 from api.srlm.app import db
+from api.srlm.app.api.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.models import Permission
-from api.srlm.app.api import bp
+from api.srlm.app.api import bp, responses
 from api.srlm.app.api.auth import req_app_token
 from api.srlm.app.api.errors import ResourceNotFound, BadRequest
 
@@ -18,10 +19,11 @@ def check_key_exists(key):
     return exists
 
 
-@bp.route('/permissions/<int:perm_id>', methods=['GET'])
+@bp.route('/permissions/<perm_id_or_key>', methods=['GET'])
 @req_app_token
-def get_permission(perm_id):
-    return Permission.query.get_or_404(perm_id).to_dict()
+def get_permission(perm_id_or_key):
+    permission = ensure_exists(Permission, join_method='or', id=perm_id_or_key, key=perm_id_or_key)
+    return permission.to_dict()
 
 
 @bp.route('/permissions', methods=['GET'])
@@ -36,35 +38,38 @@ def get_permissions():
 @req_app_token
 def new_permission():
     data = request.get_json()
-    if 'key' not in data:
-        raise BadRequest("Permission 'key' field missing")
-    if check_key_exists(data['key']):
-        raise BadRequest('Permission key is not unique')
+
+    required_fields = valid_fields = ['key', 'description']
+
+    force_fields(data, required_fields)
+    force_unique(Permission, data, ['key'])
+    cleaned_data = clean_data(data, valid_fields)
+
     permission = Permission()
-    permission.from_dict(data)
+    permission.from_dict(cleaned_data)
     db.session.add(permission)
     db.session.commit()
-    return permission.to_dict(), 201, {'Location': url_for('api.get_permission', perm_id=permission.id)}
+    # return permission.to_dict(), 201, {'Location': url_for('api.get_permission', perm_id=permission.id)}
+    return responses.create_success(f"Permission {permission.key} created", 'api.get_permission', perm_id_or_key=permission.id)
 
 
-@bp.route('/permissions/<int:perm_id>', methods=['PUT'])
+@bp.route('/permissions/<perm_id_or_key>', methods=['PUT'])
 @req_app_token
-def update_permission(perm_id):
-    permission = Permission.query.get_or_404(perm_id)
+def update_permission(perm_id_or_key):
+    permission = ensure_exists(Permission, join_method='or', id=perm_id_or_key, key=perm_id_or_key)
     data = request.get_json()
+
     if 'key' in data and data['key'] != permission.key and check_key_exists(data['key']):
         raise BadRequest('Permission key is not unique')
     permission.from_dict(data)
     db.session.commit()
-    return permission.to_dict()
+    return responses.request_success(f"Permission {permission.key} updated", 'api.get_permission', perm_id_or_key=permission.id)
 
 
-@bp.route('/permissions/<int:perm_id>/users', methods=['GET'])
+@bp.route('/permissions/<perm_id_or_key>/users', methods=['GET'])
 @req_app_token
-def list_users_with_permission(perm_id):
-    permission = db.session.get(Permission, perm_id)
-    if not permission:
-        raise ResourceNotFound(f'Permission with ID {perm_id}')
+def list_users_with_permission(perm_id_or_key):
+    permission = ensure_exists(Permission, join_method='or', id=perm_id_or_key, key=perm_id_or_key)
 
     users = []
     for user in permission.users:
@@ -81,7 +86,7 @@ def list_users_with_permission(perm_id):
         'key': permission.key,
         'users': users,
         '_links': {
-            'self': url_for('api.list_users_with_permission', perm_id=perm_id)
+            'self': url_for('api.list_users_with_permission', perm_id_or_key=permission.id)
         }
     }
 
