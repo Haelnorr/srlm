@@ -1277,6 +1277,62 @@ De-registers a team from a season_division. <code>tid</code> is <code>team.id</c
 </details>
 </ul>
 </details>
+<br><details>
+<summary><b>Match</b></summary>
+<ul>
+<details>
+<summary><code>POST /api/match</code></summary>
+Creates a match. Teams must be registered to the specified season_division, and cannot play themselves.
+<pre># Italicised fields are optional
+{
+    "season_division_id": 40,
+    "home_team_id": 247,
+    "away_team_id": 245,
+    <em>"round": 1,</em>
+    <em>"match_week": 1</em>
+}</pre>
+</details>
+<details>
+<summary><code>GET /api/match/{id}</code></summary>
+Gets the details of the specified match. Will include results if match is completed.
+<pre>{
+    "id": 1,
+    "season_division": "Season 19 Pro League",
+    "round": 1,
+    "match_week": 1,
+    "scheduled_time": null,
+    "results": null,
+    "streamer": null,
+    "cancelled": null,
+    "final": false,
+    "home_team": {
+        "_links": {
+            "self": "/api/teams/247"
+        },
+        "acronym": "CBR",
+        "color": null,
+        "name": "CBR Milk"
+    },
+    "away_team": {
+        "_links": {
+            "self": "/api/teams/245"
+        },
+        "acronym": "MONK",
+        "color": null,
+        "name": "Massive Monkeys"
+    },
+    "_links": {
+        "away_team": "/api/teams/245",
+        "home_team": "/api/teams/247",
+        "results": null,
+        "season_division": "/api/season_division/40",
+        "self": "/api/match/1",
+        "streamer": null
+    }
+}</pre>
+</details>
+</ul>
+</details>
 <br>
 
 <h3>Responses</h3>

@@ -866,10 +866,38 @@ class Match(db.Model):
     away_team = db.relationship('Team', backref='matches_away', foreign_keys=away_team_id)
     streamer = db.relationship('User', back_populates='streamed_matches')
     final = db.relationship('Final', back_populates='matches')
-    results = db.relationship('MatchResult', back_populates='match', lazy=True, uselist=False)  # null if not completed?
+    results = db.relationship('MatchResult', back_populates='match', lazy=True, uselist=False)
     schedule = db.relationship('MatchSchedule', back_populates='match', uselist=False)
     team_availability = db.relationship('MatchAvailability', back_populates='match')
     lobbies = db.relationship('Lobby', back_populates='match', lazy=True)
+
+    def from_dict(self, data):
+        for field in ['season_division_id', 'home_team_id', 'away_team_id', 'round', 'match_week']:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            'season_division': self.season_division.get_readable_name(),
+            'home_team': self.home_team.to_simple_dict(),
+            'away_team': self.away_team.to_simple_dict(),
+            'round': self.round,
+            'match_week': self.match_week,
+            'cancelled': self.cancelled,
+            'streamer': self.streamer.twitch.to_dict() if self.streamer else None,
+            'final': bool(self.final_id),
+            'results': self.results.get_result() if self.results else None,
+            'scheduled_time': self.schedule.scheduled_time,
+            '_links': {
+                'self': url_for('api.get_match', match_id=self.id),
+                'season_division': url_for('api.get_season_division', season_division_id=self.season_division_id),
+                'home_team': url_for('api.get_team', team_id=self.home_team_id),
+                'away_team': url_for('api.get_team', team_id=self.away_team_id),
+                'streamer': url_for('api.get_user_twitch', user_id=self.streamer_id) if self.streamer else None
+            }
+        }
+        return data
 
 
 # result of a match between two registered league teams, one-to-one relationship with match
@@ -883,10 +911,45 @@ class MatchResult(db.Model):
     overtime = db.Column(db.Boolean, nullable=False, default=False)
     forfeit = db.Column(db.Boolean, nullable=False, default=False)
     vod = db.Column(db.String(128))
+    completed_date = db.Column(db.DateTime)
 
     match = db.relationship('Match', back_populates='results', uselist=False)
     winner = db.relationship('Team', backref='matches_won', foreign_keys=winner_id)
     loser = db.relationship('Team', backref='matches_lost', foreign_keys=loser_id)
+
+    def get_result(self):
+        return f"{self.winner.name} {self.score_winner}-{self.score_loser} {self.loser.name}"
+
+    def from_dict(self, data):
+        for field in ['winner_id', 'loser_id', 'draw', 'score_winner', 'score_loser', 'overtime', 'forfeit', 'vod']:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            'season_division': self.season_division.get_readable_name(),
+            'round': self.round,
+            'match_week': self.match_week,
+            'home_team': self.home_team.to_simple_dict(),
+            'away_team': self.away_team.to_simple_dict(),
+            'winner': self.winner.name,
+            'loser': self.loser.name,
+            'score_winner': self.score_winner,
+            'score_loser': self.score_loser,
+            'overtime': self.overtime,
+            'forfeit': self.forfeit,
+            'final': bool(self.final_id),
+            'completed': self.completed_date,
+            'vod': self.vod,
+            '_links': {
+                'self': url_for('api.get_match', match_id=self.id),
+                'season_division': url_for('api.get_season_division', season_division_id=self.season_division_id),
+                'home_team': url_for('api.get_team', team_id=self.home_team_id),
+                'away_team': url_for('api.get_team', team_id=self.away_team_id)
+            }
+        }
+        return data
 
 
 # presets for creating lobbies using different match types

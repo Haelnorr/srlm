@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from flask import request, url_for
+from flask import request
 import sqlalchemy as sa
 
 from api.srlm.app import db
