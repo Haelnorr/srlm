@@ -5,7 +5,7 @@ from api.srlm.app.api import bp, responses
 from flask import request, url_for
 import sqlalchemy as sa
 from api.srlm.app.api.functions import ensure_exists, force_fields, force_unique, clean_data
-from api.srlm.app.models import Team, SeasonDivision
+from api.srlm.app.models import Team, SeasonDivision, PlayerTeam
 from api.srlm.app.api.auth import req_app_token
 
 # create a new logger for this module
@@ -79,55 +79,9 @@ def get_team_players(team_id):
 
     current = request.args.get('current', False, bool)
 
-    if current:
-        players = {}
-        for player_assoc in team.player_association:
-            now = datetime.now(timezone.utc)
-            if player_assoc.start_date.replace(tzinfo=timezone.utc) < now and (player_assoc.end_date is None or player_assoc.end_date.replace(tzinfo=timezone.utc) > now):
-                player = {
-                    'name': player_assoc.player.player_name,
-                    'start_date': player_assoc.start_date,
-                    '_links': {
-                        'self': url_for('api.get_player', player_id=player_assoc.player.id)
-                    }
-                }
-                players[player_assoc.player.id] = player
+    team_players = PlayerTeam.get_players_dict(team.id, current)
 
-    else:
-        players = {}
-        for player_assoc in team.player_association:
-            if player_assoc.player.id not in players:
-                player_data = {
-                    'name': player_assoc.player.player_name,
-                    'dates': [
-                        {
-                            'start': player_assoc.start_date,
-                            'end': player_assoc.end_date
-                        }
-                    ],
-                    '_links': {
-                        'self': url_for('api.get_player', player_id=player_assoc.player.id)
-                    }
-                }
-                players[player_assoc.player.id] = player_data
-            else:
-                dates = {
-                    'start': player_assoc.start_date,
-                    'end': player_assoc.end_date
-                }
-                players[player_assoc.player.id]['dates'].append(dates)
-
-    response = {
-        'team': team.name,
-        'acronym': team.acronym,
-        'color': team.color,
-        'players': players,
-        '_links': {
-            'self': url_for('api.get_team_players', team_id=team.id, current=current),
-            'team': url_for('api.get_team', team_id=team.id)
-        }
-    }
-    return response
+    return team_players
 
 
 @bp.route('/teams/<int:team_id>/players/season/<int:season_division_id>', methods=['GET'])

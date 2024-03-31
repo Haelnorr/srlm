@@ -334,7 +334,6 @@ class Player(PaginatedAPIMixin, db.Model):
         return current_team_q.first()
 
 
-
 # this is a helper table for recording which teams played in which season and in which division
 season_division_team = db.Table('season_division_team',
                                 db.Column('season_division_id', db.Integer, db.ForeignKey('season_division.id')),
@@ -402,6 +401,115 @@ class PlayerTeam(db.Model):
     player = db.relationship('Player', back_populates='team_association')
     team = db.relationship('Team', back_populates='player_association')
 
+    def __repr__(self):
+        return f'<PlayerTeam {self.player.player_name} | {self.team.name}>'
+
+    def player_to_dict(self):
+        data = {
+            'name': self.player.player_name,
+            'dates': [
+                {
+                    'start': self.start_date,
+                    'end': self.end_date
+                }
+            ],
+            '_links': {
+                'self': url_for('api.get_player', player_id=self.player.id)
+            }
+        }
+        return data
+
+    def team_to_dict(self):
+        data = {
+            'name': self.team.name,
+            'acronym': self.team.acronym,
+            'color': self.team.color,
+            'dates': [
+                {
+                    'start': self.start_date,
+                    'end': self.end_date
+                }
+            ],
+            '_links': {
+                'self': url_for('api.get_team', team_id=self.team.id)
+            }
+        }
+        return data
+
+    @staticmethod
+    def get_players_dict(team_id, current=False):
+        team = db.session.get(Team, team_id)
+        players = {}
+        if current:
+            for player_assoc in team.player_association:
+                now = datetime.now(timezone.utc)
+                if player_assoc.start_date.replace(tzinfo=timezone.utc) < now and (player_assoc.end_date is None or player_assoc.end_date.replace(tzinfo=timezone.utc) > now):
+                    players[player_assoc.player.id] = player_assoc.player_to_dict()
+
+        else:
+            for player_assoc in team.player_association:
+                if player_assoc.player.id not in players:
+                    players[player_assoc.player.id] = player_assoc.player_to_dict()
+                else:
+                    dates = {
+                        'start': player_assoc.start_date,
+                        'end': player_assoc.end_date
+                    }
+                    players[player_assoc.player.id]['dates'].append(dates)
+
+        response = {
+            'team': team.name,
+            'acronym': team.acronym,
+            'color': team.color,
+            'players': players,
+            '_links': {
+                'self': url_for('api.get_team_players', team_id=team.id, current=current),
+                'team': url_for('api.get_team', team_id=team.id)
+            }
+        }
+        return response
+
+    @staticmethod
+    def get_teams_dict(player_id, current=False):
+        player = db.session.get(Player, player_id)
+        if current:
+            response = None
+            for team_assoc in player.team_association:
+                now = datetime.now(timezone.utc)
+                if team_assoc.start_date.replace(tzinfo=timezone.utc) < now and (team_assoc.end_date is None or team_assoc.end_date.replace(tzinfo=timezone.utc) > now):
+                    response = {
+                        'player': player.player_name,
+                        'current_team': team_assoc.team_to_dict(),
+                        '_links': {
+                            'self': url_for('api.get_player_teams', player_id=player.id, current=True),
+                            'player': url_for('api.get_player', player_id=player.id)
+                        }
+                    }
+                    break
+            return response
+
+        else:
+            teams = {}
+            for team_assoc in player.team_association:
+                if team_assoc.team.id not in teams:
+                    teams[team_assoc.team.id] = team_assoc.team_to_dict()
+                else:
+                    dates = {
+                        'start': team_assoc.start_date,
+                        'end': team_assoc.end_date
+                    }
+                    teams[team_assoc.team.id]['dates'].append(dates)
+
+            response = {
+                'player': player.player_name,
+                'teams': teams,
+                '_links': {
+                    'self': url_for('api.get_player_teams', player_id=player.id),
+                    'player': url_for('api.get_player', player_id=player.id)
+                }
+            }
+            return response
+
 
 # this is a helper table for recording which players were free agents, for which seasons and when
 class FreeAgent(db.Model):
@@ -413,6 +521,35 @@ class FreeAgent(db.Model):
 
     player = db.relationship('Player', back_populates='season_association')
     season_division = db.relationship('SeasonDivision', back_populates='free_agent_association')
+
+    def to_dict(self, parent):
+        if parent is 'player':
+            data = {
+                'season_division': self.season_division.get_readable_name(),
+                'start_date': self.start_date,
+                'end_date': self.end_date,
+                '_links': {
+                    'season_division': url_for('api.get_season_division', season_division_id=self.season_division_id)
+                }
+            }
+        elif parent is 'season_division':
+            data = {
+                'player': self.player.player_name,
+                'start_date': self.start_date,
+                'end_date': self.end_date,
+                '_links': {
+                    'player': url_for('api.get_player', player_id=self.player_id)
+                }
+            }
+        else:
+            raise ValueError("parent arg should be either 'player' or 'season_division'")
+        return data
+
+    def from_dict(self, data):
+        valid_fields = ['start_date', 'end_date']
+        for field in valid_fields:
+            if field in data:
+                setattr(self, field, data[field])
 
 
 class League(PaginatedAPIMixin, db.Model):

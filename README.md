@@ -872,10 +872,16 @@ to retrieve only the players current team.
         "acronym": "SIL",
         "color": "dd73ff",
         "name": "Such Is Life",
-        "start_date": "Mon, 28 Aug 2023 00:00:00 GMT"
+        "dates": [
+            "start": "Mon, 28 Aug 2023 00:00:00 GMT",
+            "end": null
+        ],
+        "_links": {
+            "self": "/api/teams/55"
+        }
     },
     "_links": {
-        "current_team": "/api/teams/55",
+        "current_team": "/api/players/113",
         "self": "/api/players/113/teams?current=True"
     }
 }
