@@ -4,6 +4,8 @@ from api.srlm.app import db
 from api.srlm.app.api import bp, responses
 from flask import request, url_for
 import sqlalchemy as sa
+
+from api.srlm.app.api.errors import ResourceNotFound, BadRequest
 from api.srlm.app.api.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.models import Team, SeasonDivision, PlayerTeam
 from api.srlm.app.api.auth import req_app_token
@@ -129,13 +131,62 @@ def get_team_players_in_season(team_id, season_division_id):
 @bp.route('/teams/<int:team_id>/seasons', methods=['GET'])
 @req_app_token
 def get_team_seasons(team_id):
-    pass
+    # ensure team exists
+    team = ensure_exists(Team, id=team_id)
+
+    if len(team.season_divisions) is 0:
+        raise ResourceNotFound('Team has not played in any seasons')
+
+    # return list of seasons
+    seasons = SeasonDivision.get_seasons_dict(team.id)
+    return seasons
 
 
 @bp.route('/teams/<int:team_id>/seasons', methods=['POST'])
 @req_app_token
 def register_team_season(team_id):
-    pass
+    # ensure team exists
+    team = ensure_exists(Team, id=team_id)
+
+    # validate input
+    data = request.get_json()
+    force_fields(data, ['season_division_id'])
+
+    # ensure season exists
+    season_division = ensure_exists(SeasonDivision, id=data['season_division_id'])
+
+    team_registered = team.season_divisions.filter_by(id=season_division.id).first()
+
+    if team_registered:
+        raise BadRequest(f'Team {team.name} already registered to {season_division.get_readable_name()}')
+
+    # register team
+    team.season_divisions.append(season_division)
+    db.session.commit()
+
+    return responses.request_success(f'Team {team.name} registered to {season_division.get_readable_name()}',
+                                     'api.get_season_division', season_division_id=season_division.id)
+
+
+@bp.route('/teams/<int:team_id>/seasons/<int:season_division_id>', methods=['DELETE'])
+@req_app_token
+def deregister_team_season(team_id, season_division_id):
+    # ensure team exists
+    team = ensure_exists(Team, id=team_id)
+
+    # ensure season exists
+    season_division = ensure_exists(SeasonDivision, id=season_division_id)
+
+    team_registered = team.season_divisions.filter_by(id=season_division.id).first()
+
+    if not team_registered:
+        raise BadRequest(f'Team {team.name} not registered to {season_division.get_readable_name()}')
+
+    team.season_divisions.remove(season_division)
+    db.session.commit()
+
+    return responses.request_success(f'Team {team.name} de-registered from {season_division.get_readable_name()}',
+                                     'api.get_season_division', season_division_id=season_division.id)
 
 
 @bp.route('/teams/<int:team_id>/awards', methods=['GET'])

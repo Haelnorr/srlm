@@ -758,6 +758,40 @@ Gets a list of divisions in the specified season. Optional args and defaults: <c
 </ul>
 </details>
 <br><details>
+<summary><b>SeasonDivision</b></summary>
+This namespace can be slightly confusing, but it comes from the helper table it is built on. The table
+links together entries from the 'Seasons' and 'Divisions' tables, and is where most of the relevant in-season data
+is stored (teams, matches, finals etc).
+<ul>
+<details>
+<summary><code>GET /api/season_division/{id}/free_agents</code></summary>
+Returns a list of all the free agents in the specified season. Will return <code>404 NOT FOUND</code> if season had no 
+free agents
+<pre>{
+    "league": "OSL",
+    "season_division": "Season 2 Single League",
+    "free_agents": [
+        {
+            "_links": {
+                "player": "/api/players/40"
+            },
+            "end_date": null,
+            "player": "Nutterz",
+            "start_date": null
+        },
+        { ... free agent info ... },
+        ...
+    ],
+    "_links": {
+        "league": "/api/leagues/1",
+        "season_division": "/api/season_division/2",
+        "self": "/api/season_division/2/free_agents"
+    }
+}</pre>
+</details>
+</ul>
+</details>
+<br><details>
 <summary><b>Players</b></summary>
 <ul>
 <details>
@@ -895,6 +929,37 @@ Will fail if player is currently registered to a team.
 <details>
 <summary><code>DELETE /api/players/{id}/teams</code></summary>
 De-register the player from their current team.
+</details>
+<details>
+<summary><code>GET /api/players/{id}/free_agent</code></summary>
+Gets a list of seasons a player has been a free agent in.
+<pre>{
+    "player": "Nananana",
+    "free_agent_seasons": [
+        {
+            "_links": {
+                "self": "/api/season_division/30",
+                "season": "/api/seasons/15",
+                "division": "/api/divisions/1",
+                "league": "/api/leagues/1",
+            },
+            "division": "Pro League",
+            "id": 30,
+            "league": "OSL",
+            "season": "Season 15"
+        },
+        { ... season/division information ... },
+        ...
+    ],
+    "_links": {
+        "player": "/api/players/48",
+        "self": "/api/players/48/free_agent"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>POST /api/players/{id}/free_agent</code></summary>
+Registers a player to the given season_division. Input is <code>season_division_id</code>
 </details>
 </ul>
 </details>
@@ -1082,6 +1147,44 @@ Gets the list of players for a team specified by <code>pid</code> in the season_
         "team": "/api/teams/55"
     }
 }</pre>
+</details>
+<details>
+<summary><code>GET /api/teams/{id}/seasons</code></summary>
+Gets a list of seasons the team has played in
+<pre>{
+    "acronym": "SIL",
+    "color": "dd73ff",
+    "name": "Such Is Life",
+    "season_divisions": [
+        {
+            "_links": {
+                "division": "/api/divisions/3",
+                "league": "/api/leagues/1",
+                "season": "/api/seasons/5",
+                "self": "/api/season_division/6"
+            },
+            "division": "Open League",
+            "id": 6,
+            "league": "OSL",
+            "season": "Season 5"
+        },
+        { ... season_division info ... },
+        ...
+    ],
+    "_links": {
+        "self": "/api/teams/55/seasons",
+        "team": "/api/teams/55"
+    }
+}</pre>
+</details>
+<details>
+<summary><code>POST /api/teams/{id}/seasons</code></summary>
+Registers a team to a season_division. Input: <code>season_division_id</code>
+</details>
+<details>
+<summary><code>DELETE /api/teams/{tid}/seasons/{sid}</code></summary>
+De-registers a team from a season_division. <code>tid</code> is <code>team.id</code> and 
+<code>sid</code> is <code>season_division.id</code>
 </details>
 </ul>
 </details>

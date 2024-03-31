@@ -5,6 +5,7 @@
    - ~~league~~
    - ~~division~~
    - ~~season~~
+   - season_division
    - player
    - team
    - player_team
@@ -22,7 +23,7 @@
    - match + match_result
    - final + final_result
    - lobby stuff
-   - match_data stuff
+   - match_data stuff (including legacy)
    - scheduling
    - awards
    - logging

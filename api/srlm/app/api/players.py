@@ -10,7 +10,7 @@ from api.srlm.app.api.auth import req_app_token
 # create a new logger for this module
 from api.srlm.app.api.errors import BadRequest, ResourceNotFound
 from api.srlm.app.api.functions import ensure_exists, force_fields, force_unique, clean_data
-from api.srlm.app.models import Player, SeasonDivision, Team, PlayerTeam
+from api.srlm.app.models import Player, SeasonDivision, Team, PlayerTeam, FreeAgent
 from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
@@ -144,19 +144,57 @@ def deregister_player_team(player_id):
 
     db.session.commit()
 
-    return responses.request_success(f'Player {player.player_name} de-registered from team {current_team.team.name}', 'api.get_player', player_id=player.id)
+    return responses.request_success(f'Player {player.player_name} de-registered from team '
+                                     f'{current_team.team.name}', 'api.get_player', player_id=player.id)
 
 
 @bp.route('/players/<int:player_id>/free_agent', methods=['GET'])
 @req_app_token
 def get_player_free_agent(player_id):
-    pass
+    player = ensure_exists(Player, id=player_id)
+
+    player_seasons = FreeAgent.get_free_agent_seasons(player.id)
+
+    if player_seasons is None:
+        raise ResourceNotFound('Player has not been a free agent in any season')
+    else:
+        return player_seasons
 
 
 @bp.route('/players/<int:player_id>/free_agent', methods=['POST'])
 @req_app_token
 def register_player_free_agent(player_id):
-    pass
+    player = ensure_exists(Player, id=player_id)
+
+    data = request.get_json()
+    force_fields(data, ['season_division_id'])
+
+    season_division = ensure_exists(SeasonDivision, id=data['season_division_id'])
+
+    # check if player isnt already a free agent in that season
+    already_registered = ensure_exists(FreeAgent, return_none=True, player_id=player.id, season_division_id=season_division.id)
+    if already_registered:
+        raise BadRequest('Player already registered as a free agent to that season')
+
+    start_date = None
+    end_date = None
+    if 'start_date' in data:
+        start_date = data['start_date']
+    if 'end_date' in data:
+        end_date = data['end_date']
+
+    free_agent = FreeAgent()
+    free_agent.player = player
+    free_agent.season_division = season_division
+    free_agent.start_date = start_date
+    free_agent.end_date = end_date
+
+    db.session.add(free_agent)
+    db.session.commit()
+
+    return responses.request_success(f"Player {player.player_name} registered as a Free Agent to "
+                                     f"{season_division.get_readable_name()} ({season_division.season.league.acronym})",
+                                     'api.get_season_division', season_division_id=season_division.id)
 
 
 @bp.route('/players/<int:player_id>/awards', methods=['GET'])

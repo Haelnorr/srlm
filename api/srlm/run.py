@@ -23,7 +23,7 @@ log = get_logger(__name__)
 
 log.info('Starting web app')
 from api.srlm.app import create_app, db
-from api.srlm.app.models import User, Permission, UserPermissions, League, Season, Division
+from api.srlm.app.models import User, Permission, UserPermissions, League, Season, Division, SeasonDivision, Player, Team
 from api.srlm.api_access.models import AuthorizedApp
 from api.srlm.app.api import import_dict
 app = create_app()
@@ -51,6 +51,9 @@ def make_shell_context():
         'League': League,
         'Season': Season,
         'Division': Division,
+        'SeasonDivision': SeasonDivision,
+        'Player': Player,
+        'Team': Team,
         'aa': AuthorizedApp,
         'ee': ensure_exists,
         'import_dict': import_dict

@@ -351,7 +351,7 @@ class Team(PaginatedAPIMixin, db.Model):
 
     player_association = db.relationship('PlayerTeam', back_populates='team', lazy='dynamic')
     players = association_proxy('player_association', 'player')
-    season_divisions = db.relationship('SeasonDivision', secondary=season_division_team, back_populates='teams')
+    season_divisions = db.relationship('SeasonDivision', secondary=season_division_team, back_populates='teams', lazy='dynamic')
     player_match_data = db.relationship('PlayerMatchData', back_populates='team')
     awards_association = db.relationship('TeamAward', back_populates='team', lazy=True)
     awards = association_proxy('awards_association', 'award')
@@ -382,6 +382,17 @@ class Team(PaginatedAPIMixin, db.Model):
             }
         }
 
+        return data
+
+    def to_simple_dict(self):
+        data = {
+            'name': self.name,
+            'acronym': self.acronym,
+            'color': self.color,
+            '_links': {
+                'self': url_for('api.get_team', team_id=self.id)
+            }
+        }
         return data
 
     def from_dict(self, data):
@@ -524,14 +535,7 @@ class FreeAgent(db.Model):
 
     def to_dict(self, parent):
         if parent is 'player':
-            data = {
-                'season_division': self.season_division.get_readable_name(),
-                'start_date': self.start_date,
-                'end_date': self.end_date,
-                '_links': {
-                    'season_division': url_for('api.get_season_division', season_division_id=self.season_division_id)
-                }
-            }
+            return self.season_division.to_simple_dict()
         elif parent is 'season_division':
             data = {
                 'player': self.player.player_name,
@@ -550,6 +554,54 @@ class FreeAgent(db.Model):
         for field in valid_fields:
             if field in data:
                 setattr(self, field, data[field])
+
+    @staticmethod
+    def get_free_agent_seasons(player_id):
+        player = db.session.get(Player, player_id)
+        season_query = db.session.query(FreeAgent).filter_by(player_id=player_id).order_by(sa.desc(FreeAgent.season_division_id))
+
+        if season_query.count() is 0:
+            return None
+
+        seasons = []
+        for free_agent_record in season_query:
+            seasons.append(free_agent_record.to_dict(parent='player'))
+
+        response = {
+            'player': player.player_name,
+            'free_agent_seasons': seasons,
+            '_links': {
+                'self': url_for('api.get_player_free_agent', player_id=player.id),
+                'player': url_for('api.get_player', player_id=player.id)
+            }
+        }
+        return response
+
+    @staticmethod
+    def get_season_free_agents(season_division_id):
+        # get season/division
+        season_division = db.session.get(SeasonDivision, season_division_id)
+        # query free agents
+        player_query = db.session.query(FreeAgent).filter_by(season_division_id=season_division.id)
+        # return none if no players
+        if player_query.count() is 0:
+            return None
+        # get players
+        players = []
+        for free_agent_record in player_query:
+            players.append(free_agent_record.to_dict(parent='season_division'))
+        # build response
+        response = {
+            'season_division': season_division.get_readable_name(),
+            'league': season_division.season.league.acronym,
+            'free_agents': players,
+            '_links': {
+                'self': url_for('api.get_free_agents_in_season_division', season_division_id=season_division.id),
+                'season_division': url_for('api.get_season_division', season_division_id=season_division.id),
+                'league': url_for('api.get_league', league_id_or_acronym=season_division.season.league.id)
+            }
+        }
+        return response
 
 
 class League(PaginatedAPIMixin, db.Model):
@@ -686,7 +738,7 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
     rookies = db.relationship('Player', back_populates='first_season')
 
     def __repr__(self):
-        return f'<SeasonDivision | {self.season.name} | Division: {self.division.name} | {self.league.acronym}>'
+        return f'<SeasonDivision | {self.season.name} | Division: {self.division.name} | {self.season.league.acronym}>'
 
     def get_readable_name(self):
         return self.season.name + ' ' + self.division.name
@@ -718,6 +770,51 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
             }
         }
         return data
+
+    def to_simple_dict(self):
+        data = {
+            'id': self.id,
+            'season': self.season.name,
+            'division': self.division.name,
+            'league': self.season.league.acronym,
+            '_links': {
+                'self': url_for('api.get_season_division', season_division_id=self.id),
+                'season': url_for('api.get_season', season_id=self.season.id),
+                'division': url_for('api.get_division', division_id=self.division.id),
+                'league': url_for('api.get_league', league_id_or_acronym=self.season.league.id)
+            }
+        }
+        return data
+
+    @staticmethod
+    def get_teams_dict(season_division_id):
+        season_division = db.session.get(SeasonDivision, season_division_id)
+        teams = []
+        for team in season_division.teams:
+            teams.append(team.to_simple_dict())
+        response = season_division.to_simple_dict()
+        response['teams'] = teams
+        links = {
+            'self': url_for('api.get_teams_in_season_division', season_division_id=season_division.id),
+            'season_division': url_for('api.get_season_division', season_division_id=season_division.id)
+        }
+        response['_links'] = links
+        return response
+
+    @staticmethod
+    def get_seasons_dict(team_id):
+        team = db.session.get(Team, team_id)
+        seasons = []
+        for season in team.season_divisions:
+            seasons.append(season.to_simple_dict())
+        response = team.to_simple_dict()
+        response['season_divisions'] = seasons
+        links = {
+            'self': url_for('api.get_team_seasons', team_id=team.id),
+            'team': url_for('api.get_team', team_id=team.id)
+        }
+        response['_links'] = links
+        return response
 
 
 # info of a match between two registered league teams
