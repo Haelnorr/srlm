@@ -1,8 +1,4 @@
-import sqlalchemy as sa
-
-from api.srlm.app.api.errors import error_response
-from api.srlm.app.api.functions import ensure_exists
-from api.srlm.app.spapi.slapid import get_slap_id
+from api.srlm.app.spapi.lobby import create_lobby, delete_lobby, get_lobby, get_lobby_matches
 from api.srlm.logger import get_logger
 from api.srlm.logger import LogConfig
 from api.srlm.definitions import ROOT_DIR
@@ -23,9 +19,11 @@ if log_config.clean == 'true':
 log = get_logger(__name__)
 
 log.info('Starting web app')
+import sqlalchemy as sa
 from api.srlm.app import create_app, db
 from api.srlm.app.models import User, Permission, UserPermissions, League, Season, Division, SeasonDivision, Player, Team
 from api.srlm.api_access.models import AuthorizedApp
+from api.srlm.app.api.errors import error_response
 app = create_app()
 log.info('Web app started, accepting requests')
 
@@ -55,6 +53,10 @@ def make_shell_context():
         'Player': Player,
         'Team': Team,
         'AuthorizedApp': AuthorizedApp,
-        'get_slap_id': get_slap_id,
+        'create_lobby': create_lobby,
+        'test_lobby': {"region": "oce-east", "name": "Haelnorr's test lobby", "password": "123", "creator_name": "HaelnorrAPI", "match_length": 120},
+        'delete_lobby': delete_lobby,
+        'get_lobby': get_lobby,
+        'get_lobby_matches': get_lobby_matches
     }
 
