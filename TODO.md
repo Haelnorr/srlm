@@ -1,10 +1,16 @@
 # TODO
 
 **Before next PR**
- - match + match_result
- - lobby stuff
+ - matches & lobbies
+   - ~~create and view matches~~
+   - ~~get match results~~
+   - update match & match results
+   - lobby creation and monitoring
+   - match_stats retrieval
+   - match review system
  - integration with Slapshot Public API for lobby creation and retrieving match data
  - match_data stuff (including legacy)
+ - import legacy match data
 
 **Future**
  - api endpoints (list incomplete)

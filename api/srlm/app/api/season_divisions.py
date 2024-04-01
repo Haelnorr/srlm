@@ -80,7 +80,16 @@ def get_free_agents_in_season_division(season_division_id):
 @bp.route('/season_division/<int:season_division_id>/matches', methods=['GET'])
 @req_app_token
 def get_matches_in_season_division(season_division_id):
-    pass
+    season_division = ensure_exists(SeasonDivision, id=season_division_id)
+    unplayed = request.args.get('unplayed', False, bool)
+    matches = []
+    for match in season_division.matches:
+        if match.results is None or not unplayed:
+            matches.append(match.to_simple_dict())
+
+    response = season_division.to_simple_dict()
+    response['matches'] = matches
+    return response
 
 
 @bp.route('/season_division/<int:season_division_id>/finals', methods=['GET'])

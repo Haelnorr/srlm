@@ -878,6 +878,41 @@ Lists the players who are playing for the first time in this season.
     }
 }</pre>
 </details>
+<details>
+<summary><code>GET /api/season_division/{id}/matches</code></summary>
+Gets a list of matches in the given season_division. Optional arg <code>unplayed=True</code> can be specified to only
+get unplayed matches.
+<pre>{
+    "id": 40,
+    "season": "Season 19",
+    "division": "Pro League",
+    "league": "OSL",
+    "matches": [
+        {
+            "_links": {
+                "away_team": "/api/teams/245",
+                "home_team": "/api/teams/247",
+                "self": "/api/match/1"
+            },
+            "away_team": "Massive Monkeys",
+            "final": false,
+            "home_team": "CBR Milk",
+            "match_week": null,
+            "result": null,
+            "round": null,
+            "scheduled_time": null
+        },
+        { ... match item ... }
+        ...
+    ],
+    "_links": {
+        "division": "/api/divisions/1",
+        "league": "/api/leagues/1",
+        "season": "/api/seasons/19",
+        "self": "/api/season_division/40"
+    }
+}</pre>
+</details>
 </ul>
 </details>
 <br><details>
@@ -1301,7 +1336,6 @@ Gets the details of the specified match. Will include results if match is comple
     "round": 1,
     "match_week": 1,
     "scheduled_time": null,
-    "results": null,
     "streamer": null,
     "cancelled": null,
     "final": false,

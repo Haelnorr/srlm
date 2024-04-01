@@ -887,7 +887,6 @@ class Match(db.Model):
             'cancelled': self.cancelled,
             'streamer': self.streamer.twitch.to_dict() if self.streamer else None,
             'final': bool(self.final_id),
-            'results': self.results.get_result() if self.results else None,
             'scheduled_time': self.schedule.scheduled_time,
             '_links': {
                 'self': url_for('api.get_match', match_id=self.id),
@@ -895,6 +894,23 @@ class Match(db.Model):
                 'home_team': url_for('api.get_team', team_id=self.home_team_id),
                 'away_team': url_for('api.get_team', team_id=self.away_team_id),
                 'streamer': url_for('api.get_user_twitch', user_id=self.streamer_id) if self.streamer else None
+            }
+        }
+        return data
+
+    def to_simple_dict(self):
+        data = {
+            'home_team': self.home_team.name,
+            'away_team': self.away_team.name,
+            'result': self.results.get_result() if self.results else None,
+            'round': self.round,
+            'match_week': self.match_week,
+            'final': bool(self.final_id),
+            'scheduled_time': self.schedule.scheduled_time,
+            '_links': {
+                'self': url_for('api.get_match', match_id=self.id),
+                'home_team': url_for('api.get_team', team_id=self.home_team_id),
+                'away_team': url_for('api.get_team', team_id=self.away_team_id),
             }
         }
         return data
@@ -947,6 +963,21 @@ class MatchResult(db.Model):
                 'season_division': url_for('api.get_season_division', season_division_id=self.season_division_id),
                 'home_team': url_for('api.get_team', team_id=self.home_team_id),
                 'away_team': url_for('api.get_team', team_id=self.away_team_id)
+            }
+        }
+        return data
+
+    def to_simple_dict(self):
+        data = {
+            'winner': self.winner.name,
+            'loser': self.loser.name,
+            'score_winner': self.score_winner,
+            'score_loser': self.score_loser,
+            'overtime': self.overtime,
+            'forfeit': self.forfeit,
+            'final': bool(self.final_id),
+            '_links': {
+                'self': url_for('api.get_match', match_id=self.id)
             }
         }
         return data
