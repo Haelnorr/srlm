@@ -2,6 +2,7 @@ import sqlalchemy as sa
 
 from api.srlm.app.api.errors import error_response
 from api.srlm.app.api.functions import ensure_exists
+from api.srlm.app.spapi.slapid import get_slap_id
 from api.srlm.logger import get_logger
 from api.srlm.logger import LogConfig
 from api.srlm.definitions import ROOT_DIR
@@ -25,7 +26,6 @@ log.info('Starting web app')
 from api.srlm.app import create_app, db
 from api.srlm.app.models import User, Permission, UserPermissions, League, Season, Division, SeasonDivision, Player, Team
 from api.srlm.api_access.models import AuthorizedApp
-from api.srlm.app.api import import_dict
 app = create_app()
 log.info('Web app started, accepting requests')
 
@@ -54,8 +54,7 @@ def make_shell_context():
         'SeasonDivision': SeasonDivision,
         'Player': Player,
         'Team': Team,
-        'aa': AuthorizedApp,
-        'ee': ensure_exists,
-        'import_dict': import_dict
+        'AuthorizedApp': AuthorizedApp,
+        'get_slap_id': get_slap_id,
     }
 
