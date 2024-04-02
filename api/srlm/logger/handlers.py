@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler, SMTPHandler
@@ -30,7 +31,7 @@ def get_mail_handler():
         secure = ()
     mail_handler = SMTPHandler(
         mailhost=(mail_config.mail_server, mail_config.mail_port),
-        fromaddr='no-reply@' + mail_config.mail_server,
+        fromaddr='no-reply@', # + mail_config.mail_server,
         toaddrs=mail_config.admins, subject='LDS Manager - Error',
         credentials=auth, secure=secure)
     mail_handler.setLevel(logging.ERROR)

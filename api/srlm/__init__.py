@@ -5,3 +5,4 @@ import api.srlm.exceptions
 import api.srlm.api_access
 
 from api.srlm.run import asgi_app as asgi
+from api.srlm.run import celery

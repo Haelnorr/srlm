@@ -552,9 +552,9 @@ class FreeAgent(db.Model):
     season_division = db.relationship('SeasonDivision', back_populates='free_agent_association')
 
     def to_dict(self, parent):
-        if parent is 'player':
+        if parent == 'player':
             return self.season_division.to_simple_dict()
-        elif parent is 'season_division':
+        elif parent == 'season_division':
             data = {
                 'player': self.player.player_name,
                 'start_date': self.start_date,
@@ -578,7 +578,7 @@ class FreeAgent(db.Model):
         player = db.session.get(Player, player_id)
         season_query = db.session.query(FreeAgent).filter_by(player_id=player_id).order_by(sa.desc(FreeAgent.season_division_id))
 
-        if season_query.count() is 0:
+        if season_query.count() == 0:
             return None
 
         seasons = []
@@ -602,7 +602,7 @@ class FreeAgent(db.Model):
         # query free agents
         player_query = db.session.query(FreeAgent).filter_by(season_division_id=season_division.id)
         # return none if no players
-        if player_query.count() is 0:
+        if player_query.count() == 0:
             return None
         # get players
         players = []

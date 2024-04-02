@@ -7,19 +7,26 @@ config = configparser.ConfigParser()
 config.read(os.path.join(ROOT_DIR, 'config', 'mail.config'))
 mailing_list = config['MAIL']['MailingList'].split(', ')
 
+league_manager_db_uri = os.getenv('DATABASE_URL', '').replace('"', '') + os.getenv('LEAGUE_MANAGER_DB', '')
+api_access_db_uri = os.getenv('DATABASE_URL', '').replace('"', '') + os.getenv('API_ACCESS_DB', '')
+
 
 class Config:
-    SECRET_KEY = os.getenv('SECRET_KEY') # or '4bcc9d9906fb680fd7ee0b4458f7d604eeb51dffbbabd65736a9272238a5dd2c'
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL') + os.getenv('LEAGUE_MANAGER_DB') # or 'sqlite:///' + os.path.join(ROOT_DIR, 'db', 'app.db')
+    SECRET_KEY = os.getenv('SECRET_KEY')
+    SQLALCHEMY_DATABASE_URI = league_manager_db_uri # if league_manager_db_uri is not '' else 'sqlite:///' + os.path.join(ROOT_DIR, 'db', 'league_manager.db')
     SQLALCHEMY_BINDS = {
-        'api_access': os.getenv('DATABASE_URL') + os.getenv('API_ACCESS_DB')
+        'api_access': api_access_db_uri # if api_access_db_uri is not '' else 'sqlite:///' + os.path.join(ROOT_DIR, 'db', 'api_access.db')
     }
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    MAIL_SERVER = os.getenv('MAIL_SERVER')
-    MAIL_PORT = int(os.getenv('MAIL_PORT'))
+    MAIL_SERVER = os.getenv('MAIL_SERVER', 'localhost')
+    MAIL_PORT = int(os.getenv('MAIL_PORT', 25))
     MAIL_USE_TLS = os.getenv('MAIL_USE_TLS') is not None
     MAIL_USERNAME = os.getenv('MAIL_USERNAME')
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
     DOMAIN = os.getenv('DOMAIN')
     ADMINS = mailing_list
+    CELERY = {
+        "broker_url": os.getenv('CELERY_BROKER', "redis://127.0.0.1:6379/0"),
+        "result_backend": os.getenv('CELERY_BACKEND')
+    }
 

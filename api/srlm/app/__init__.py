@@ -3,6 +3,8 @@ from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_mail import Mail
+
+from api.srlm.app.celery import make_celery
 from api.srlm.logger import get_logger
 from api.srlm.app.config import Config
 
@@ -32,6 +34,9 @@ def create_app(config_class=Config):
     login.init_app(app)
     mail.init_app(app)
 
+    celery = make_celery(app)
+    celery.set_default()
+
     # Registering blueprints
     log.info('Registering blueprints')
     from api.srlm.app.api import bp as api_bp
@@ -46,7 +51,7 @@ def create_app(config_class=Config):
         pass  # temporary while function is empty
 
     log.info('Web app instantiated')
-    return app
+    return app, celery
 
 
 from api.srlm.app import models, events

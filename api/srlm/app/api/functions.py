@@ -78,6 +78,6 @@ def clean_data(data, valid_fields):
         if key in valid_fields:
             cleaned[key] = value
 
-    if len(cleaned) is 0:
+    if len(cleaned) == 0:
         raise BadRequest(f'No valid fields provided. Provide at least one of: {valid_fields}')
     return cleaned

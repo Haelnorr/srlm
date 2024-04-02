@@ -43,7 +43,7 @@ def add_team():
 
     cleaned_data = clean_data(data, valid_fields)
 
-    if cleaned_data['color'] is "":
+    if cleaned_data['color'] == "":
         cleaned_data['color'] = None
 
     team = Team()
@@ -134,7 +134,7 @@ def get_team_seasons(team_id):
     # ensure team exists
     team = ensure_exists(Team, id=team_id)
 
-    if len(team.season_divisions) is 0:
+    if len(team.season_divisions) == 0:
         raise ResourceNotFound('Team has not played in any seasons')
 
     # return list of seasons

@@ -8,8 +8,7 @@ class LogConfig:
     def __init__(self):
         config = configparser.ConfigParser()
         config.read(os.path.join(ROOT_DIR, 'config', 'logger.config'))
-
-        self.log_dir = config['LOGGER']['LogDirectory']
+        self.log_dir = os.getenv('LOG_DIR', 'logs/api')
         self.file_name = config['LOGGER']['FileName']
         self.level = get_level(config['LOGGER']['LogLevel'])
         self.clean = config['LOGGER']['WipeCurrentFile']
