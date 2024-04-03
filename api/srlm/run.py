@@ -8,7 +8,7 @@ from api.srlm.logger import LogConfig
 from datetime import datetime
 from asgiref.wsgi import WsgiToAsgi
 
-load_dotenv(os.path.join(ROOT_DIR, '.dev-env'))
+load_dotenv(os.path.join(ROOT_DIR, '.env'))
 
 # Checks if the current log file is set to be wiped on program load and wipes the file if true
 log_config = LogConfig()

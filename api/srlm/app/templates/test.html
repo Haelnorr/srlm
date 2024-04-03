@@ -1,0 +1,36 @@
+<!DOCTYPE html><!--TODO DELETE ME-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Page</title>
+</head>
+<body>
+Matches
+    <table>
+        <tr>
+            <td>Home Team</td>
+            <td></td>
+            <td>Away Team</td>
+            <td>Lobby</td>
+        </tr>
+        {% for match in matches %}
+        <tr>
+            <td>
+                {{ match['home_team'] }}
+            </td>
+            <td>vs</td>
+            <td>
+                {{ match['away_team'] }}
+            </td>
+            <td>
+                {% if match['current_lobby'] == None %}
+                <a href="{{ url_for('api.add_test_lobby', match_id=match['id']) }}">Create Lobby</a>
+                {% else %}
+                Password: {{ match['current_lobby']['password'] }} || <a href="{{ url_for('api.abort_lobby', lobby_id=match['current_lobby']['id']) }}">Delete Lobby</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

@@ -5,7 +5,7 @@ from flask import current_app
 from api.srlm.app import email
 from api.srlm.definitions import app_name
 
-
+# TODO CONVERT TO CELERY
 def send_password_reset_email(user):
     token = user.get_password_reset_token()
     print(token)

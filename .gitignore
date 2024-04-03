@@ -4,7 +4,7 @@
 /mail.bat
 /test.bat
 /test.py
-/.env
+/.envfiles
 /config/mail.config
 /api/mail.bat
 /api/test.bat

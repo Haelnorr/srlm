@@ -3,7 +3,7 @@ from flask_mail import Message
 from threading import Thread
 from api.srlm.app import mail
 
-
+# TODO CONVERT TO CELERY
 # Sending mail with the context of the app
 def send_async(app, msg):
     with app.app_context():

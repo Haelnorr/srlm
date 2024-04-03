@@ -45,7 +45,6 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
     discord = db.relationship('Discord', back_populates='user', lazy=True, uselist=False)
     twitch = db.relationship('Twitch', back_populates='user', lazy=True, uselist=False)
     streamed_matches = db.relationship('Match', back_populates='streamer', lazy=True)
-    reviewed_matches = db.relationship('PlayerMatchData', back_populates='reviewed_by')
     permission_assoc = db.relationship('UserPermissions', back_populates='user', lazy=True)
     permissions = association_proxy('permission_assoc', 'permission')
 
@@ -87,7 +86,6 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
             'discord': self.discord.id if self.discord is not None else None,
             'permissions': self.permissions_list(),
             'matches_streamed': len(self.streamed_matches),
-            'matches_reviewed': len(self.reviewed_matches),
             'reset_pass': self.reset_pass,
             '_links': {
                 'self': url_for('api.get_user', user_id=self.id),
@@ -95,7 +93,6 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
                 'discord': url_for('api.get_user_discord', user_id=self.id) if self.discord is not None else None,
                 'permissions': url_for('api.get_user_permissions', user_id=self.id),
                 'matches_streamed': url_for('api.get_user_matches_streamed', user_id=self.id),
-                'matches_reviewed': url_for('api.get_user_matches_reviewed', user_id=self.id)
             }
         }
         if include_email:
@@ -369,7 +366,8 @@ class Team(PaginatedAPIMixin, db.Model):
 
     player_association = db.relationship('PlayerTeam', back_populates='team', lazy='dynamic')
     players = association_proxy('player_association', 'player')
-    season_divisions = db.relationship('SeasonDivision', secondary=season_division_team, back_populates='teams', lazy='dynamic')
+    season_divisions = db.relationship('SeasonDivision', secondary=season_division_team, back_populates='teams',
+                                       lazy='dynamic')
     player_match_data = db.relationship('PlayerMatchData', back_populates='team')
     awards_association = db.relationship('TeamAward', back_populates='team', lazy=True)
     awards = association_proxy('awards_association', 'award')
@@ -380,7 +378,8 @@ class Team(PaginatedAPIMixin, db.Model):
 
     def to_dict(self):
         now = datetime.now(timezone.utc)
-        active_players = self.player_association.filter(sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))
+        active_players = self.player_association.filter(
+            sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))
         data = {
             'id': self.id,
             'name': self.name,
@@ -472,7 +471,8 @@ class PlayerTeam(db.Model):
         if current:
             for player_assoc in team.player_association:
                 now = datetime.now(timezone.utc)
-                if player_assoc.start_date.replace(tzinfo=timezone.utc) < now and (player_assoc.end_date is None or player_assoc.end_date.replace(tzinfo=timezone.utc) > now):
+                if player_assoc.start_date.replace(tzinfo=timezone.utc) < now and (
+                        player_assoc.end_date is None or player_assoc.end_date.replace(tzinfo=timezone.utc) > now):
                     players[player_assoc.player.id] = player_assoc.player_to_dict()
 
         else:
@@ -505,7 +505,8 @@ class PlayerTeam(db.Model):
             response = None
             for team_assoc in player.team_association:
                 now = datetime.now(timezone.utc)
-                if team_assoc.start_date.replace(tzinfo=timezone.utc) < now and (team_assoc.end_date is None or team_assoc.end_date.replace(tzinfo=timezone.utc) > now):
+                if team_assoc.start_date.replace(tzinfo=timezone.utc) < now and (
+                        team_assoc.end_date is None or team_assoc.end_date.replace(tzinfo=timezone.utc) > now):
                     response = {
                         'player': player.player_name,
                         'current_team': team_assoc.team_to_dict(),
@@ -576,7 +577,8 @@ class FreeAgent(db.Model):
     @staticmethod
     def get_free_agent_seasons(player_id):
         player = db.session.get(Player, player_id)
-        season_query = db.session.query(FreeAgent).filter_by(player_id=player_id).order_by(sa.desc(FreeAgent.season_division_id))
+        season_query = db.session.query(FreeAgent).filter_by(player_id=player_id).order_by(
+            sa.desc(FreeAgent.season_division_id))
 
         if season_query.count() == 0:
             return None
@@ -869,12 +871,16 @@ class Match(db.Model):
     results = db.relationship('MatchResult', back_populates='match', lazy=True, uselist=False)
     schedule = db.relationship('MatchSchedule', back_populates='match', uselist=False)
     team_availability = db.relationship('MatchAvailability', back_populates='match')
-    lobbies = db.relationship('Lobby', back_populates='match', lazy=True)
+    lobbies = db.relationship('Lobby', back_populates='match', lazy='dynamic')
 
     def from_dict(self, data):
         for field in ['season_division_id', 'home_team_id', 'away_team_id', 'round', 'match_week']:
             if field in data:
                 setattr(self, field, data[field])
+
+    def current_lobby(self):
+        current_lobby = self.lobbies.filter_by(active=True).first()
+        return {'id': current_lobby.id, 'password': current_lobby.password} if current_lobby else None
 
     def to_dict(self):
         data = {
@@ -888,6 +894,7 @@ class Match(db.Model):
             'streamer': self.streamer.twitch.to_dict() if self.streamer else None,
             'final': bool(self.final_id),
             'scheduled_time': self.schedule.scheduled_time,
+            'current_lobby': self.current_lobby(),
             '_links': {
                 'self': url_for('api.get_match', match_id=self.id),
                 'season_division': url_for('api.get_season_division', season_division_id=self.season_division_id),
@@ -900,6 +907,7 @@ class Match(db.Model):
 
     def to_simple_dict(self):
         data = {
+            'id': self.id,
             'home_team': self.home_team.name,
             'away_team': self.away_team.name,
             'result': self.results.get_result() if self.results else None,
@@ -907,6 +915,7 @@ class Match(db.Model):
             'match_week': self.match_week,
             'final': bool(self.final_id),
             'scheduled_time': self.schedule.scheduled_time,
+            'current_lobby': self.current_lobby(),
             '_links': {
                 'self': url_for('api.get_match', match_id=self.id),
                 'home_team': url_for('api.get_team', team_id=self.home_team_id),
@@ -1004,6 +1013,7 @@ class Lobby(db.Model):
     lobby_id = db.Column(db.String(64), nullable=False)
     active = db.Column(db.Boolean, nullable=False, default=True)
     password = db.Column(db.String(64), nullable=False)
+    task_id = db.Column(db.String(64))
 
     match = db.relationship('Match', back_populates='lobbies')
     match_data = db.relationship('MatchData', back_populates='lobby', lazy=True)
@@ -1013,11 +1023,31 @@ class Lobby(db.Model):
 class MatchData(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     lobby_id = db.Column(db.Integer, db.ForeignKey('lobby.id'))
+    processed = db.Column(db.Boolean, nullable=False, default=False)
+    accepted = db.Column(db.Boolean, nullable=False, default=False)
     match_id = db.Column(db.String(64), nullable=False)
+    region = db.Column(db.String(16), nullable=False)
+    gamemode = db.Column(db.String(16), nullable=False)
+    created = db.Column(db.DateTime, nullable=False)
+    arena = db.Column(db.String(16), nullable=False)
+    home_score = db.Column(db.Integer, nullable=False)
+    away_score = db.Column(db.Integer, nullable=False)
+    winner = db.Column(db.String(10), nullable=False)
+    current_period = db.Column(db.Integer, nullable=False)
+    periods_enabled = db.Column(db.Boolean, nullable=False)
+    custom_mercy_rule = db.Column(db.String(16), nullable=False)
+    end_reason = db.Column(db.String(32), nullable=False)
+    source = db.Column(db.String(10))  # e.g. slap api, user, import
 
     lobby = db.relationship('Lobby', back_populates='match_data')
     player_data_assoc = db.relationship('PlayerMatchData', back_populates='match')
     player_data = association_proxy('player_data_assoc', 'player')
+
+    def from_dict(self, data):
+        for field in ['lobby_id', 'processed', 'match_id', 'region', 'gamemode', 'created', 'arena', 'home_score',
+                      'away_score', 'winner', 'current_period', 'periods_enabled', 'custom_mercy_rule', 'end_reason', 'source']:
+            if field in data:
+                setattr(self, field, data[field])
 
 
 # stores match data of particular players (periods of a match are separate entries)
@@ -1026,13 +1056,6 @@ class PlayerMatchData(db.Model):
     match_id = db.Column(db.Integer, db.ForeignKey('match_data.id'))
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'))
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
-    period = db.Column(db.Integer, default=0)
-    source = db.Column(db.String(10))  # e.g. slap api, user, import
-    reviewed_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    recorded_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow())
-    reviewed_date = db.Column(db.DateTime)
-    valid = db.Column(db.Boolean, default=True)
-    comments = db.Column(db.String(256))
     goals = db.Column(db.Integer, default=0)
     shots = db.Column(db.Integer, default=0)
     assists = db.Column(db.Integer, default=0)
@@ -1043,7 +1066,7 @@ class PlayerMatchData(db.Model):
     blocks = db.Column(db.Integer, default=0)
     takeaways = db.Column(db.Integer, default=0)
     turnovers = db.Column(db.Integer, default=0)
-    possession_time = db.Column(db.Integer, default=0)
+    possession_time_sec = db.Column(db.Integer, default=0)
     game_winning_goals = db.Column(db.Integer, default=0)
     overtime_goals = db.Column(db.Integer, default=0)
     post_hits = db.Column(db.Integer, default=0)
@@ -1054,7 +1077,13 @@ class PlayerMatchData(db.Model):
     match = db.relationship('MatchData', back_populates='player_data_assoc')
     player = db.relationship('Player', back_populates='match_data_assoc')
     team = db.relationship('Team', back_populates='player_match_data')
-    reviewed_by = db.relationship('User', back_populates='reviewed_matches')
+
+    def from_dict(self, data):
+        for field in ['match_id', 'player_id', 'team_id', 'goals', 'shots', 'assists', 'saves', 'primary_assists',
+                      'secondary_assists', 'passes', 'blocks', 'takeaways', 'turnovers', 'possession_time_sec',
+                      'game_winning_goals', 'post_hits', 'faceoffs_won', 'faceoffs_lost', 'score']:
+            if field in data:
+                setattr(self, field, data[field])
 
 
 class Final(db.Model):
