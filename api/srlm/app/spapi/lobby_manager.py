@@ -1,7 +1,7 @@
 import datetime
 import os
 import random
-from celery import shared_task, current_app
+from celery import shared_task, current_app, chain
 from celery.contrib.abortable import AbortableTask
 
 from api.srlm.app import db, create_app
@@ -34,9 +34,9 @@ def generate_lobby(match, current_period=1, initial_stats=None, initial_score=No
 
     lobby_settings = {
         'region': league.server_region_value,
-        'name': 'Haelnorr Test Lobby',#lobby_name, # TODO
+        'name': 'Haelnorr Test Lobby',  # lobby_name, # TODO
         'password': password,
-        'creator_name': 'Haelnorr',#creator_name, # TODO
+        'creator_name': 'Haelnorr',  # creator_name, # TODO
         'is_periods': match_type.periods,
         'arena': match_type.arena,
         'mercy_rule': match_type.mercy_rule,
@@ -75,27 +75,29 @@ def generate_lobby(match, current_period=1, initial_stats=None, initial_score=No
 def lobby_monitor(self, lobby_id):
     with app.app_context():
         import time
+        import sqlalchemy as sa
         from api.srlm.app.models import Lobby
         from api.srlm.app.spapi.lobby import get_lobby, delete_lobby
 
         # get lobby info from db
         lobby = db.session.query(Lobby).filter_by(id=lobby_id).first()
+        match_type = lobby.match.season_division.season.match_type
         log.info(f'Lobby {lobby.id} details pulled from database')
 
-        max_time = 1           # max time for process in minutes # TODO
-        i = 0                   # counts loop increments
-        check_interval = 10     # how often to check for abort signal in seconds
-        finished = False        # loop controller
-        end_reason = None           # used for return message and skip condition in loop
-        parse_stats_task = None     # results from parse_stats_task
-        process_stats_task = None   # results from process_stats_task
+        max_time = 20  # max time for process in minutes # TODO
+        i = 0  # counts loop increments
+        check_interval = 10  # how often to check for abort signal in seconds
+        finished = False  # loop controller
+        end_reason = None  # used for return message and skip condition in loop
+        retrieve_stats_task = None  # results from retrieve_stats_task
 
         # how often the monitor will check on the lobby via an API request
         # is based on match length (aka period length - default is 5 minutes)
-        monitor_interval = lobby.match.season_division.season.match_type.match_length
+        monitor_interval = match_type.match_length
 
-        log.info(f'Initialized monitor ||| Max time: {max_time} minutes, Abort check interval: {check_interval} seconds,'
-                 f' API Request Interval: {monitor_interval} seconds ({monitor_interval / 60} minutes)')
+        log.info(
+            f'Initialized monitor ||| Max time: {max_time} minutes, Abort check interval: {check_interval} seconds,'
+            f' API Request Interval: {monitor_interval} seconds ({monitor_interval / 60} minutes)')
 
         while not finished:
             if (i * check_interval) >= (max_time * 60):
@@ -111,22 +113,35 @@ def lobby_monitor(self, lobby_id):
             i += 1
 
             # checks if a match result has been parsed from the API
-            if parse_stats_task:
-                if parse_stats_task.state == 'FAILURE' or (parse_stats_task.state == 'SUCCESS' and not parse_stats_task.result):
-                    log.info('Detected failed match data retrieval. Ignoring results')
-                    parse_stats_task = None
-                # checks if a match result has been stored in the DB, calls process task to review the stored data
-                elif parse_stats_task.state == 'SUCCESS' and parse_stats_task.result:
-                    log.info('Match data retrieved successfully, requesting processing of data')
-                    # process_stats_task = process_match_stats.delay(parse_stats_task.result) # TODO
+            if retrieve_stats_task:
+                # check if it was successful
+                if retrieve_stats_task.state == 'SUCCESS':
+                    period_data = db.session.query(MatchData).filter_by(
+                        lobby_id=lobby.id,
+                        periods_enabled=match_type.periods,
+                        gamemode=match_type.game_mode
+                    ).order_by(sa.asc(MatchData.current_period))
+                    periods_valid = []
+                    current_period = 1
+                    for period in period_data:
+                        if period.current_period == current_period:
+                            player_count = db.session.query(PlayerMatchData).filter_by(
+                                match_id=period.id
+                            ).count()
+                            if player_count == match_type.num_players:
+                                periods_valid.append(current_period)
+                                current_period += 1
 
-            # check if process_stats_task was run and completed successfully
-            if process_stats_task:
-                if process_stats_task.value == 'Match stats validated':
-                    # if good signal received, exit from loop
-                    log.info('Match results recorded - exiting monitor')
-                    end_reason = 'Match results recorded'
-                    finished = True
+                    if (periods_valid == [1, 2, 3] and match_type.periods) or (
+                            periods_valid == [1] and not match_type.periods):
+                        # looks like the match was completed with the correct number of periods and players
+                        validate_stats(lobby.match.id)
+                        end_reason = 'Match results recorded'
+                        finished = True
+                        log.info('Match data retrieved successfully, requesting validation of data')
+                    else:
+                        retrieve_stats_task = None
+                        # retrieved stats incomplete, need to wait for a new result
 
             # math to determine if API request should be made - skipped if task has been told to abort this loop
             if i % round(monitor_interval / check_interval) == 0 and not end_reason:
@@ -136,10 +151,11 @@ def lobby_monitor(self, lobby_id):
                 if lobby_resp.status_code == 200:
                     lobby_info = lobby_resp.json()
                     log.info(f"Period: {lobby_info['current_period']} | In-Game: {lobby_info['in_game']}")
-                    if (lobby_info['periods_enabled'] and lobby_info['current_period'] > 3) or (not lobby_info['periods_enabled'] and lobby_info['current_period'] > 1):
+                    if (lobby_info['periods_enabled'] and lobby_info['current_period'] > 3) or (
+                            not lobby_info['periods_enabled'] and lobby_info['current_period'] > 1):
                         # looks like match is completed - tell another worker to get the match results
                         log.info('Detected possible match completion, requesting match data')
-                        parse_stats_task = get_match_data.delay(lobby.id)
+                        retrieve_stats_task = get_match_data.delay(lobby.id)
 
             time.sleep(check_interval)
 
@@ -156,12 +172,11 @@ def lobby_monitor(self, lobby_id):
             db.session.commit()
             log.info('Lobby marked as inactive')
 
-        # check if process_stats_task was run and completed successfully
+        # check if get_match_data was run and found correct number of periods
         # if no good signal received, tell a get_match_data worker to get the match stats
         if end_reason != 'Match results recorded':
             log.info('Lobby closing without completed match data - making final match data request')
-            match_ids = get_match_data.delay(lobby.id)
-            # process stats from above ^ # TODO
+            get_match_data.delay(lobby.id)
 
         return {
             'end_reason': f'Lobby closed: {end_reason}',
@@ -189,9 +204,6 @@ def get_match_data(lobby_id):
         match_response = get_lobby_matches(lobby.lobby_id)
         log.info('Requested match stats from API')
 
-        success = True   # defaults to true for comparison logic
-        match_data_ids = []
-
         # save each period into match_data and player_match_data
         if match_response.status_code == 200:
             for match in match_response.json():
@@ -201,12 +213,7 @@ def get_match_data(lobby_id):
                 log.info(lobby.id)
                 result = parse_match_stats(match, teams, lobby)
 
-                if result:
-                    match_data_ids.append(result)
-                # if any of the match results fail to process, will change success to False
-                success = success and result
-
-        return match_data_ids if success else False
+        return lobby.match.id
 
 
 def parse_match_stats(match, teams, lobby):
@@ -246,7 +253,7 @@ def parse_match_stats(match, teams, lobby):
                 player = Player()
                 player.slap_id = player_data['game_user_id']
                 player.player_name = player_data['username']
-                player.first_season_id = lobby.match_db.season_division_id
+                player.first_season_id = lobby.match.season_division_id
                 db.session.add(player)
                 db.session.commit()
 
@@ -271,3 +278,164 @@ def parse_match_stats(match, teams, lobby):
         match_id = match_db.id if match_db.id else False
 
     return match_id
+
+
+@shared_task
+def validate_stats(match_id):
+    with app.app_context():
+        import sqlalchemy as sa
+        from api.srlm.app import db
+        from api.srlm.app.models import Match, MatchReview
+
+        log.info('Validating match stats!')
+        match = db.session.get(Match, match_id)
+        log.info(f'Pulled match {match.id} from database')
+
+        # Getting relevant info for comparison
+        teams = {
+            'home': match.home_team,
+            'away': match.away_team
+        }
+        match_type = match.season_division.season.match_type
+
+        # periods_on is 1 or 0, so this formula gives either 3 or 1 (correct number of periods)
+        correct_periods = 1 + (match_type.periods * 2)
+
+        # uses correct_periods to get a comparison array to check the order
+        correct_period_order = {1: [1], 3: [1, 2, 3]}[correct_periods]
+
+        # the expected match settings
+        match_settings = {
+            'periods': match_type.periods,
+            'game_mode': match_type.game_mode,
+            'region': match.season_division.season.league.server_region_value
+        }
+
+        # setting defaults for the review flags
+        defaults = {
+            'match_id': match.id,
+            'raised_by': 'System',
+            'type': 'AutoReview'
+        }
+
+        # check num lobbies
+        num_lobbies = match.lobbies.count()
+        lobby_ids = []
+        for lobby in match.lobbies:
+            lobby_ids.append(lobby.id)
+        if num_lobbies == 0:
+            return f'No lobbies found for match {match.id}'
+        if num_lobbies > 1:
+            db.session.add(MatchReview(reason='Multiple lobbies created for match', **defaults))
+
+        periods = db.session.query(MatchData).filter(MatchData.lobby_id.in_(lobby_ids)).order_by(
+            sa.asc(MatchData.created))
+        period_ids = []
+
+        period_order = []
+        for period in periods:
+            period_order.append(period.current_period)
+            period_ids.append(period.id)
+            # check lobby settings
+            period_settings = {
+                'periods': period.periods_enabled,
+                'game_mode': period.gamemode,
+                'region': period.region
+            }
+            if period_settings != match_settings:
+                incorrect_fields = []
+                for field in period_settings:
+                    if period_settings[field] != match_settings[field]:
+                        incorrect_fields.append((field, period_settings[field]))
+                db.session.add(
+                    MatchReview(reason=f'Game settings for period {period.current_period} were incorrect.', **defaults))
+
+            if period.player_data_assoc.count() != match_type.num_players:
+                db.session.add(
+                    MatchReview(reason=f'Period {period.current_period} had incorrect number of players.', **defaults))
+
+        # check num periods
+        if periods.count() != correct_periods:
+            db.session.add(
+                MatchReview(reason=f'{periods.count()} periods were recorded, should be {correct_periods}', **defaults))
+        # check periods played in order
+        elif period_order != correct_period_order:
+            db.session.add(MatchReview(reason='Periods were not played in correct order', **defaults))
+
+        # check player count
+        players_data = db.session.query(PlayerMatchData).filter(PlayerMatchData.match_id.in_(period_ids))
+        if round(players_data.count() / periods.count()) != match_type.num_players:
+            db.session.add(
+                MatchReview(reason=f'Invalid number of players. Had {round(players_data.count() / periods.count())}, '
+                                   f'should be {match_type.num_players}', **defaults))
+
+        # check players/teams
+        players_wrong_team = []
+        # check all players are registered to a team in the match or are free agents in the current season
+        for player_data in players_data:
+            # check player has a current team
+            player_current_team = player_data.player.current_team()
+            if not player_current_team:
+                # check if player is a free agent
+                player_free_agent = player_data.player.season_association.filter_by(
+                    season_division_id=match.season_division.id).first()
+                if not player_free_agent:
+                    db.session.add(MatchReview(
+                        reason=f'Player {player_data.player.player_name} is not a free agent in the current season/division',
+                        **defaults))
+                else:
+                    # free agents added to wrong team
+                    players_wrong_team.append(('FA', player_data.team_id))
+            # check if players current team is part of the match
+            elif player_current_team.team not in teams.values():
+                db.session.add(MatchReview(
+                    reason=f"Player {player_data.player.player_name} is not a member of either team in the match",
+                    **defaults))
+
+            # check if player is on correct team
+            elif player_current_team.team.id != player_data.team_id:
+                players_wrong_team.append((player_current_team.team.id, player_data.team_id))
+
+        # check over players on wrong team -
+        # if ALL players are playing with correct teams but just on wrong side (i.e. they chose AWAY instead of HOME)
+        # fix up the records to match and don't raise a flag
+        # else it will iterate back over all the wrong records and raise appropriate flags
+        all_players_flipped = True
+        valid_teams = [teams['home'].id, teams['away'].id]
+
+        # if all players are flipped, then all the records should have been added to the above list
+        if len(players_wrong_team) != (match_type.num_players * correct_periods):
+            all_players_flipped = False
+        else:
+            # free agents only needed in this list for the check above, remove them
+            players_wrong_team = [player for player in players_wrong_team if not player[0] == 'FA']
+            for player in players_wrong_team:
+                if not (player[0] in valid_teams and player[1] in valid_teams):
+                    all_players_flipped = False
+
+        if all_players_flipped:
+            # flip all the players teams around
+            flip = {valid_teams[0]: valid_teams[1], valid_teams[1]: valid_teams[0]}
+            for player_data in players_data:
+                player_data.team_id = flip[player_data.team_id]
+                db.session.add(player_data)
+            db.session.commit()
+        else:
+            # raise player on incorrect team flags
+            for player_data in players_data:
+                if player_data.player.current_team().team.id != player_data.team_id:
+                    db.session.add(MatchReview(
+                        reason=f"Player {player_data.player.player_name} played period {player_data.match.current_period}"
+                               f" for the wrong team",
+                        **defaults))
+        db.session.commit()
+
+        # if good, mark periods as accepted
+        flags = db.session.query(MatchReview).filter_by(match_id=match.id).count()
+        for period in periods:
+            period.processed = True
+            if flags == 0:
+                period.accepted = True
+                # call process_match_result
+            db.session.add(period)
+            db.session.commit()

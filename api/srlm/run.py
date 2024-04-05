@@ -1,7 +1,5 @@
 import os
-
 from dotenv import load_dotenv
-
 from api.srlm.definitions import ROOT_DIR
 from api.srlm.logger import get_logger
 from api.srlm.logger import LogConfig
@@ -20,10 +18,11 @@ log = get_logger(__name__)
 log.info('Starting web app')
 import sqlalchemy as sa
 from api.srlm.app import create_app, db
-from api.srlm.app.models import User, Permission, UserPermissions, League, Season, Division, SeasonDivision, Player, Team
+from api.srlm.app.models import User, Permission, UserPermissions, League, Season, Division, SeasonDivision, \
+    Player, Team, Match, Lobby, MatchData, PlayerMatchData
 from api.srlm.api_access.models import AuthorizedApp
 from api.srlm.app.api.errors import error_response
-from api.srlm.app.spapi.lobby import create_lobby, delete_lobby, get_lobby, get_lobby_matches
+from api.srlm.app.spapi.lobby_manager import validate_stats
 app, celery = create_app()
 log.info('Web app started, accepting requests')
 
@@ -52,11 +51,11 @@ def make_shell_context():
         'SeasonDivision': SeasonDivision,
         'Player': Player,
         'Team': Team,
+        'Match': Match,
+        'Lobby': Lobby,
+        'MatchData': MatchData,
+        'PlayerMatchData': PlayerMatchData,
         'AuthorizedApp': AuthorizedApp,
-        'create_lobby': create_lobby,
-        'test_lobby': {"region": "oce-east", "name": "Haelnorr's test lobby", "password": "123", "creator_name": "HaelnorrAPI", "match_length": 120},
-        'delete_lobby': delete_lobby,
-        'get_lobby': get_lobby,
-        'get_lobby_matches': get_lobby_matches,
+        'validate_stats': validate_stats
     }
 

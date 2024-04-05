@@ -134,7 +134,7 @@ def get_team_seasons(team_id):
     # ensure team exists
     team = ensure_exists(Team, id=team_id)
 
-    if len(team.season_divisions) == 0:
+    if team.season_divisions.count() == 0:
         raise ResourceNotFound('Team has not played in any seasons')
 
     # return list of seasons

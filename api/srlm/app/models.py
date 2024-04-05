@@ -277,7 +277,7 @@ class Player(PaginatedAPIMixin, db.Model):
     first_season = db.relationship('SeasonDivision', back_populates='rookies')
     team_association = db.relationship('PlayerTeam', back_populates='player', lazy='dynamic')
     teams = association_proxy('team_association', 'team')
-    season_association = db.relationship('FreeAgent', back_populates='player')
+    season_association = db.relationship('FreeAgent', back_populates='player', lazy='dynamic')
     seasons = association_proxy('season_association', 'season_division')
     match_data_assoc = db.relationship('PlayerMatchData', back_populates='player')
     match_data = association_proxy('player_data_assoc', 'match')
@@ -1002,6 +1002,7 @@ class Matchtype(db.Model):
     mercy_rule = db.Column(db.Integer, nullable=False, default=0)
     match_length = db.Column(db.Integer, nullable=False, default=300)
     game_mode = db.Column(db.String(32), db.ForeignKey('game_mode.value'), nullable=False)
+    num_players = db.Column(db.Integer, nullable=False, default=3)
 
     seasons = db.relationship('Season', back_populates='match_type', lazy=True)
 
@@ -1016,7 +1017,7 @@ class Lobby(db.Model):
     task_id = db.Column(db.String(64))
 
     match = db.relationship('Match', back_populates='lobbies')
-    match_data = db.relationship('MatchData', back_populates='lobby', lazy=True)
+    match_data = db.relationship('MatchData', back_populates='lobby', lazy='dynamic')
 
 
 # stores data on in game matches (periods of a match are separate entries)
@@ -1040,7 +1041,7 @@ class MatchData(db.Model):
     source = db.Column(db.String(10))  # e.g. slap api, user, import
 
     lobby = db.relationship('Lobby', back_populates='match_data')
-    player_data_assoc = db.relationship('PlayerMatchData', back_populates='match')
+    player_data_assoc = db.relationship('PlayerMatchData', back_populates='match', lazy='dynamic')
     player_data = association_proxy('player_data_assoc', 'player')
 
     def from_dict(self, data):
@@ -1204,6 +1205,25 @@ class Event(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     module = db.Column(db.String(50), index=True)
     message = db.Column(db.String(200))
+
+
+class MatchReview(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    match_id = db.Column(db.Integer, db.ForeignKey('match.id'))
+    type = db.Column(db.String(16), nullable=False)
+    reason = db.Column(db.String(64), nullable=False)
+    raised_by = db.Column(db.String(32))
+    comments = db.Column(db.String(256))
+    resolved = db.Column(db.Boolean, nullable=False, default=False)
+    resolved_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    resolved_on = db.Column(db.Integer)
+
+    reviewer = db.relationship('User', backref='match_review')
+
+    def from_dict(self, data):
+        for field in ['match_id', 'type', 'raised_by', 'reason', 'comments', 'resolved', 'resolved_by', 'resolved_on']:
+            if field in data:
+                setattr(self, field, data[field])
 
 
 @login.user_loader
