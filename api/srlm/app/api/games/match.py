@@ -1,11 +1,11 @@
 from flask import request
-
 from api.srlm.app import db
-from api.srlm.app.api import bp, responses
-from api.srlm.app.api.auth import req_app_token
-from api.srlm.app.api.errors import BadRequest
-from api.srlm.app.api.functions import force_fields, ensure_exists, clean_data
-from api.srlm.app.models import SeasonDivision, Team, Match, MatchSchedule, MatchResult
+from api.srlm.app.api import bp
+from api.srlm.app.api.utils import responses
+from api.srlm.app.api.auth.utils import req_app_token
+from api.srlm.app.api.utils.errors import BadRequest
+from api.srlm.app.api.utils.functions import force_fields, ensure_exists, clean_data
+from api.srlm.app.models import SeasonDivision, Team, Match, MatchSchedule
 
 
 @bp.route('/match', methods=['POST'])
@@ -51,3 +51,18 @@ def get_match(match_id):
         response = match.results.to_dict()
     return response
 
+
+def get_match_review():
+    pass
+
+
+def update_match_review():
+    pass
+
+
+def get_match_stats():
+    pass
+
+
+def report_issue():
+    pass

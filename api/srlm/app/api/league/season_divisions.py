@@ -1,11 +1,11 @@
 from api.srlm.app import db
-from api.srlm.app.api import bp, responses
-from flask import request, url_for
-
-from api.srlm.app.api.errors import ResourceNotFound, BadRequest
-from api.srlm.app.api.functions import ensure_exists, force_fields
+from api.srlm.app.api import bp
+from api.srlm.app.api.utils import responses
+from flask import request
+from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
+from api.srlm.app.api.utils.functions import ensure_exists, force_fields
 from api.srlm.app.models import SeasonDivision, FreeAgent, Season, Division
-from api.srlm.app.api.auth import req_app_token
+from api.srlm.app.api.auth.utils import req_app_token
 
 # create a new logger for this module
 from api.srlm.logger import get_logger

@@ -21,7 +21,7 @@ from api.srlm.app import create_app, db
 from api.srlm.app.models import User, Permission, UserPermissions, League, Season, Division, SeasonDivision, \
     Player, Team, Match, Lobby, MatchData, PlayerMatchData
 from api.srlm.api_access.models import AuthorizedApp
-from api.srlm.app.api.errors import error_response
+from api.srlm.app.api.utils.errors import error_response
 from api.srlm.app.spapi.lobby_manager import validate_stats
 app, celery = create_app()
 log.info('Web app started, accepting requests')

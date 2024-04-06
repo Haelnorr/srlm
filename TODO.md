@@ -12,17 +12,21 @@
  - ~~integration with Slapshot Public API for lobby creation and retrieving match data~~
  - match_data stuff (including legacy)
  - import legacy match data
+ - api endpoints
+   - match review
+   - lobby creation and details
+   - reporting system
+ - ~~get slapid and create/link player from steamID~~
 
 **Future**
  - api endpoints (list incomplete)
    - final + final_result
-   - scheduling
+   - scheduling + view fixtures
    - awards
-   - logging
- - get slapid and create/link player from steamID
  - confirm user email
  - caching support
  - setup mysql in docker
+ - web relay for discord bot notifications
 
 **Completed**
  - database models implemented

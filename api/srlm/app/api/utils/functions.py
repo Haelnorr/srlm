@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from api.srlm.app import db
-from api.srlm.app.api.errors import BadRequest, ResourceNotFound
+from api.srlm.app.api.utils.errors import BadRequest, ResourceNotFound
 import sqlalchemy as sa
 
 

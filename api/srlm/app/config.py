@@ -29,4 +29,6 @@ class Config:
         "broker_url": os.getenv('CELERY_BROKER', "redis://127.0.0.1:6379/0"),
         "result_backend": os.getenv('CELERY_BACKEND')
     }
+    APIFAIRY_TITLE = 'Slapshot: Rebound - League Manager API'
+    APIFAIRY_VERSION = '0.5 - dev'
 

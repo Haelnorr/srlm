@@ -1,11 +1,9 @@
 import sqlalchemy as sa
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth
-
 from api.srlm.api_access.models import AuthorizedApp
-from api.srlm.app.auth.functions import get_bearer_token
 from api.srlm.app import db
 from api.srlm.app.models import User
-from api.srlm.app.api.errors import error_response, AppAuthError, UserAuthError
+from api.srlm.app.api.utils.errors import error_response, AppAuthError, UserAuthError
 from functools import wraps
 from flask import request
 
@@ -49,3 +47,30 @@ def req_app_token(f):
         else:
             raise AppAuthError()
     return decorated_function
+
+
+def get_basic_token(headers):
+    data = headers['Authorization']
+
+    # this section gets the Basic Auth code from the auth headers
+    basic_start = data.rfind('Basic ') + 6
+    basic = data[basic_start:]
+    if basic.find(' ') != -1:
+        basic = basic[:basic.find(' ')]
+
+    return basic
+
+
+def get_bearer_token(headers):
+    data = headers['Authorization']
+
+    # gets the bearer code from the auth header
+    bearer_start = data.rfind('Bearer ') + 7
+    bearer = data[bearer_start:]
+    if bearer.find(' ') != -1:
+        bearer = bearer[:bearer.find(' ')]
+
+    # extracts the app token from the bearer code - expects it to be the first 34 characters
+    app_token = bearer[:34]
+    user_token = bearer[34:]
+    return {'app': app_token, 'user': user_token}

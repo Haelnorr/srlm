@@ -1,4 +1,4 @@
-from api.srlm.app.api.functions import clean_data
+from api.srlm.app.api.utils.functions import clean_data
 from api.srlm.app.spapi import slap_api
 
 

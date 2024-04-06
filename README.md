@@ -345,6 +345,23 @@ Removes a users twitch information. User must be authenticated. Returns <code>20
 </details>
 </ul>
 </details>
+<details>
+<summary><u>Steam</u></summary>
+<ul>
+<details>
+<summary><code>POST /api/users/{id}/steam</code></summary>
+Links a steam account to the user, and looks up the steam_id using the Slapshot Public API to retreive the users SlapID.  
+Successful retrieval of a Slap ID will link the user account to the respective player account, or create one if it 
+does not yet exist. This is how players register to the league.
+<pre>{
+    "location": "/api/players/355",
+    "message": "Player Haelnorr succesfully linked to user Haelnorr",
+    "result": "OK"
+}
+</pre>
+</details>
+</ul>
+</details>
 </ul>
 
 

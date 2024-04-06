@@ -39,11 +39,9 @@ def create_app(config_class=Config):
 
     # Registering blueprints
     log.info('Registering blueprints')
-    from api.srlm.app.api import bp as api_bp
-    app.register_blueprint(api_bp, url_prefix='/api')
-
-    from api.srlm.app.auth import bp as auth_bp
-    app.register_blueprint(auth_bp, url_prefix='/auth')
+    with app.app_context():
+        from api.srlm.app.api import bp as api_bp
+        app.register_blueprint(api_bp, url_prefix='/api')
 
     if not app.debug and not app.testing:
         # only runs when app not in debug or testing mode

@@ -1,9 +1,7 @@
 import datetime
-import os
 import random
-from celery import shared_task, current_app, chain
+from celery import shared_task
 from celery.contrib.abortable import AbortableTask
-
 from api.srlm.app import db, create_app
 from api.srlm.app.models import Lobby, MatchData, Player, PlayerMatchData
 from api.srlm.app.spapi.lobby import create_lobby

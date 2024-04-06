@@ -1,10 +1,10 @@
 from api.srlm.app import db
-from api.srlm.app.api import bp, responses
+from api.srlm.app.api import bp
 from flask import request, url_for
-
-from api.srlm.app.api.functions import force_fields, clean_data, ensure_exists, force_unique
-from api.srlm.app.models import Division, League, Season
-from api.srlm.app.api.auth import req_app_token
+from api.srlm.app.api.utils import responses
+from api.srlm.app.api.utils.functions import force_fields, clean_data, ensure_exists, force_unique
+from api.srlm.app.models import Division, League
+from api.srlm.app.api.auth.utils import req_app_token
 import sqlalchemy as sa
 
 # create a new logger for this module
