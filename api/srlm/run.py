@@ -16,17 +16,17 @@ if log_config.clean == 'true':
 log = get_logger(__name__)
 
 log.info('Starting web app')
+from api.srlm.app import create_app
+app, celery = create_app()
+log.info('Web app started, accepting requests')
+asgi_app = WsgiToAsgi(app)
+
 import sqlalchemy as sa
-from api.srlm.app import create_app, db
+from api.srlm.app import db
 from api.srlm.app.models import User, Permission, UserPermissions, League, Season, Division, SeasonDivision, \
     Player, Team, Match, Lobby, MatchData, PlayerMatchData
 from api.srlm.api_access.models import AuthorizedApp
 from api.srlm.app.api.utils.errors import error_response
-from api.srlm.app.spapi.lobby_manager import validate_stats
-app, celery = create_app()
-log.info('Web app started, accepting requests')
-
-asgi_app = WsgiToAsgi(app)
 
 
 @app.errorhandler(404)
@@ -55,7 +55,6 @@ def make_shell_context():
         'Lobby': Lobby,
         'MatchData': MatchData,
         'PlayerMatchData': PlayerMatchData,
-        'AuthorizedApp': AuthorizedApp,
-        'validate_stats': validate_stats
+        'AuthorizedApp': AuthorizedApp
     }
 

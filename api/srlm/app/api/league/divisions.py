@@ -1,5 +1,5 @@
 from api.srlm.app import db
-from api.srlm.app.api import bp
+from api.srlm.app.api.league import league_bp as bp
 from flask import request, url_for
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import force_fields, clean_data, ensure_exists, force_unique
@@ -17,7 +17,7 @@ log = get_logger(__name__)
 def get_divisions():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 10, type=int), 100)
-    return Division.to_collection_dict(sa.select(Division), page, per_page, 'api.get_divisions')
+    return Division.to_collection_dict(sa.select(Division), page, per_page, 'api.league.get_divisions')
 
 
 @bp.route('/divisions/<int:division_id>', methods=['GET'])
@@ -51,7 +51,7 @@ def add_division():
     db.session.add(division)
     db.session.commit()
 
-    return responses.create_success(f'{league.acronym} {division.name} added', 'api.get_division', division_id=division.id)
+    return responses.create_success(f'{league.acronym} {division.name} added', 'api.league.get_division', division_id=division.id)
 
 
 @bp.route('/divisions/<int:division_id>', methods=['PUT'])
@@ -70,7 +70,7 @@ def update_division(division_id):
 
     db.session.commit()
 
-    return responses.request_success(f'Division {division.name} updated', 'api.get_division', division_id=division.id)
+    return responses.request_success(f'Division {division.name} updated', 'api.league.get_division', division_id=division.id)
 
 
 @bp.route('/divisions/<int:division_id>/seasons', methods=['GET'])
@@ -86,7 +86,7 @@ def get_seasons_of_division(division_id):
             'name': season.name,
             'acronym': season.acronym,
             '_links': {
-                'self': url_for('api.get_season', season_id=season.id)
+                'self': url_for('api.league.get_season', season_id=season.id)
             }
         }
         seasons.append(data)
@@ -97,8 +97,8 @@ def get_seasons_of_division(division_id):
         'league': division.league.acronym,
         'seasons': seasons,
         '_links': {
-            'self': url_for('api.get_seasons_of_division', division_id=division_id),
-            'league': url_for('api.get_league', league_id_or_acronym=division.league.id)
+            'self': url_for('api.league.get_seasons_of_division', division_id=division_id),
+            'league': url_for('api.league.get_league', league_id_or_acronym=division.league.id)
         }
     }
 

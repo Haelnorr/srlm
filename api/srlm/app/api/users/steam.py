@@ -1,7 +1,7 @@
 from flask import request
 
 from api.srlm.app import db
-from api.srlm.app.api import bp
+from api.srlm.app.api.users import users_bp as bp
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields
 from api.srlm.app.models import User, Player
@@ -34,7 +34,7 @@ def link_user_steam(user_id):
         user.player = player
         db.session.commit()
 
-        return responses.request_success(f'Player {player.player_name} succesfully linked to user {user.username}', 'api.get_player', player_id=player.id)
+        return responses.request_success(f'Player {player.player_name} succesfully linked to user {user.username}', 'api.users.get_player', player_id=player.id)
 
     else:
-        return responses.request_success(f'Slap ID not found for the given steam ID. Steam ID linked to user {user.username}', 'api.get_user', user_id=user.id)
+        return responses.request_success(f'Slap ID not found for the given steam ID. Steam ID linked to user {user.username}', 'api.users.get_user', user_id=user.id)

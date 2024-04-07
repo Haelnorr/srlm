@@ -1,7 +1,7 @@
 from flask import request, url_for
 from api.srlm.api_access.models import AuthorizedApp
 from api.srlm.app import db
-from api.srlm.app.api import bp
+from api.srlm.app.api.auth import auth_bp as bp
 from api.srlm.app.api.auth.utils import basic_auth, req_app_token, user_auth
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.auth.utils import get_bearer_token
@@ -39,7 +39,7 @@ def validate_user_token():
         'user': user.id,
         'expires': user.token_expiration,
         '_links': {
-            'user': url_for('api.get_user', user_id=user.id)
+            'user': url_for('api.users.get_user', user_id=user.id)
         }
     }
     return response

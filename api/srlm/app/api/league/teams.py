@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from api.srlm.app import db
-from api.srlm.app.api import bp
+from api.srlm.app.api.league import league_bp as bp
 from api.srlm.app.api.utils import responses
 from flask import request, url_for
 import sqlalchemy as sa
@@ -19,7 +19,7 @@ log = get_logger(__name__)
 def get_teams():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 10, type=int), 100)
-    return Team.to_collection_dict(sa.select(Team), page, per_page, 'api.get_teams')
+    return Team.to_collection_dict(sa.select(Team), page, per_page, 'api.league.get_teams')
 
 
 @bp.route('/teams/<int:team_id>', methods=['GET'])
@@ -51,7 +51,7 @@ def add_team():
     db.session.add(team)
     db.session.commit()
 
-    return responses.create_success(f'Team {team.name} created', 'api.get_team', team_id=team.id)
+    return responses.create_success(f'Team {team.name} created', 'api.league.get_team', team_id=team.id)
 
 
 @bp.route('/teams/<int:team_id>', methods=['PUT'])
@@ -70,7 +70,7 @@ def update_team(team_id):
     team.from_dict(cleaned_data)
     db.session.commit()
 
-    return responses.request_success(f'Team {team.name} updated', 'api.get_team', team_id=team.id)
+    return responses.request_success(f'Team {team.name} updated', 'api.league.get_team', team_id=team.id)
 
 
 @bp.route('/teams/<int:team_id>/players', methods=['GET'])
@@ -108,7 +108,7 @@ def get_team_players_in_season(team_id, season_division_id):
                 'start_date': player_assoc.start_date,
                 'end_date': player_assoc.end_date,
                 '_links': {
-                    'self': url_for('api.get_player', player_id=player_assoc.player.id)
+                    'self': url_for('api.league.get_player', player_id=player_assoc.player.id)
                 }
             }
             players[player_assoc.player.id] = player
@@ -120,8 +120,8 @@ def get_team_players_in_season(team_id, season_division_id):
         'color': team.color,
         'players': players,
         '_links': {
-            'self': url_for('api.get_team_players_in_season', team_id=team.id, season_division_id=season_division.id),
-            'team': url_for('api.get_team', team_id=team.id)
+            'self': url_for('api.league.get_team_players_in_season', team_id=team.id, season_division_id=season_division.id),
+            'team': url_for('api.league.get_team', team_id=team.id)
         }
     }
     return response
@@ -164,7 +164,7 @@ def register_team_season(team_id):
     db.session.commit()
 
     return responses.request_success(f'Team {team.name} registered to {season_division.get_readable_name()}',
-                                     'api.get_season_division', season_division_id=season_division.id)
+                                     'api.league.get_season_division', season_division_id=season_division.id)
 
 
 @bp.route('/teams/<int:team_id>/seasons/<int:season_division_id>', methods=['DELETE'])
@@ -185,7 +185,7 @@ def deregister_team_season(team_id, season_division_id):
     db.session.commit()
 
     return responses.request_success(f'Team {team.name} de-registered from {season_division.get_readable_name()}',
-                                     'api.get_season_division', season_division_id=season_division.id)
+                                     'api.league.get_season_division', season_division_id=season_division.id)
 
 
 @bp.route('/teams/<int:team_id>/awards', methods=['GET'])

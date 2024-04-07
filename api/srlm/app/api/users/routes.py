@@ -1,7 +1,7 @@
 import sqlalchemy as sa
 from flask import request, url_for
 from api.srlm.app import db
-from api.srlm.app.api import bp
+from api.srlm.app.api.users import users_bp as bp
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import force_fields, force_unique, clean_data, ensure_exists
 from api.srlm.app.models import User
@@ -34,7 +34,7 @@ def get_user(user_id):
 def get_users(pagination):
     page = request.args.get('page', 1, int)
     per_page = min(request.args.get('per_page', 10, int), 100)
-    return User.to_collection_dict(sa.select(User), page, per_page, 'api.get_users')
+    return User.to_collection_dict(sa.select(User), page, per_page, 'api.users.get_users')
 
 
 @bp.route('/users', methods=['POST'])
@@ -55,7 +55,7 @@ def add_user():
     db.session.add(user)
     db.session.commit()
 
-    return responses.create_success(f'User {user.username} added', 'api.get_user', user_id=user.id)
+    return responses.create_success(f'User {user.username} added', 'api.users.get_user', user_id=user.id)
 
 
 @bp.route('/users/<int:user_id>', methods=['PUT'])
@@ -74,7 +74,7 @@ def update_user(user_id):
 
     user.from_dict(clean_data(data, valid_fields))
     db.session.commit()
-    return responses.request_success(f'User {user.username} updated', 'api.get_user', user_id=user.id)
+    return responses.request_success(f'User {user.username} updated', 'api.users.get_user', user_id=user.id)
 
 
 @bp.route('/users/<int:user_id>/new_password', methods=['POST'])
@@ -132,7 +132,7 @@ def request_password_reset():
         'result': 'success',
         'user': user.id,
         '_links': {
-            'user': url_for('api.get_user', user_id=user.id)
+            'user': url_for('api.users.get_user', user_id=user.id)
         }
     }
     return response

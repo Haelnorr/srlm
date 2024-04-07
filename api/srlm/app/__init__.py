@@ -34,14 +34,14 @@ def create_app(config_class=Config):
     login.init_app(app)
     mail.init_app(app)
 
-    celery = make_celery(app)
-    celery.set_default()
+    celery_app = make_celery(app)
+    celery_app.set_default()
 
     # Registering blueprints
     log.info('Registering blueprints')
-    with app.app_context():
-        from api.srlm.app.api import bp as api_bp
-        app.register_blueprint(api_bp, url_prefix='/api')
+    from api.srlm.app.api import bp as api_bp
+
+    app.register_blueprint(api_bp, url_prefix='/api')
 
     if not app.debug and not app.testing:
         # only runs when app not in debug or testing mode
@@ -49,7 +49,7 @@ def create_app(config_class=Config):
         pass  # temporary while function is empty
 
     log.info('Web app instantiated')
-    return app, celery
+    return app, celery_app
 
 
 from api.srlm.app import models, events

@@ -88,11 +88,11 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
             'matches_streamed': len(self.streamed_matches),
             'reset_pass': self.reset_pass,
             '_links': {
-                'self': url_for('api.get_user', user_id=self.id),
-                'player': url_for('api.get_player', player_id=self.player.id) if self.player is not None else None,
-                'discord': url_for('api.get_user_discord', user_id=self.id) if self.discord is not None else None,
-                'permissions': url_for('api.get_user_permissions', user_id=self.id),
-                'matches_streamed': url_for('api.get_user_matches_streamed', user_id=self.id),
+                'self': url_for('api.users.get_user', user_id=self.id),
+                'player': url_for('api.league.get_player', player_id=self.player.id) if self.player is not None else None,
+                'discord': url_for('api.users.get_user_discord', user_id=self.id) if self.discord is not None else None,
+                'permissions': url_for('api.users.get_user_permissions', user_id=self.id),
+                'matches_streamed': url_for('api.users.get_user_matches_streamed', user_id=self.id),
             }
         }
         if include_email:
@@ -151,7 +151,7 @@ class Permission(PaginatedAPIMixin, db.Model):
             'description': self.description,
             'users_count': len(self.users),
             '_links': {
-                'self': url_for('api.get_permission', perm_id_or_key=self.id)
+                'self': url_for('api.auth.get_permission', perm_id_or_key=self.id)
             }
         }
         return data
@@ -183,8 +183,8 @@ class UserPermissions(db.Model):
             'description': self.permission.description,
             'modifiers': self.additional_modifiers,
             '_links': {
-                'self': url_for('api.get_permission', perm_id_or_key=self.permission.id),
-                'user': url_for('api.get_user', user_id=self.user_id),
+                'self': url_for('api.auth.get_permission', perm_id_or_key=self.permission.id),
+                'user': url_for('api.users.get_user', user_id=self.user_id),
             }
         }
         return data
@@ -209,8 +209,8 @@ class Discord(db.Model):
             'discord_id': self.discord_id,
             'token_expiration': self.token_expiration,
             '_links': {
-                'self': url_for('api.get_user_discord', user_id=self.user_id),
-                'user': url_for('api.get_user', user_id=self.user_id)
+                'self': url_for('api.users.get_user_discord', user_id=self.user_id),
+                'user': url_for('api.users.get_user', user_id=self.user_id)
             }
         }
         if authenticated:
@@ -246,8 +246,8 @@ class Twitch(db.Model):
             'twitch_id': self.twitch_id,
             'token_expiration': self.token_expiration,
             '_links': {
-                'self': url_for('api.get_user_twitch', user_id=self.user_id),
-                'user': url_for('api.get_user', user_id=self.user_id)
+                'self': url_for('api.users.get_user_twitch', user_id=self.user_id),
+                'user': url_for('api.users.get_user', user_id=self.user_id)
             }
         }
         if authenticated:
@@ -305,16 +305,16 @@ class Player(PaginatedAPIMixin, db.Model):
             'next_name_change': self.next_name_change,
             'current_team': current_team.team.name if current_team else None,
             'teams': len(unique_teams),
-            'free_agent_seasons': len(self.seasons),
+            'free_agent_seasons': self.season_association.count(),
             'awards': len(self.awards_association),
             '_links': {
-                'self': url_for('api.get_player', player_id=self.id),
-                'user': url_for('api.get_user', user_id=self.user_id) if self.user else None,
-                'first_season': url_for('api.get_season_division', season_division_id=self.first_season_id),
-                'current_team': url_for('api.get_team', team_id=current_team.team.id) if current_team else None,
-                'teams': url_for('api.get_player_teams', player_id=self.id),
-                'free_agent_seasons': url_for('api.get_player_free_agent', player_id=self.id),
-                'awards': url_for('api.get_team_awards', team_id=self.id)
+                'self': url_for('api.league.get_player', player_id=self.id),
+                'user': url_for('api.users.get_user', user_id=self.user_id) if self.user else None,
+                'first_season': url_for('api.league.get_season_division', season_division_id=self.first_season_id),
+                'current_team': url_for('api.league.get_team', team_id=current_team.team.id) if current_team else None,
+                'teams': url_for('api.league.get_player_teams', player_id=self.id),
+                'free_agent_seasons': url_for('api.league.get_player_free_agent', player_id=self.id),
+                'awards': url_for('api.league.get_team_awards', team_id=self.id)
             }
         }
 
@@ -330,9 +330,9 @@ class Player(PaginatedAPIMixin, db.Model):
             'slap_id': self.slap_id,
             'current_team': current_team.team.name if current_team else None,
             '_links': {
-                'self': url_for('api.get_player', player_id=self.id),
-                'user': url_for('api.get_user', user_id=self.user_id) if self.user else None,
-                'current_team': url_for('api.get_team', team_id=current_team.team.id) if current_team else None
+                'self': url_for('api.league.get_player', player_id=self.id),
+                'user': url_for('api.users.get_user', user_id=self.user_id) if self.user else None,
+                'current_team': url_for('api.league.get_team', team_id=current_team.team.id) if current_team else None
             }
         }
 
@@ -391,11 +391,11 @@ class Team(PaginatedAPIMixin, db.Model):
             'seasons_played': len(self.season_divisions),
             'awards': len(self.awards_association),
             '_links': {
-                'self': url_for('api.get_team', team_id=self.id),
+                'self': url_for('api.league.get_team', team_id=self.id),
                 'logo': self.logo,
-                'active_players': url_for('api.get_team_players', team_id=self.id, current=True),
-                'seasons_played': url_for('api.get_team_seasons', team_id=self.id),
-                'awards': url_for('api.get_team_awards', team_id=self.id)
+                'active_players': url_for('api.league.get_team_players', team_id=self.id, current=True),
+                'seasons_played': url_for('api.league.get_team_seasons', team_id=self.id),
+                'awards': url_for('api.league.get_team_awards', team_id=self.id)
             }
         }
 
@@ -407,7 +407,7 @@ class Team(PaginatedAPIMixin, db.Model):
             'acronym': self.acronym,
             'color': self.color,
             '_links': {
-                'self': url_for('api.get_team', team_id=self.id)
+                'self': url_for('api.league.get_team', team_id=self.id)
             }
         }
         return data
@@ -442,7 +442,7 @@ class PlayerTeam(db.Model):
                 }
             ],
             '_links': {
-                'self': url_for('api.get_player', player_id=self.player.id)
+                'self': url_for('api.league.get_player', player_id=self.player.id)
             }
         }
         return data
@@ -459,7 +459,7 @@ class PlayerTeam(db.Model):
                 }
             ],
             '_links': {
-                'self': url_for('api.get_team', team_id=self.team.id)
+                'self': url_for('api.league.get_team', team_id=self.team.id)
             }
         }
         return data
@@ -492,8 +492,8 @@ class PlayerTeam(db.Model):
             'color': team.color,
             'players': players,
             '_links': {
-                'self': url_for('api.get_team_players', team_id=team.id, current=current),
-                'team': url_for('api.get_team', team_id=team.id)
+                'self': url_for('api.league.get_team_players', team_id=team.id, current=current),
+                'team': url_for('api.league.get_team', team_id=team.id)
             }
         }
         return response
@@ -511,8 +511,8 @@ class PlayerTeam(db.Model):
                         'player': player.player_name,
                         'current_team': team_assoc.team_to_dict(),
                         '_links': {
-                            'self': url_for('api.get_player_teams', player_id=player.id, current=True),
-                            'player': url_for('api.get_player', player_id=player.id)
+                            'self': url_for('api.league.get_player_teams', player_id=player.id, current=True),
+                            'player': url_for('api.league.get_player', player_id=player.id)
                         }
                     }
                     break
@@ -534,8 +534,8 @@ class PlayerTeam(db.Model):
                 'player': player.player_name,
                 'teams': teams,
                 '_links': {
-                    'self': url_for('api.get_player_teams', player_id=player.id),
-                    'player': url_for('api.get_player', player_id=player.id)
+                    'self': url_for('api.league.get_player_teams', player_id=player.id),
+                    'player': url_for('api.league.get_player', player_id=player.id)
                 }
             }
             return response
@@ -561,7 +561,7 @@ class FreeAgent(db.Model):
                 'start_date': self.start_date,
                 'end_date': self.end_date,
                 '_links': {
-                    'player': url_for('api.get_player', player_id=self.player_id)
+                    'player': url_for('api.league.get_player', player_id=self.player_id)
                 }
             }
         else:
@@ -591,8 +591,8 @@ class FreeAgent(db.Model):
             'player': player.player_name,
             'free_agent_seasons': seasons,
             '_links': {
-                'self': url_for('api.get_player_free_agent', player_id=player.id),
-                'player': url_for('api.get_player', player_id=player.id)
+                'self': url_for('api.league.get_player_free_agent', player_id=player.id),
+                'player': url_for('api.league.get_player', player_id=player.id)
             }
         }
         return response
@@ -616,9 +616,9 @@ class FreeAgent(db.Model):
             'league': season_division.season.league.acronym,
             'free_agents': players,
             '_links': {
-                'self': url_for('api.get_free_agents_in_season_division', season_division_id=season_division.id),
-                'season_division': url_for('api.get_season_division', season_division_id=season_division.id),
-                'league': url_for('api.get_league', league_id_or_acronym=season_division.season.league.id)
+                'self': url_for('api.league.get_free_agents_in_season_division', season_division_id=season_division.id),
+                'season_division': url_for('api.league.get_season_division', season_division_id=season_division.id),
+                'league': url_for('api.league.get_league', league_id_or_acronym=season_division.season.league.id)
             }
         }
         return response
@@ -645,9 +645,9 @@ class League(PaginatedAPIMixin, db.Model):
             'seasons_count': self.seasons.count(),
             'divisions_count': self.divisions.count(),
             '_links': {
-                'self': url_for('api.get_league', league_id_or_acronym=self.id),
-                'seasons': url_for('api.get_league_seasons', league_id_or_acronym=self.id),
-                'divisions': url_for('api.get_league_divisions', league_id_or_acronym=self.id)
+                'self': url_for('api.league.get_league', league_id_or_acronym=self.id),
+                'seasons': url_for('api.league.get_league_seasons', league_id_or_acronym=self.id),
+                'divisions': url_for('api.league.get_league_divisions', league_id_or_acronym=self.id)
             }
         }
         return data
@@ -690,10 +690,10 @@ class Season(PaginatedAPIMixin, db.Model):
             'match_type': self.match_type.name,
             'divisions_count': self.division_association.count(),
             '_links': {
-                'self': url_for('api.get_season', season_id=self.id),
-                'league': url_for('api.get_league', league_id_or_acronym=self.league_id),
-                'match_type': None,  # url_for('api.get_match_type', match_type_id=self.match_type_id),
-                'divisions': url_for('api.get_divisions_in_season', season_id=self.id)
+                'self': url_for('api.league.get_season', season_id=self.id),
+                'league': url_for('api.league.get_league', league_id_or_acronym=self.league_id),
+                'match_type': None,  # url_for('api.get_match_type', match_type_id=self.match_type_id), # TODO
+                'divisions': url_for('api.league.get_divisions_in_season', season_id=self.id)
             }
         }
         return data
@@ -728,9 +728,9 @@ class Division(PaginatedAPIMixin, db.Model):
             'description': self.description,
             'seasons_count': self.season_association.count(),
             '_links': {
-                'self': url_for('api.get_league', league_id_or_acronym=self.id),
-                'league': url_for('api.get_league', league_id_or_acronym=self.league_id),
-                'seasons': url_for('api.get_seasons_of_division', division_id=self.id)
+                'self': url_for('api.league.get_league', league_id_or_acronym=self.id),
+                'league': url_for('api.league.get_league', league_id_or_acronym=self.league_id),
+                'seasons': url_for('api.league.get_seasons_of_division', division_id=self.id)
             }
         }
         return data
@@ -778,15 +778,15 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
             'matches_count': len(self.matches),
             'finals_count': len(self.finals),
             '_links': {
-                'self': url_for('api.get_league', league_id_or_acronym=self.id),
-                'league': url_for('api.get_league', league_id_or_acronym=self.season.league_id),
-                'season': url_for('api.get_season', season_id=self.season_id),
-                'division': url_for('api.get_division', division_id=self.division_id),
-                'teams': url_for('api.get_teams_in_season_division', season_division_id=self.id),
-                'free_agents': url_for('api.get_free_agents_in_season_division', season_division_id=self.id),
-                'rookies': url_for('api.get_rookies_in_season_division', season_division_id=self.id),
-                'matches': url_for('api.get_matches_in_season_division', season_division_id=self.id),
-                'finals': url_for('api.get_finals_in_season_division', season_division_id=self.id)
+                'self': url_for('api.league.get_league', league_id_or_acronym=self.id),
+                'league': url_for('api.league.get_league', league_id_or_acronym=self.season.league_id),
+                'season': url_for('api.league.get_season', season_id=self.season_id),
+                'division': url_for('api.league.get_division', division_id=self.division_id),
+                'teams': url_for('api.league.get_teams_in_season_division', season_division_id=self.id),
+                'free_agents': url_for('api.league.get_free_agents_in_season_division', season_division_id=self.id),
+                'rookies': url_for('api.league.get_rookies_in_season_division', season_division_id=self.id),
+                'matches': url_for('api.league.get_matches_in_season_division', season_division_id=self.id),
+                'finals': url_for('api.league.get_finals_in_season_division', season_division_id=self.id)
             }
         }
         return data
@@ -798,10 +798,10 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
             'division': self.division.name,
             'league': self.season.league.acronym,
             '_links': {
-                'self': url_for('api.get_season_division', season_division_id=self.id),
-                'season': url_for('api.get_season', season_id=self.season.id),
-                'division': url_for('api.get_division', division_id=self.division.id),
-                'league': url_for('api.get_league', league_id_or_acronym=self.season.league.id)
+                'self': url_for('api.league.get_season_division', season_division_id=self.id),
+                'season': url_for('api.league.get_season', season_id=self.season.id),
+                'division': url_for('api.league.get_division', division_id=self.division.id),
+                'league': url_for('api.league.get_league', league_id_or_acronym=self.season.league.id)
             }
         }
         return data
@@ -815,8 +815,8 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
         response = season_division.to_simple_dict()
         response['teams'] = teams
         links = {
-            'self': url_for('api.get_teams_in_season_division', season_division_id=season_division.id),
-            'season_division': url_for('api.get_season_division', season_division_id=season_division.id)
+            'self': url_for('api.league.get_teams_in_season_division', season_division_id=season_division.id),
+            'season_division': url_for('api.league.get_season_division', season_division_id=season_division.id)
         }
         response['_links'] = links
         return response
@@ -830,8 +830,8 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
         response = team.to_simple_dict()
         response['season_divisions'] = seasons
         links = {
-            'self': url_for('api.get_team_seasons', team_id=team.id),
-            'team': url_for('api.get_team', team_id=team.id)
+            'self': url_for('api.league.get_team_seasons', team_id=team.id),
+            'team': url_for('api.league.get_team', team_id=team.id)
         }
         response['_links'] = links
         return response
@@ -844,8 +844,8 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
         response = self.to_simple_dict()
         response['rookies'] = rookies
         links = {
-            'self': url_for('api.get_rookies_in_season_division', season_division_id=self.id),
-            'season_division': url_for('api.get_season_division', season_division_id=self.id)
+            'self': url_for('api.league.get_rookies_in_season_division', season_division_id=self.id),
+            'season_division': url_for('api.league.get_season_division', season_division_id=self.id)
         }
         response['_links'] = links
         return response
@@ -896,11 +896,11 @@ class Match(db.Model):
             'scheduled_time': self.schedule.scheduled_time,
             'current_lobby': self.current_lobby(),
             '_links': {
-                'self': url_for('api.get_match', match_id=self.id),
-                'season_division': url_for('api.get_season_division', season_division_id=self.season_division_id),
-                'home_team': url_for('api.get_team', team_id=self.home_team_id),
-                'away_team': url_for('api.get_team', team_id=self.away_team_id),
-                'streamer': url_for('api.get_user_twitch', user_id=self.streamer_id) if self.streamer else None
+                'self': url_for('api.game.get_match', match_id=self.id),
+                'season_division': url_for('api.league.get_season_division', season_division_id=self.season_division_id),
+                'home_team': url_for('api.league.get_team', team_id=self.home_team_id),
+                'away_team': url_for('api.league.get_team', team_id=self.away_team_id),
+                'streamer': url_for('api.league.get_user_twitch', user_id=self.streamer_id) if self.streamer else None
             }
         }
         return data
@@ -917,9 +917,9 @@ class Match(db.Model):
             'scheduled_time': self.schedule.scheduled_time,
             'current_lobby': self.current_lobby(),
             '_links': {
-                'self': url_for('api.get_match', match_id=self.id),
-                'home_team': url_for('api.get_team', team_id=self.home_team_id),
-                'away_team': url_for('api.get_team', team_id=self.away_team_id),
+                'self': url_for('api.game.get_match', match_id=self.id),
+                'home_team': url_for('api.league.get_team', team_id=self.home_team_id),
+                'away_team': url_for('api.league.get_team', team_id=self.away_team_id),
             }
         }
         return data
@@ -968,10 +968,10 @@ class MatchResult(db.Model):
             'completed': self.completed_date,
             'vod': self.vod,
             '_links': {
-                'self': url_for('api.get_match', match_id=self.id),
-                'season_division': url_for('api.get_season_division', season_division_id=self.season_division_id),
-                'home_team': url_for('api.get_team', team_id=self.home_team_id),
-                'away_team': url_for('api.get_team', team_id=self.away_team_id)
+                'self': url_for('api.game.get_match', match_id=self.id),
+                'season_division': url_for('api.league.get_season_division', season_division_id=self.season_division_id),
+                'home_team': url_for('api.league.get_team', team_id=self.home_team_id),
+                'away_team': url_for('api.league.get_team', team_id=self.away_team_id)
             }
         }
         return data
@@ -986,7 +986,7 @@ class MatchResult(db.Model):
             'forfeit': self.forfeit,
             'final': bool(self.final_id),
             '_links': {
-                'self': url_for('api.get_match', match_id=self.id)
+                'self': url_for('api.game.get_match', match_id=self.id)
             }
         }
         return data
@@ -1050,6 +1050,27 @@ class MatchData(db.Model):
             if field in data:
                 setattr(self, field, data[field])
 
+    def to_dict(self):
+        data = {
+            'lobby_id': self.lobby_id,
+            'processed': self.processed,
+            'accepted': self.accepted,
+            'match_id': self.match_id,
+            'region': self.region,
+            'gamemode': self.gamemode,
+            'created': self.created,
+            'arena': self.arena,
+            'home_score': self.home_score,
+            'away_score': self.away_score,
+            'winner': self.winner,
+            'current_period': self.current_period,
+            'periods_enabled': self.periods_enabled,
+            'custom_mercy_rule': self.custom_mercy_rule,
+            'end_reason': self.end_reason,
+            'source': self.source
+        }
+        return data
+
 
 # stores match data of particular players (periods of a match are separate entries)
 class PlayerMatchData(db.Model):
@@ -1085,6 +1106,34 @@ class PlayerMatchData(db.Model):
                       'game_winning_goals', 'post_hits', 'faceoffs_won', 'faceoffs_lost', 'score']:
             if field in data:
                 setattr(self, field, data[field])
+
+    def to_dict(self):
+        data = {
+            'id': self.match_id,
+            'player': self.player.player_name,
+            'team': self.team.name,
+            'goals': self.goals,
+            'shots': self.shots,
+            'assists': self.assists,
+            'saves': self.saves,
+            'primary_assists': self.primary_assists,
+            'secondary_assists': self.secondary_assists,
+            'passes': self.passes,
+            'blocks': self.blocks,
+            'takeaways': self.takeaways,
+            'turnovers': self.turnovers,
+            'possession_time_sec': self.possession_time_sec,
+            'game_winning_goals': self.game_winning_goals,
+            'post_hits': self.post_hits,
+            'faceoffs_won': self.faceoffs_won,
+            'faceoffs_lost': self.faceoffs_lost,
+            'score': self.score,
+            '_links': {
+                'player': url_for('api.league.get_player', player_id=self.player_id),
+                'team': url_for('api.league.get_team', team_id=self.team_id)
+            }
+        }
+        return data
 
 
 class Final(db.Model):
@@ -1224,6 +1273,18 @@ class MatchReview(db.Model):
         for field in ['match_id', 'type', 'raised_by', 'reason', 'comments', 'resolved', 'resolved_by', 'resolved_on']:
             if field in data:
                 setattr(self, field, data[field])
+
+    def to_dict(self):
+        data = {
+            'type': self.type,
+            'reason': self.reason,
+            'raised_by': self.raised_by,
+            'comments': self.comments,
+            'resolved': self.resolved,
+            'resolved_by': self.resolved_by,
+            'resolved_on': self.resolved_on
+        }
+        return data
 
 
 @login.user_loader

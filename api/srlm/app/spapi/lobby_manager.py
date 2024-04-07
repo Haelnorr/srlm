@@ -9,8 +9,6 @@ from celery.utils.log import get_task_logger
 
 log = get_task_logger(__name__)
 
-app, celery = create_app()
-
 
 def generate_lobby(match, current_period=1, initial_stats=None, initial_score=None, finals_game=None, delay=120):
     # Unpacking relevant objects from match object
@@ -71,6 +69,7 @@ def generate_lobby(match, current_period=1, initial_stats=None, initial_score=No
 
 @shared_task(bind=True, base=AbortableTask)
 def lobby_monitor(self, lobby_id):
+    app, celery = create_app()
     with app.app_context():
         import time
         import sqlalchemy as sa
@@ -82,7 +81,7 @@ def lobby_monitor(self, lobby_id):
         match_type = lobby.match.season_division.season.match_type
         log.info(f'Lobby {lobby.id} details pulled from database')
 
-        max_time = 20  # max time for process in minutes # TODO
+        max_time = 60  # max time for process in minutes
         i = 0  # counts loop increments
         check_interval = 10  # how often to check for abort signal in seconds
         finished = False  # loop controller
@@ -133,7 +132,7 @@ def lobby_monitor(self, lobby_id):
                     if (periods_valid == [1, 2, 3] and match_type.periods) or (
                             periods_valid == [1] and not match_type.periods):
                         # looks like the match was completed with the correct number of periods and players
-                        validate_stats(lobby.match.id)
+                        validate_stats.delay(lobby.match.id)
                         end_reason = 'Match results recorded'
                         finished = True
                         log.info('Match data retrieved successfully, requesting validation of data')
@@ -184,6 +183,7 @@ def lobby_monitor(self, lobby_id):
 
 @shared_task
 def get_match_data(lobby_id):
+    app, celery = create_app()
     with app.app_context():
         from api.srlm.app import db
         from api.srlm.app.models import Lobby
@@ -280,6 +280,7 @@ def parse_match_stats(match, teams, lobby):
 
 @shared_task
 def validate_stats(match_id):
+    app, celery = create_app()
     with app.app_context():
         import sqlalchemy as sa
         from api.srlm.app import db
@@ -413,10 +414,17 @@ def validate_stats(match_id):
 
         if all_players_flipped:
             # flip all the players teams around
-            flip = {valid_teams[0]: valid_teams[1], valid_teams[1]: valid_teams[0]}
+            flip_team_id = {valid_teams[0]: valid_teams[1], valid_teams[1]: valid_teams[0]}
             for player_data in players_data:
-                player_data.team_id = flip[player_data.team_id]
+                player_data.team_id = flip_team_id[player_data.team_id]
                 db.session.add(player_data)
+
+            flip_team_label = {'away': 'home', 'home': 'away'}
+            for period in periods:
+                period.winner = flip_team_label[period.winner]
+                period.home_score, period.away_score = period.away_score, period.home_score
+                db.session.add(period)
+
             db.session.commit()
         else:
             # raise player on incorrect team flags
@@ -434,6 +442,67 @@ def validate_stats(match_id):
             period.processed = True
             if flags == 0:
                 period.accepted = True
-                # call process_match_result
             db.session.add(period)
             db.session.commit()
+
+        if flags == 0:
+            process_match_result.delay(match.id)
+
+
+@shared_task
+def process_match_result(match_id):
+    app, celery = create_app()
+    with app.app_context():
+        import sqlalchemy as sa
+        from datetime import datetime, timezone, timedelta
+        from api.srlm.app import db
+        from api.srlm.app.models import Match, MatchResult, MatchData
+
+        log.info('Processing match result!')
+        match = db.session.get(Match, match_id)
+        log.info(f'Pulled match {match.id} from database')
+
+        lobby_ids = []
+        for lobby in match.lobbies:
+            lobby_ids.append(lobby.id)
+
+        accepted_periods = db.session.query(MatchData).filter(MatchData.lobby_id.in_(lobby_ids)).order_by(
+            sa.desc(MatchData.current_period))
+        last_period = accepted_periods.first()
+
+        match_result = MatchResult()
+        teams = {
+            'home': {
+                'team': match.home_team,
+                'score': last_period.home_score
+            },
+            'away': {
+                'team': match.away_team,
+                'score': last_period.away_score
+            }
+        }
+        flip = {
+            'home': 'away',
+            'away': 'home'
+        }
+        winner = teams[last_period.winner]
+        loser = teams[flip[last_period.winner]]
+
+        data = {
+            'winner_id': winner['team'].id,
+            'loser_id': loser['team'].id,
+            'draw': True if last_period.home_score == last_period.away_score else False,
+            'score_winner': winner['score'],
+            'score_loser': loser['score'],
+            'overtime': True if last_period.end_reason == 'Overtime' else False,
+            'forfeit': False
+        }
+
+        match_length = match.season_division.season.match_type.match_length
+        game_finished = last_period.created + timedelta(seconds=match_length)
+
+        match_result.from_dict(data)
+        match_result.completed_date = game_finished
+        match_result.match = match
+        db.session.add(match_result)
+        db.session.commit()

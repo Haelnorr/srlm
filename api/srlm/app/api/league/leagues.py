@@ -1,5 +1,5 @@
 from api.srlm.app import db
-from api.srlm.app.api import bp
+from api.srlm.app.api.league import league_bp as bp
 from api.srlm.app.api.utils import responses
 from flask import request
 from api.srlm.app.api.utils.functions import force_fields, clean_data, force_unique, ensure_exists
@@ -17,7 +17,7 @@ log = get_logger(__name__)
 def get_leagues():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 10, type=int), 100)
-    return League.to_collection_dict(sa.select(League), page, per_page, 'api.get_leagues')
+    return League.to_collection_dict(sa.select(League), page, per_page, 'api.league.get_leagues')
 
 
 @bp.route('/leagues/<league_id_or_acronym>', methods=['GET'])
@@ -44,7 +44,7 @@ def add_leagues():
     db.session.add(league)
     db.session.commit()
 
-    return responses.create_success(f'League {league.name} added', 'api.get_league', league_id_or_acronym=league.id)
+    return responses.create_success(f'League {league.name} added', 'api.league.get_league', league_id_or_acronym=league.id)
 
 
 @bp.route('/leagues/<league_id_or_acronym>', methods=['PUT'])
@@ -62,7 +62,7 @@ def update_leagues(league_id_or_acronym):
 
     db.session.commit()
 
-    return responses.request_success(f'League {league.name} updated', 'api.get_league', league_id_or_acronym=league.id)
+    return responses.request_success(f'League {league.name} updated', 'api.league.get_league', league_id_or_acronym=league.id)
 
 
 @bp.route('/leagues/<league_id_or_acronym>/seasons', methods=['GET'])
@@ -75,7 +75,7 @@ def get_league_seasons(league_id_or_acronym):
 
     query = league.seasons.order_by(Season.start_date.desc())
 
-    seasons = Season.to_collection_dict(query, page, per_page, 'api.get_league_seasons', league_id_or_acronym=league.id)
+    seasons = Season.to_collection_dict(query, page, per_page, 'api.league.get_league_seasons', league_id_or_acronym=league.id)
 
     response = {
         'league': league.name,
@@ -94,7 +94,7 @@ def get_league_divisions(league_id_or_acronym):
 
     league = ensure_exists(League, join_method='or', id=league_id_or_acronym, acronym=league_id_or_acronym)
 
-    divisions = Division.to_collection_dict(league.divisions, page, per_page, 'api.get_league_divisions', league_id_or_acronym=league.id)
+    divisions = Division.to_collection_dict(league.divisions, page, per_page, 'api.league.get_league_divisions', league_id_or_acronym=league.id)
 
     response = {
         'league': league.name,

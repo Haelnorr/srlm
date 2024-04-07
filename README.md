@@ -1382,6 +1382,100 @@ Gets the details of the specified match. Will include results if match is comple
     }
 }</pre>
 </details>
+<details>
+<summary><code>GET /api/match/{id}/review</code></summary>
+Gets a list of flags and review details for a given match.
+<pre>{
+    "flags": [
+        {
+            "comments": null,
+            "raised_by": "System",
+            "reason": "Player sooshi played period 2 for the wrong team",
+            "resolved": false,
+            "resolved_by": null,
+            "resolved_on": null,
+            "type": "AutoReview"
+        },
+        {
+            "comments": null,
+            "raised_by": "System",
+            "reason": "Player Nananana played period 2 for the wrong team",
+            "resolved": false,
+            "resolved_by": null,
+            "resolved_on": null,
+            "type": "AutoReview"
+        }
+    ],
+    "match_details": {
+        "_links": {
+            "away_team": "/api/teams/245",
+            "home_team": "/api/teams/247",
+            "self": "/api/match/3"
+        },
+        "away_team": "Massive Monkeys",
+        "current_lobby": null,
+        "final": false,
+        "home_team": "CBR Milk",
+        "id": 3,
+        "match_week": null,
+        "result": null,
+        "round": null,
+        "scheduled_time": null
+    },
+    "match_id": 3,
+    "periods": [
+        {
+            "accepted": true,
+            "arena": "Slap Stadium",
+            "away_score": 0,
+            "created": "Mon, 01 Apr 2024 03:11:57 GMT",
+            "current_period": 1,
+            "custom_mercy_rule": "0",
+            "end_reason": "EndOfRegulation",
+            "gamemode": "hockey",
+            "home_score": 2,
+            "lobby_id": 38,
+            "match_id": "52e4ea95-04a1-42d1-97fc-8aab9438b4d4",
+            "periods_enabled": true,
+            "player_data": [
+                {
+                    "_links": {
+                        "player": "/api/players/350",
+                        "team": "/api/teams/245"
+                    },
+                    "assists": 0,
+                    "blocks": 0,
+                    "faceoffs_lost": 1,
+                    "faceoffs_won": 1,
+                    "game_winning_goals": 0,
+                    "goals": 0,
+                    "id": 5,
+                    "passes": 5,
+                    "player": "Anthony",
+                    "possession_time_sec": 6,
+                    "post_hits": 0,
+                    "primary_assists": 0,
+                    "saves": 3,
+                    "score": 120,
+                    "secondary_assists": 0,
+                    "shots": 0,
+                    "takeaways": 0,
+                    "team": "Massive Monkeys",
+                    "turnovers": 1
+                },
+                { ... player_match_data item ... }
+                ...
+            ],
+            "processed": true,
+            "region": "oce-east",
+            "source": "SlapAPI",
+            "winner": "home"
+        },
+        { ... period item ... }
+        ...
+    ]
+}</pre>
+</details>
 </ul>
 </details>
 <br>

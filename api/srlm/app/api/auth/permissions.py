@@ -3,7 +3,7 @@ import sqlalchemy as sa
 from api.srlm.app import db
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.models import Permission
-from api.srlm.app.api import bp
+from api.srlm.app.api.auth import auth_bp as bp
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.auth.utils import req_app_token
 from api.srlm.app.api.utils.errors import BadRequest
@@ -32,7 +32,7 @@ def get_permission(perm_id_or_key):
 def get_permissions():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 10, type=int), 100)
-    return Permission.to_collection_dict(sa.select(Permission), page, per_page, 'api.get_permissions')
+    return Permission.to_collection_dict(sa.select(Permission), page, per_page, 'api.auth.get_permissions')
 
 
 @bp.route('/permissions', methods=['POST'])
@@ -50,8 +50,7 @@ def new_permission():
     permission.from_dict(cleaned_data)
     db.session.add(permission)
     db.session.commit()
-    # return permission.to_dict(), 201, {'Location': url_for('api.get_permission', perm_id=permission.id)}
-    return responses.create_success(f"Permission {permission.key} created", 'api.get_permission', perm_id_or_key=permission.id)
+    return responses.create_success(f"Permission {permission.key} created", 'api.auth.get_permission', perm_id_or_key=permission.id)
 
 
 @bp.route('/permissions/<perm_id_or_key>', methods=['PUT'])
@@ -64,7 +63,7 @@ def update_permission(perm_id_or_key):
         raise BadRequest('Permission key is not unique')
     permission.from_dict(data)
     db.session.commit()
-    return responses.request_success(f"Permission {permission.key} updated", 'api.get_permission', perm_id_or_key=permission.id)
+    return responses.request_success(f"Permission {permission.key} updated", 'api.auth.get_permission', perm_id_or_key=permission.id)
 
 
 @bp.route('/permissions/<perm_id_or_key>/users', methods=['GET'])
@@ -78,7 +77,7 @@ def list_users_with_permission(perm_id_or_key):
             'id': user.id,
             'username': user.username,
             '_links': {
-                'self': url_for('api.get_user', user_id=user.id)
+                'self': url_for('api.users.get_user', user_id=user.id)
             }
         })
 
@@ -87,7 +86,7 @@ def list_users_with_permission(perm_id_or_key):
         'key': permission.key,
         'users': users,
         '_links': {
-            'self': url_for('api.list_users_with_permission', perm_id_or_key=permission.id)
+            'self': url_for('api.users.list_users_with_permission', perm_id_or_key=permission.id)
         }
     }
 

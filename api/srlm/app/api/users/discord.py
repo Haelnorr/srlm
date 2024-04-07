@@ -1,6 +1,6 @@
 from flask import request
 from api.srlm.app import db
-from api.srlm.app.api import bp
+from api.srlm.app.api.users import users_bp as bp
 from api.srlm.app.api.auth.utils import req_app_token, user_auth, get_bearer_token
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.errors import ResourceNotFound, UserAuthError, BadRequest
@@ -52,7 +52,7 @@ def create_user_discord(user_id):
     db.session.add(discord)
     db.session.commit()
 
-    return responses.create_success('Discord account linked', 'api.get_user_discord', user_id=user_id)
+    return responses.create_success('Discord account linked', 'api.users.get_user_discord', user_id=user_id)
 
 
 @bp.route('/users/<int:user_id>/discord', methods=['PUT'])
@@ -85,7 +85,7 @@ def update_user_discord(user_id):
     user.discord.from_dict(data)
     db.session.commit()
 
-    return responses.request_success('Discord account updated', 'api.get_user_discord', user_id=user_id)
+    return responses.request_success('Discord account updated', 'api.users.get_user_discord', user_id=user_id)
 
 
 @bp.route('/users/<int:user_id>/discord', methods=['DELETE'])
@@ -103,4 +103,4 @@ def delete_user_discord(user_id):
     db.session.query(Discord).filter(Discord.user_id == user.id).delete()
     db.session.commit()
 
-    return responses.request_success('Discord account unlinked', 'api.get_user', user_id=user_id)
+    return responses.request_success('Discord account unlinked', 'api.users.get_user', user_id=user_id)

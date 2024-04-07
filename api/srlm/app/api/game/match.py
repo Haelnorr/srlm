@@ -1,11 +1,12 @@
 from flask import request
+import sqlalchemy as sa
 from api.srlm.app import db
-from api.srlm.app.api import bp
+from api.srlm.app.api.game import game_bp as bp
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.auth.utils import req_app_token
 from api.srlm.app.api.utils.errors import BadRequest
 from api.srlm.app.api.utils.functions import force_fields, ensure_exists, clean_data
-from api.srlm.app.models import SeasonDivision, Team, Match, MatchSchedule
+from api.srlm.app.models import SeasonDivision, Team, Match, MatchSchedule, MatchReview, MatchData
 
 
 @bp.route('/match', methods=['POST'])
@@ -39,7 +40,7 @@ def create_match():
     db.session.add(match)
     db.session.commit()
 
-    return responses.create_success(f'Match between {match.home_team.name} and {match.away_team.name} created', 'api.get_match', match_id=match.id)
+    return responses.create_success(f'Match between {match.home_team.name} and {match.away_team.name} created', 'api.game.get_match', match_id=match.id)
 
 
 @bp.route('/match/<int:match_id>', methods=['GET'])
@@ -52,8 +53,38 @@ def get_match(match_id):
     return response
 
 
-def get_match_review():
-    pass
+@bp.route('/match/<int:match_id>/review', methods=['GET'])
+@req_app_token
+def get_match_review(match_id):
+    match = ensure_exists(Match, id=match_id)
+
+    flags = db.session.query(MatchReview).filter_by(match_id=match_id)
+
+    flags_data = []
+    for flag in flags:
+        flags_data.append(flag.to_dict())
+
+    lobby_ids = []
+    for lobby in match.lobbies:
+        lobby_ids.append(lobby.id)
+
+    period_query = db.session.query(MatchData).filter(MatchData.lobby_id.in_(lobby_ids)).order_by(sa.asc(MatchData.created))
+    periods = []
+    for period in period_query:
+        period_data = period.to_dict()
+        period_data['player_data'] = []
+        for player in period.player_data_assoc:
+            period_data['player_data'].append(player.to_dict())
+        periods.append(period_data)
+
+    response = {
+        'match_id': match.id,
+        'match_details': match.to_simple_dict(),
+        'periods': periods,
+        'flags': flags_data,
+    }
+
+    return response
 
 
 def update_match_review():

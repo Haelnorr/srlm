@@ -1,5 +1,5 @@
 from api.srlm.app import db
-from api.srlm.app.api import bp
+from api.srlm.app.api.league import league_bp as bp
 from api.srlm.app.api.utils import responses
 from flask import request
 from api.srlm.app.api.utils.functions import force_fields, clean_data, force_unique, ensure_exists, \
@@ -18,7 +18,7 @@ log = get_logger(__name__)
 def get_seasons():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 10, type=int), 100)
-    return Season.to_collection_dict(sa.select(Season), page, per_page, 'api.get_seasons')
+    return Season.to_collection_dict(sa.select(Season), page, per_page, 'api.league.get_seasons')
 
 
 @bp.route('/seasons/<int:season_id>', methods=['GET'])
@@ -57,7 +57,7 @@ def add_season():
     db.session.add(season)
     db.session.commit()
 
-    return responses.create_success(f'{season.league.acronym} {season.name} added', 'api.get_season', season_id=season.id)
+    return responses.create_success(f'{season.league.acronym} {season.name} added', 'api.league.get_season', season_id=season.id)
 
 
 @bp.route('/seasons/<int:season_id>', methods=['PUT'])
@@ -80,7 +80,7 @@ def update_season(season_id):
 
     db.session.commit()
 
-    return responses.request_success(f'Season {season.name} updated', 'api.get_season', season_id=season.id)
+    return responses.request_success(f'Season {season.name} updated', 'api.league.get_season', season_id=season.id)
 
 
 @bp.route('/seasons/<int:season_id>/divisions', methods=['GET'])
@@ -91,7 +91,7 @@ def get_divisions_in_season(season_id):
 
     season = ensure_exists(Season, id=season_id)
 
-    divisions = SeasonDivision.to_collection_dict(season.division_association, page, per_page, 'api.get_divisions_in_season', season_id=season_id)
+    divisions = SeasonDivision.to_collection_dict(season.division_association, page, per_page, 'api.league.get_divisions_in_season', season_id=season_id)
 
     response = {
         'season': season.name,

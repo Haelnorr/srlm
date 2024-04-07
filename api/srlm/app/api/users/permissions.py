@@ -1,6 +1,6 @@
 from flask import url_for, request
 from api.srlm.app import db
-from api.srlm.app.api import bp
+from api.srlm.app.api.users import users_bp as bp
 from api.srlm.app.api.auth.utils import req_app_token
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.errors import BadRequest, ResourceNotFound
@@ -21,7 +21,7 @@ def get_user_permissions(user_id):
         'username': user.username,
         'permissions': permissions,
         '_links': {
-            'self': url_for('api.get_user_permissions', user_id=user_id)
+            'self': url_for('api.users.get_user_permissions', user_id=user_id)
         }
     }
 
@@ -51,7 +51,7 @@ def add_user_permissions(user_id):
     db.session.add(user_perm)
     db.session.commit()
 
-    return responses.create_success(f'Permission {user_perm.permssion.key} added to user {user_perm.user.username}', 'api.get_user_permissions', user_id=user_id)
+    return responses.create_success(f'Permission {user_perm.permssion.key} added to user {user_perm.user.username}', 'api.users.get_user_permissions', user_id=user_id)
 
 
 @bp.route('/users/<int:user_id>/permissions', methods=['PUT'])
@@ -74,7 +74,7 @@ def update_user_permissions(user_id):
     user_perm.additional_modifiers = modifiers
     db.session.commit()
 
-    return responses.create_success(f'Permission {user_perm.permssion.key} updated for user {user_perm.user.username}', 'api.get_user_permissions', user_id=user_id)
+    return responses.create_success(f'Permission {user_perm.permssion.key} updated for user {user_perm.user.username}', 'api.users.get_user_permissions', user_id=user_id)
 
 
 @bp.route('/users/<int:user_id>/permissions/revoke', methods=['POST'])
@@ -94,4 +94,4 @@ def revoke_user_permissions(user_id):
     db.session.query(UserPermissions).filter_by(user_id=user.id, permission_id=permission.id).delete()
     db.session.commit()
 
-    return responses.create_success(f'Permission {permission.key} revoked from user {user.username}', 'api.get_user_permissions', user_id=user_id)
+    return responses.create_success(f'Permission {permission.key} revoked from user {user.username}', 'api.users.get_user_permissions', user_id=user_id)

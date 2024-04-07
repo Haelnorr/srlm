@@ -1,5 +1,5 @@
 from api.srlm.app import db
-from api.srlm.app.api import bp
+from api.srlm.app.api.league import league_bp as bp
 from api.srlm.app.api.utils import responses
 from flask import request
 from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
@@ -41,7 +41,7 @@ def add_season_division():
     db.session.commit()
 
     return responses.create_success(f'{season_division.get_readable_name()} created.',
-                                    'api.get_season_division', season_division_id=season_division.id)
+                                    'api.league.get_season_division', season_division_id=season_division.id)
 
 
 @bp.route('/season_division/<int:season_division_id>/teams', methods=['GET'])
