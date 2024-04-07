@@ -1,3 +1,4 @@
+"""Endpoints relating to Teams"""
 from datetime import datetime, timezone
 from api.srlm.app import db
 from api.srlm.app.api.league import league_bp as league

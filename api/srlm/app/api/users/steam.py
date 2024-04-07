@@ -1,5 +1,5 @@
+"""Endpoint for linking a users steam account"""
 from flask import request
-
 from api.srlm.app import db
 from api.srlm.app.api.users import users_bp as users
 from api.srlm.app.api.utils import responses

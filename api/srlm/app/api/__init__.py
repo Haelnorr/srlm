@@ -1,3 +1,4 @@
+"""Provides all the routes and helper functions for the main API"""
 from flask import Blueprint
 
 bp = Blueprint('api', __name__)

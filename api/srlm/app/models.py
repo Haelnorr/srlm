@@ -1,3 +1,8 @@
+"""
+Where all the models for the main league_manager database are defined
+These models are used by both Alembic to create and migrate the database using Flask-Migrate and to interface with the
+database using SQLAlchemy
+"""
 import jwt
 import secrets
 from time import time

@@ -1,3 +1,4 @@
+"""For handling errors and returning standardized error messages"""
 from werkzeug.http import HTTP_STATUS_CODES
 from werkzeug.exceptions import HTTPException
 from api.srlm.app.api import bp

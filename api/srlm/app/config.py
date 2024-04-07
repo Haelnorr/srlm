@@ -1,3 +1,4 @@
+"""Configuration parameters of the flask app"""
 import os
 import configparser
 from api.srlm.definitions import ROOT_DIR

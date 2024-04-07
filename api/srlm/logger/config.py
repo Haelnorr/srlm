@@ -1,3 +1,4 @@
+"""Provides the config for the logging module"""
 import os.path
 import configparser
 from api.srlm.definitions import ROOT_DIR

@@ -1,3 +1,4 @@
+"""Endpoints relating to Players"""
 from datetime import datetime, timezone
 from flask import request
 import sqlalchemy as sa

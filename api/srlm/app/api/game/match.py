@@ -1,3 +1,4 @@
+"""Provides endpoints for creating matches and retrieving match data"""
 from flask import request
 import sqlalchemy as sa
 from api.srlm.app import db

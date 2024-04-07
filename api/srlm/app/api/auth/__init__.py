@@ -1,3 +1,4 @@
+"""Provides all the auth endpoints"""
 from flask import Blueprint
 from api.srlm.app.api import bp
 

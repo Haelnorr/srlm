@@ -1,3 +1,5 @@
+"""Main package for Slapshot: Rebound League Manager"""
+
 import api.srlm.definitions
 import api.srlm.app
 import api.srlm.logger

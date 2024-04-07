@@ -1,3 +1,4 @@
+"""Endpoints Relating to SeasonDivisions"""
 from api.srlm.app import db
 from api.srlm.app.api.league import league_bp as league
 from api.srlm.app.api.utils import responses

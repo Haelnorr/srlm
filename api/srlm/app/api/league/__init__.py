@@ -1,3 +1,4 @@
+"""Provides endpoints for League management related endpoints"""
 from flask import Blueprint
 from api.srlm.app.api import bp
 

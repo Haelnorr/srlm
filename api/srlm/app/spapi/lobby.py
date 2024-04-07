@@ -1,3 +1,4 @@
+"""Functions to interface with the Lobby endpoints of the Slapshot Public API"""
 from api.srlm.app.api.utils.functions import clean_data
 from api.srlm.app.spapi import slap_api
 

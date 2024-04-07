@@ -1,3 +1,4 @@
+"""Main auth endpoints"""
 from flask import request, url_for
 from api.srlm.api_access.models import AuthorizedApp
 from api.srlm.app import db

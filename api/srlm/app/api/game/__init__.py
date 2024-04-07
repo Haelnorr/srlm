@@ -1,3 +1,4 @@
+"""Provides endpoints for in-game related API endpoints"""
 from flask import Blueprint
 from api.srlm.app.api import bp
 

@@ -1,3 +1,4 @@
+"""Provides easy access to the API by creating methods that inject the authorization headers"""
 import os
 import requests
 

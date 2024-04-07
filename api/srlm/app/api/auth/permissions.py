@@ -1,3 +1,4 @@
+"""Auth endpoints relating to permissions"""
 from flask import request, url_for
 import sqlalchemy as sa
 from api.srlm.app import db

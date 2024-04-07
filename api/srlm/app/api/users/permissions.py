@@ -1,3 +1,4 @@
+"""Endpoints for managing user permissions"""
 from flask import url_for, request
 from api.srlm.app import db
 from api.srlm.app.api.users import users_bp as users

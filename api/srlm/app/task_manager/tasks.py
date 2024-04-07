@@ -1,3 +1,4 @@
+"""Provides functions for interfacing with celery tasks"""
 from celery.contrib.abortable import AbortableAsyncResult
 from celery.result import AsyncResult
 

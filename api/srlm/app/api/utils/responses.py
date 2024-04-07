@@ -1,3 +1,5 @@
+"""Functions for returning standardized success responses"""
+
 from flask import url_for
 from werkzeug.http import HTTP_STATUS_CODES
 

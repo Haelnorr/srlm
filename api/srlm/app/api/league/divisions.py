@@ -1,3 +1,4 @@
+"""Endpoints relating to Divisions"""
 from api.srlm.app import db
 from api.srlm.app.api.league import league_bp as league
 from flask import request, url_for

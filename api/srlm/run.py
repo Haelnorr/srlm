@@ -1,3 +1,4 @@
+"""Where the web-app is created and run"""
 import os
 from dotenv import load_dotenv
 from api.srlm.definitions import ROOT_DIR

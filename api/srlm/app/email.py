@@ -1,3 +1,4 @@
+"""Functions for sending emails"""
 import os
 from flask import current_app, render_template
 from flask_mail import Message

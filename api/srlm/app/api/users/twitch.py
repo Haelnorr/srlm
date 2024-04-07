@@ -1,3 +1,4 @@
+"""Endpoints for managing Twitch linking"""
 from flask import request
 from api.srlm.app import db
 from api.srlm.app.api.users import users_bp as users

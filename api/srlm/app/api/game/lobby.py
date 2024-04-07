@@ -1,4 +1,4 @@
-from celery.contrib.abortable import AbortableAsyncResult
+"""Provides routes for generating and cancelling in game lobbies"""
 from flask import request
 from api.srlm.app.api.game import game_bp as game
 from api.srlm.app.api.auth.utils import req_app_token
@@ -6,6 +6,7 @@ from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import force_fields, ensure_exists
 from api.srlm.app.models import Match, Lobby
 from api.srlm.app.spapi.lobby_manager import generate_lobby
+from api.srlm.app.task_manager.tasks import cancel_task
 
 
 @game.route('/lobby', methods=['POST'])
@@ -25,7 +26,6 @@ def generate_lobby():
 def abort_lobby(lobby_id):
     lobby = ensure_exists(Lobby, id=lobby_id)
 
-    monitor = AbortableAsyncResult(lobby.task_id)
-    monitor.abort()
+    cancel_task(lobby.task_id)
 
     return responses.request_success(f'Lobby {lobby.id} aborted', 'api.game.get_match', match_id=lobby.match.id)

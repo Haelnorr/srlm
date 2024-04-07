@@ -1,3 +1,5 @@
+"""Function to interface with the SteamID endpoint """
+
 from api.srlm.app.spapi import slap_api
 
 

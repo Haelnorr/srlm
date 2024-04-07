@@ -1,3 +1,4 @@
+"""Main endpoints relating to Users"""
 import sqlalchemy as sa
 from flask import request, url_for
 from api.srlm.app import db

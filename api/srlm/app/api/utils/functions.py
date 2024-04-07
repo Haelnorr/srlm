@@ -1,8 +1,8 @@
-from datetime import datetime
+"""Useful functions for interfacing with the database"""
 
+from datetime import datetime
 from api.srlm.app import db
 from api.srlm.app.api.utils.errors import BadRequest, ResourceNotFound
-import sqlalchemy as sa
 
 
 def ensure_exists(model, return_none=False, join_method='and', **kwargs):

@@ -1,3 +1,4 @@
+"""This module provides methods that manage in-game lobbies and retrieve/process the game stats"""
 import datetime
 import random
 from celery import shared_task

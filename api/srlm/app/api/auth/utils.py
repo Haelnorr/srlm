@@ -1,3 +1,4 @@
+"""Utilities for the authentication system"""
 import sqlalchemy as sa
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth
 from api.srlm.api_access.models import AuthorizedApp

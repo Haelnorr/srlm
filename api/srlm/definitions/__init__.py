@@ -1,3 +1,4 @@
+"""Basic project level definitions"""
 import os
 
 from api.srlm.definitions.paths import ROOT_DIR
