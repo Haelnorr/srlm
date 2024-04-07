@@ -1,6 +1,6 @@
 from flask import url_for, request
 from api.srlm.app import db
-from api.srlm.app.api.users import users_bp as bp
+from api.srlm.app.api.users import users_bp as users
 from api.srlm.app.api.auth.utils import req_app_token
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.errors import BadRequest, ResourceNotFound
@@ -8,7 +8,7 @@ from api.srlm.app.api.utils.functions import ensure_exists, force_fields
 from api.srlm.app.models import User, Permission, UserPermissions
 
 
-@bp.route('/users/<int:user_id>/permissions', methods=['GET'])
+@users.route('/users/<int:user_id>/permissions', methods=['GET'])
 @req_app_token
 def get_user_permissions(user_id):
     user = ensure_exists(User, id=user_id)
@@ -28,7 +28,7 @@ def get_user_permissions(user_id):
     return response
 
 
-@bp.route('/users/<int:user_id>/permissions', methods=['POST'])
+@users.route('/users/<int:user_id>/permissions', methods=['POST'])
 @req_app_token
 def add_user_permissions(user_id):
     user = ensure_exists(User, id=user_id)
@@ -54,7 +54,7 @@ def add_user_permissions(user_id):
     return responses.create_success(f'Permission {user_perm.permssion.key} added to user {user_perm.user.username}', 'api.users.get_user_permissions', user_id=user_id)
 
 
-@bp.route('/users/<int:user_id>/permissions', methods=['PUT'])
+@users.route('/users/<int:user_id>/permissions', methods=['PUT'])
 @req_app_token
 def update_user_permissions(user_id):
     user = ensure_exists(User, id=user_id)
@@ -77,7 +77,7 @@ def update_user_permissions(user_id):
     return responses.create_success(f'Permission {user_perm.permssion.key} updated for user {user_perm.user.username}', 'api.users.get_user_permissions', user_id=user_id)
 
 
-@bp.route('/users/<int:user_id>/permissions/revoke', methods=['POST'])
+@users.route('/users/<int:user_id>/permissions/revoke', methods=['POST'])
 @req_app_token
 def revoke_user_permissions(user_id):
     user = ensure_exists(User, id=user_id)

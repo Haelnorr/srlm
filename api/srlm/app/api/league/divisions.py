@@ -1,5 +1,5 @@
 from api.srlm.app import db
-from api.srlm.app.api.league import league_bp as bp
+from api.srlm.app.api.league import league_bp as league
 from flask import request, url_for
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import force_fields, clean_data, ensure_exists, force_unique
@@ -12,7 +12,7 @@ from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
 
-@bp.route('/divisions', methods=['GET'])
+@league.route('/divisions', methods=['GET'])
 @req_app_token
 def get_divisions():
     page = request.args.get('page', 1, type=int)
@@ -20,7 +20,7 @@ def get_divisions():
     return Division.to_collection_dict(sa.select(Division), page, per_page, 'api.league.get_divisions')
 
 
-@bp.route('/divisions/<int:division_id>', methods=['GET'])
+@league.route('/divisions/<int:division_id>', methods=['GET'])
 @req_app_token
 def get_division(division_id):
     division = ensure_exists(Division, id=division_id)
@@ -28,7 +28,7 @@ def get_division(division_id):
         return division.to_dict()
 
 
-@bp.route('/divisions', methods=['POST'])
+@league.route('/divisions', methods=['POST'])
 @req_app_token
 def add_division():
     data = request.get_json()
@@ -54,7 +54,7 @@ def add_division():
     return responses.create_success(f'{league.acronym} {division.name} added', 'api.league.get_division', division_id=division.id)
 
 
-@bp.route('/divisions/<int:division_id>', methods=['PUT'])
+@league.route('/divisions/<int:division_id>', methods=['PUT'])
 @req_app_token
 def update_division(division_id):
     data = request.get_json()
@@ -73,7 +73,7 @@ def update_division(division_id):
     return responses.request_success(f'Division {division.name} updated', 'api.league.get_division', division_id=division.id)
 
 
-@bp.route('/divisions/<int:division_id>/seasons', methods=['GET'])
+@league.route('/divisions/<int:division_id>/seasons', methods=['GET'])
 @req_app_token
 def get_seasons_of_division(division_id):
 

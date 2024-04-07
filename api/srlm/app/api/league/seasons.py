@@ -1,5 +1,5 @@
 from api.srlm.app import db
-from api.srlm.app.api.league import league_bp as bp
+from api.srlm.app.api.league import league_bp as league
 from api.srlm.app.api.utils import responses
 from flask import request
 from api.srlm.app.api.utils.functions import force_fields, clean_data, force_unique, ensure_exists, \
@@ -13,7 +13,7 @@ from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
 
-@bp.route('/seasons', methods=['GET'])
+@league.route('/seasons', methods=['GET'])
 @req_app_token
 def get_seasons():
     page = request.args.get('page', 1, type=int)
@@ -21,7 +21,7 @@ def get_seasons():
     return Season.to_collection_dict(sa.select(Season), page, per_page, 'api.league.get_seasons')
 
 
-@bp.route('/seasons/<int:season_id>', methods=['GET'])
+@league.route('/seasons/<int:season_id>', methods=['GET'])
 @req_app_token
 def get_season(season_id):
     season = ensure_exists(Season, id=season_id)
@@ -29,7 +29,7 @@ def get_season(season_id):
         return season.to_dict()
 
 
-@bp.route('/seasons', methods=['POST'])
+@league.route('/seasons', methods=['POST'])
 @req_app_token
 def add_season():
     data = request.get_json()
@@ -60,7 +60,7 @@ def add_season():
     return responses.create_success(f'{season.league.acronym} {season.name} added', 'api.league.get_season', season_id=season.id)
 
 
-@bp.route('/seasons/<int:season_id>', methods=['PUT'])
+@league.route('/seasons/<int:season_id>', methods=['PUT'])
 @req_app_token
 def update_season(season_id):
     data = request.get_json()
@@ -83,7 +83,7 @@ def update_season(season_id):
     return responses.request_success(f'Season {season.name} updated', 'api.league.get_season', season_id=season.id)
 
 
-@bp.route('/seasons/<int:season_id>/divisions', methods=['GET'])
+@league.route('/seasons/<int:season_id>/divisions', methods=['GET'])
 @req_app_token
 def get_divisions_in_season(season_id):
     page = request.args.get('page', 1, type=int)

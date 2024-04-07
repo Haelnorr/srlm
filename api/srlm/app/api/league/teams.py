@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from api.srlm.app import db
-from api.srlm.app.api.league import league_bp as bp
+from api.srlm.app.api.league import league_bp as league
 from api.srlm.app.api.utils import responses
 from flask import request, url_for
 import sqlalchemy as sa
@@ -14,7 +14,7 @@ from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
 
-@bp.route('/teams', methods=['GET'])
+@league.route('/teams', methods=['GET'])
 @req_app_token
 def get_teams():
     page = request.args.get('page', 1, type=int)
@@ -22,14 +22,14 @@ def get_teams():
     return Team.to_collection_dict(sa.select(Team), page, per_page, 'api.league.get_teams')
 
 
-@bp.route('/teams/<int:team_id>', methods=['GET'])
+@league.route('/teams/<int:team_id>', methods=['GET'])
 @req_app_token
 def get_team(team_id):
     team = ensure_exists(Team, id=team_id)
     return team.to_dict()
 
 
-@bp.route('/teams', methods=['POST'])
+@league.route('/teams', methods=['POST'])
 @req_app_token
 def add_team():
     data = request.get_json()
@@ -54,7 +54,7 @@ def add_team():
     return responses.create_success(f'Team {team.name} created', 'api.league.get_team', team_id=team.id)
 
 
-@bp.route('/teams/<int:team_id>', methods=['PUT'])
+@league.route('/teams/<int:team_id>', methods=['PUT'])
 @req_app_token
 def update_team(team_id):
     data = request.get_json()
@@ -73,7 +73,7 @@ def update_team(team_id):
     return responses.request_success(f'Team {team.name} updated', 'api.league.get_team', team_id=team.id)
 
 
-@bp.route('/teams/<int:team_id>/players', methods=['GET'])
+@league.route('/teams/<int:team_id>/players', methods=['GET'])
 @req_app_token
 def get_team_players(team_id):
     team = ensure_exists(Team, id=team_id)
@@ -85,7 +85,7 @@ def get_team_players(team_id):
     return team_players
 
 
-@bp.route('/teams/<int:team_id>/players/season/<int:season_division_id>', methods=['GET'])
+@league.route('/teams/<int:team_id>/players/season/<int:season_division_id>', methods=['GET'])
 @req_app_token
 def get_team_players_in_season(team_id, season_division_id):
     # get team
@@ -127,7 +127,7 @@ def get_team_players_in_season(team_id, season_division_id):
     return response
 
 
-@bp.route('/teams/<int:team_id>/seasons', methods=['GET'])
+@league.route('/teams/<int:team_id>/seasons', methods=['GET'])
 @req_app_token
 def get_team_seasons(team_id):
     # ensure team exists
@@ -141,7 +141,7 @@ def get_team_seasons(team_id):
     return seasons
 
 
-@bp.route('/teams/<int:team_id>/seasons', methods=['POST'])
+@league.route('/teams/<int:team_id>/seasons', methods=['POST'])
 @req_app_token
 def register_team_season(team_id):
     # ensure team exists
@@ -167,7 +167,7 @@ def register_team_season(team_id):
                                      'api.league.get_season_division', season_division_id=season_division.id)
 
 
-@bp.route('/teams/<int:team_id>/seasons/<int:season_division_id>', methods=['DELETE'])
+@league.route('/teams/<int:team_id>/seasons/<int:season_division_id>', methods=['DELETE'])
 @req_app_token
 def deregister_team_season(team_id, season_division_id):
     # ensure team exists
@@ -188,13 +188,13 @@ def deregister_team_season(team_id, season_division_id):
                                      'api.league.get_season_division', season_division_id=season_division.id)
 
 
-@bp.route('/teams/<int:team_id>/awards', methods=['GET'])
+@league.route('/teams/<int:team_id>/awards', methods=['GET'])
 @req_app_token
 def get_team_awards(team_id):
     pass
 
 
-@bp.route('/teams/<int:team_id>/awards', methods=['POST'])
+@league.route('/teams/<int:team_id>/awards', methods=['POST'])
 @req_app_token
 def give_team_award(team_id):
     pass

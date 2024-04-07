@@ -1,6 +1,6 @@
 from flask import request
 from api.srlm.app import db
-from api.srlm.app.api.users import users_bp as bp
+from api.srlm.app.api.users import users_bp as users
 from api.srlm.app.api.auth.utils import req_app_token, user_auth, get_bearer_token
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.errors import ResourceNotFound, UserAuthError, BadRequest
@@ -8,7 +8,7 @@ from api.srlm.app.api.utils.functions import ensure_exists, force_fields, clean_
 from api.srlm.app.models import User, Twitch
 
 
-@bp.route('/users/<int:user_id>/twitch', methods=['GET'])
+@users.route('/users/<int:user_id>/twitch', methods=['GET'])
 @req_app_token
 def get_user_twitch(user_id):
     user_token = get_bearer_token(request.headers)['user']
@@ -24,7 +24,7 @@ def get_user_twitch(user_id):
     return user.twitch.to_dict(authenticated=authenticated)
 
 
-@bp.route('/users/<int:user_id>/twitch', methods=['POST'])
+@users.route('/users/<int:user_id>/twitch', methods=['POST'])
 @req_app_token
 @user_auth.login_required
 def create_user_twitch(user_id):
@@ -56,7 +56,7 @@ def create_user_twitch(user_id):
     return responses.create_success('Twitch account linked', 'api.users.get_user_twitch', user_id=user_id)
 
 
-@bp.route('/users/<int:user_id>/twitch', methods=['PUT'])
+@users.route('/users/<int:user_id>/twitch', methods=['PUT'])
 @req_app_token
 @user_auth.login_required
 def update_user_twitch(user_id):
@@ -91,7 +91,7 @@ def update_user_twitch(user_id):
     return responses.request_success('Twitch account updated', 'api.users.get_user_twitch', user_id=user_id)
 
 
-@bp.route('/users/<int:user_id>/twitch', methods=['DELETE'])
+@users.route('/users/<int:user_id>/twitch', methods=['DELETE'])
 @req_app_token
 @user_auth.login_required
 def delete_user_twitch(user_id):

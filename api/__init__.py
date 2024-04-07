@@ -26,7 +26,7 @@ Planned features:
  - Link user account to players
  - Awards
  - Match scheduling
- -
+ - Web relay for discord notification/news bots
 
 
 

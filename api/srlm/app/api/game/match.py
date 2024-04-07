@@ -1,7 +1,7 @@
 from flask import request
 import sqlalchemy as sa
 from api.srlm.app import db
-from api.srlm.app.api.game import game_bp as bp
+from api.srlm.app.api.game import game_bp as game
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.auth.utils import req_app_token
 from api.srlm.app.api.utils.errors import BadRequest
@@ -9,7 +9,7 @@ from api.srlm.app.api.utils.functions import force_fields, ensure_exists, clean_
 from api.srlm.app.models import SeasonDivision, Team, Match, MatchSchedule, MatchReview, MatchData
 
 
-@bp.route('/match', methods=['POST'])
+@game.route('/match', methods=['POST'])
 @req_app_token
 def create_match():
     data = request.get_json()
@@ -43,7 +43,7 @@ def create_match():
     return responses.create_success(f'Match between {match.home_team.name} and {match.away_team.name} created', 'api.game.get_match', match_id=match.id)
 
 
-@bp.route('/match/<int:match_id>', methods=['GET'])
+@game.route('/match/<int:match_id>', methods=['GET'])
 @req_app_token
 def get_match(match_id):
     match = ensure_exists(Match, id=match_id)
@@ -53,7 +53,7 @@ def get_match(match_id):
     return response
 
 
-@bp.route('/match/<int:match_id>/review', methods=['GET'])
+@game.route('/match/<int:match_id>/review', methods=['GET'])
 @req_app_token
 def get_match_review(match_id):
     match = ensure_exists(Match, id=match_id)

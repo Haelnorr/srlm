@@ -1,7 +1,7 @@
 import sqlalchemy as sa
 from flask import request, url_for
 from api.srlm.app import db
-from api.srlm.app.api.users import users_bp as bp
+from api.srlm.app.api.users import users_bp as users
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import force_fields, force_unique, clean_data, ensure_exists
 from api.srlm.app.models import User
@@ -14,9 +14,10 @@ from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
 
-@bp.route('/users/<int:user_id>', methods=['GET'])
+@users.route('/<int:user_id>', methods=['GET'])
 @req_app_token
 def get_user(user_id):
+    """Gets a user"""
     user = ensure_exists(User, id=user_id)
     user_token = get_bearer_token(request.headers)['user']
     current_user = User.check_token(user_token)
@@ -29,7 +30,7 @@ def get_user(user_id):
     return user.to_dict(include_email=include_email)
 
 
-@bp.route('/users', methods=['GET'])
+@users.route('/', methods=['GET'])
 @req_app_token
 def get_users(pagination):
     page = request.args.get('page', 1, int)
@@ -37,7 +38,7 @@ def get_users(pagination):
     return User.to_collection_dict(sa.select(User), page, per_page, 'api.users.get_users')
 
 
-@bp.route('/users', methods=['POST'])
+@users.route('/', methods=['POST'])
 @req_app_token
 def add_user():
     data = request.get_json()
@@ -58,7 +59,7 @@ def add_user():
     return responses.create_success(f'User {user.username} added', 'api.users.get_user', user_id=user.id)
 
 
-@bp.route('/users/<int:user_id>', methods=['PUT'])
+@users.route('/<int:user_id>', methods=['PUT'])
 @req_app_token
 @user_auth.login_required
 def update_user(user_id):
@@ -77,7 +78,7 @@ def update_user(user_id):
     return responses.request_success(f'User {user.username} updated', 'api.users.get_user', user_id=user.id)
 
 
-@bp.route('/users/<int:user_id>/new_password', methods=['POST'])
+@users.route('/<int:user_id>/new_password', methods=['POST'])
 @req_app_token
 @user_auth.login_required
 def update_user_password(user_id):
@@ -101,19 +102,19 @@ def update_user_password(user_id):
     return response
 
 
-@bp.route('/users/<int:user_id>/matches_streamed', methods=['GET'])
+@users.route('/<int:user_id>/matches_streamed', methods=['GET'])
 @req_app_token
 def get_user_matches_streamed(user_id):
     pass
 
 
-@bp.route('/users/<int:user_id>/matches_reviewed', methods=['GET'])
+@users.route('/<int:user_id>/matches_reviewed', methods=['GET'])
 @req_app_token
 def get_user_matches_reviewed(user_id):
     pass
 
 
-@bp.route('/users/forgot_password', methods=['POST'])
+@users.route('/forgot_password', methods=['POST'])
 @req_app_token
 def request_password_reset():
     data = request.get_json()
@@ -138,7 +139,7 @@ def request_password_reset():
     return response
 
 
-@bp.route('/users/forgot_password/<reset_token>', methods=['GET'])
+@users.route('/forgot_password/<reset_token>', methods=['GET'])
 @req_app_token
 def get_temp_token(reset_token):
     user = User.verify_reset_password_token(reset_token)

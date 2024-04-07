@@ -1,14 +1,14 @@
 from flask import request
 
 from api.srlm.app import db
-from api.srlm.app.api.users import users_bp as bp
+from api.srlm.app.api.users import users_bp as users
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields
 from api.srlm.app.models import User, Player
 from api.srlm.app.spapi.slapid import get_slap_id
 
 
-@bp.route('/users/<int:user_id>/steam', methods=['POST'])
+@users.route('/users/<int:user_id>/steam', methods=['POST'])
 def link_user_steam(user_id):
     user = ensure_exists(User, id=user_id)
 

@@ -3,7 +3,7 @@ import sqlalchemy as sa
 from api.srlm.app import db
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.models import Permission
-from api.srlm.app.api.auth import auth_bp as bp
+from api.srlm.app.api.auth import auth_bp as auth
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.auth.utils import req_app_token
 from api.srlm.app.api.utils.errors import BadRequest
@@ -20,14 +20,14 @@ def check_key_exists(key):
     return exists
 
 
-@bp.route('/permissions/<perm_id_or_key>', methods=['GET'])
+@auth.route('/permissions/<perm_id_or_key>', methods=['GET'])
 @req_app_token
 def get_permission(perm_id_or_key):
     permission = ensure_exists(Permission, join_method='or', id=perm_id_or_key, key=perm_id_or_key)
     return permission.to_dict()
 
 
-@bp.route('/permissions', methods=['GET'])
+@auth.route('/permissions', methods=['GET'])
 @req_app_token
 def get_permissions():
     page = request.args.get('page', 1, type=int)
@@ -35,7 +35,7 @@ def get_permissions():
     return Permission.to_collection_dict(sa.select(Permission), page, per_page, 'api.auth.get_permissions')
 
 
-@bp.route('/permissions', methods=['POST'])
+@auth.route('/permissions', methods=['POST'])
 @req_app_token
 def new_permission():
     data = request.get_json()
@@ -53,7 +53,7 @@ def new_permission():
     return responses.create_success(f"Permission {permission.key} created", 'api.auth.get_permission', perm_id_or_key=permission.id)
 
 
-@bp.route('/permissions/<perm_id_or_key>', methods=['PUT'])
+@auth.route('/permissions/<perm_id_or_key>', methods=['PUT'])
 @req_app_token
 def update_permission(perm_id_or_key):
     permission = ensure_exists(Permission, join_method='or', id=perm_id_or_key, key=perm_id_or_key)
@@ -66,7 +66,7 @@ def update_permission(perm_id_or_key):
     return responses.request_success(f"Permission {permission.key} updated", 'api.auth.get_permission', perm_id_or_key=permission.id)
 
 
-@bp.route('/permissions/<perm_id_or_key>/users', methods=['GET'])
+@auth.route('/permissions/<perm_id_or_key>/users', methods=['GET'])
 @req_app_token
 def list_users_with_permission(perm_id_or_key):
     permission = ensure_exists(Permission, join_method='or', id=perm_id_or_key, key=perm_id_or_key)

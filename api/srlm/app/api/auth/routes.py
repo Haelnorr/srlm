@@ -1,14 +1,14 @@
 from flask import request, url_for
 from api.srlm.api_access.models import AuthorizedApp
 from api.srlm.app import db
-from api.srlm.app.api.auth import auth_bp as bp
+from api.srlm.app.api.auth import auth_bp as auth
 from api.srlm.app.api.auth.utils import basic_auth, req_app_token, user_auth
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.auth.utils import get_bearer_token
 from api.srlm.app.models import User
 
 
-@bp.route('/user', methods=['POST'])
+@auth.route('/user', methods=['POST'])
 @basic_auth.login_required
 def get_user_token():
     """Requests an auth token for a user."""
@@ -18,7 +18,7 @@ def get_user_token():
     return {'token': token, 'expires': expires}
 
 
-@bp.route('/user', methods=['DELETE'])
+@auth.route('/user', methods=['DELETE'])
 @req_app_token
 @user_auth.login_required
 def revoke_user_token():
@@ -28,7 +28,7 @@ def revoke_user_token():
     return responses.request_success('User token revoked')
 
 
-@bp.route('/user/validate', methods=['POST'])
+@auth.route('/user/validate', methods=['POST'])
 @req_app_token
 @user_auth.login_required
 def validate_user_token():
@@ -45,7 +45,7 @@ def validate_user_token():
     return response
 
 
-@bp.route('/app', methods=['POST'])
+@auth.route('/app', methods=['POST'])
 @req_app_token
 def request_new_app_token():
     app_token = get_bearer_token(request.headers)['app']
@@ -60,7 +60,7 @@ def request_new_app_token():
     return response
 
 
-@bp.route('/app', methods=['GET'])
+@auth.route('/app', methods=['GET'])
 @req_app_token
 def get_app_token():
     app_token = get_bearer_token(request.headers)['app']
