@@ -1,18 +1,26 @@
 """Provides endpoints for creating matches and retrieving match data"""
+from apifairy import body, response, authenticate, other_responses
 from flask import request
 import sqlalchemy as sa
 from api.srlm.app import db
 from api.srlm.app.api.game import game_bp as game
 from api.srlm.app.api.utils import responses
-from api.srlm.app.api.auth.utils import req_app_token
+from api.srlm.app.api.auth.utils import req_app_token, user_auth
 from api.srlm.app.api.utils.errors import BadRequest
 from api.srlm.app.api.utils.functions import force_fields, ensure_exists, clean_data
+from api.srlm.app.fairy.errors import unauthorized, bad_request, not_found
+from api.srlm.app.fairy.schemas import LinkSuccessSchema, NewMatchSchema, ViewMatchSchema, MatchReviewSchema
 from api.srlm.app.models import SeasonDivision, Team, Match, MatchSchedule, MatchReview, MatchData
 
 
 @game.route('/match', methods=['POST'])
 @req_app_token
+@body(NewMatchSchema())
+@response(LinkSuccessSchema(), 201)
+@authenticate(user_auth)
+@other_responses(unauthorized | bad_request)
 def create_match():
+    """Create a new match"""
     data = request.get_json()
 
     required_fields = ['season_division_id', 'home_team_id', 'away_team_id']
@@ -46,17 +54,23 @@ def create_match():
 
 @game.route('/match/<int:match_id>', methods=['GET'])
 @req_app_token
+@response(ViewMatchSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized | not_found)
 def get_match(match_id):
+    """Get details of a match"""
     match = ensure_exists(Match, id=match_id)
-    response = match.to_dict()
-    if match.results is not None:
-        response = match.results.to_dict()
-    return response
+    response_json = match.to_dict()
+    return response_json
 
 
 @game.route('/match/<int:match_id>/review', methods=['GET'])
 @req_app_token
+@response(MatchReviewSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized | not_found)
 def get_match_review(match_id):
+    """Get the flags and match data of a match"""
     match = ensure_exists(Match, id=match_id)
 
     flags = db.session.query(MatchReview).filter_by(match_id=match_id)
@@ -78,14 +92,14 @@ def get_match_review(match_id):
             period_data['player_data'].append(player.to_dict())
         periods.append(period_data)
 
-    response = {
+    response_json = {
         'match_id': match.id,
         'match_details': match.to_simple_dict(),
         'periods': periods,
         'flags': flags_data,
     }
 
-    return response
+    return response_json
 
 
 def update_match_review():

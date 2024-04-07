@@ -1,10 +1,14 @@
 """Main endpoints relating to Users"""
 import sqlalchemy as sa
+from apifairy import arguments, response, authenticate, other_responses, body
 from flask import request, url_for
 from api.srlm.app import db
 from api.srlm.app.api.users import users_bp as users
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import force_fields, force_unique, clean_data, ensure_exists
+from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request, forbidden
+from api.srlm.app.fairy.schemas import PaginationArgs, TokenSchema, PasswordResetSchema, ChangePasswordSchema, \
+    UserSchema, UserCollection, LinkSuccessSchema, UpdateUserSchema
 from api.srlm.app.models import User
 from api.srlm.app.api.utils.errors import UserAuthError, BadRequest, error_response
 from api.srlm.app.api.auth.utils import user_auth, req_app_token, get_bearer_token
@@ -17,8 +21,11 @@ log = get_logger(__name__)
 
 @users.route('/<int:user_id>', methods=['GET'])
 @req_app_token
+@response(UserSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized | not_found)
 def get_user(user_id):
-    """Gets a user"""
+    """Get a users details"""
     user = ensure_exists(User, id=user_id)
     user_token = get_bearer_token(request.headers)['user']
     current_user = User.check_token(user_token)
@@ -33,15 +40,25 @@ def get_user(user_id):
 
 @users.route('/', methods=['GET'])
 @req_app_token
+@arguments(PaginationArgs())
+@response(UserCollection())
+@authenticate(user_auth)
+@other_responses(unauthorized)
 def get_users(pagination):
-    page = request.args.get('page', 1, int)
-    per_page = min(request.args.get('per_page', 10, int), 100)
+    """Get the collection of all users"""
+    page = pagination['page']
+    per_page = pagination['per_page']
     return User.to_collection_dict(sa.select(User), page, per_page, 'api.users.get_users')
 
 
 @users.route('/', methods=['POST'])
 @req_app_token
+@body(UserSchema())
+@response(LinkSuccessSchema(), status_code=201)
+@authenticate(user_auth)
+@other_responses(unauthorized | bad_request)
 def add_user():
+    """Create a new user"""
     data = request.get_json()
 
     required_fields = valid_fields = ['username', 'email', 'password']
@@ -63,7 +80,12 @@ def add_user():
 @users.route('/<int:user_id>', methods=['PUT'])
 @req_app_token
 @user_auth.login_required
+@body(UpdateUserSchema())
+@response(LinkSuccessSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized | forbidden | bad_request | not_found)
 def update_user(user_id):
+    """Update a users details. Requires user token"""
     if user_auth.current_user().id != user_id:
         raise UserAuthError()
     data = request.get_json()
@@ -82,7 +104,12 @@ def update_user(user_id):
 @users.route('/<int:user_id>/new_password', methods=['POST'])
 @req_app_token
 @user_auth.login_required
+@body(ChangePasswordSchema())
+@response(TokenSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized | forbidden | not_found | bad_request)
 def update_user_password(user_id):
+    """Update a users. Revokes and issues a new token. Requires user token"""
     if user_auth.current_user().id != user_id:
         raise UserAuthError()
     user = ensure_exists(User, id=user_id)
@@ -96,11 +123,11 @@ def update_user_password(user_id):
     token = user.get_token()
     db.session.commit()
 
-    response = {
+    response_json = {
         'token': token,
         'expires': user.token_expiration
     }
-    return response
+    return response_json
 
 
 @users.route('/<int:user_id>/matches_streamed', methods=['GET'])
@@ -117,7 +144,12 @@ def get_user_matches_reviewed(user_id):
 
 @users.route('/forgot_password', methods=['POST'])
 @req_app_token
+@body(PasswordResetSchema())
+@response(PasswordResetSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized | not_found | bad_request)
 def request_password_reset():
+    """Request a password reset token"""
     data = request.get_json()
 
     if 'username' not in data and 'email' not in data:
@@ -128,21 +160,23 @@ def request_password_reset():
 
     user = ensure_exists(User, join_method='or', **search_args)
 
-    send_password_reset_email(user)  # TODO change this
-
-    response = {
-        'result': 'success',
+    response_json = {
         'user': user.id,
+        'reset_token': user.get_password_reset_token(),
         '_links': {
             'user': url_for('api.users.get_user', user_id=user.id)
         }
     }
-    return response
+    return response_json
 
 
 @users.route('/forgot_password/<reset_token>', methods=['GET'])
 @req_app_token
+@response(TokenSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized)
 def get_temp_token(reset_token):
+    """Get a temporary user auth token using the password reset token"""
     user = User.verify_reset_password_token(reset_token)
     if not user:
         return error_response(401, 'Password reset token is invalid or expired.')

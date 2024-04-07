@@ -182,11 +182,11 @@ class UserPermissions(db.Model):
 
     def to_dict(self):
         data = {
-            'id': self.permission.id,
+            'permission_id': self.permission_id,
             'user': self.user.username,
             'key': self.permission.key,
             'description': self.permission.description,
-            'modifiers': self.additional_modifiers,
+            'additional_modifiers': self.additional_modifiers,
             '_links': {
                 'self': url_for('api.auth.get_permission', perm_id_or_key=self.permission.id),
                 'user': url_for('api.users.get_user', user_id=self.user_id),
@@ -900,6 +900,7 @@ class Match(db.Model):
             'final': bool(self.final_id),
             'scheduled_time': self.schedule.scheduled_time,
             'current_lobby': self.current_lobby(),
+            'results': self.results.to_dict() if self.results else None,
             '_links': {
                 'self': url_for('api.game.get_match', match_id=self.id),
                 'season_division': url_for('api.league.get_season_division', season_division_id=self.season_division_id),
@@ -957,39 +958,14 @@ class MatchResult(db.Model):
 
     def to_dict(self):
         data = {
-            'id': self.id,
-            'season_division': self.season_division.get_readable_name(),
-            'round': self.round,
-            'match_week': self.match_week,
-            'home_team': self.home_team.to_simple_dict(),
-            'away_team': self.away_team.to_simple_dict(),
             'winner': self.winner.name,
             'loser': self.loser.name,
+            'draw': self.draw,
             'score_winner': self.score_winner,
             'score_loser': self.score_loser,
             'overtime': self.overtime,
             'forfeit': self.forfeit,
-            'final': bool(self.final_id),
-            'completed': self.completed_date,
             'vod': self.vod,
-            '_links': {
-                'self': url_for('api.game.get_match', match_id=self.id),
-                'season_division': url_for('api.league.get_season_division', season_division_id=self.season_division_id),
-                'home_team': url_for('api.league.get_team', team_id=self.home_team_id),
-                'away_team': url_for('api.league.get_team', team_id=self.away_team_id)
-            }
-        }
-        return data
-
-    def to_simple_dict(self):
-        data = {
-            'winner': self.winner.name,
-            'loser': self.loser.name,
-            'score_winner': self.score_winner,
-            'score_loser': self.score_loser,
-            'overtime': self.overtime,
-            'forfeit': self.forfeit,
-            'final': bool(self.final_id),
             '_links': {
                 'self': url_for('api.game.get_match', match_id=self.id)
             }

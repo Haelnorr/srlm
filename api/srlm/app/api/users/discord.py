@@ -1,4 +1,5 @@
 """Endpoints for managing Discord linking"""
+from apifairy import body, response, authenticate, other_responses
 from flask import request
 from api.srlm.app import db
 from api.srlm.app.api.users import users_bp as users
@@ -6,12 +7,18 @@ from api.srlm.app.api.auth.utils import req_app_token, user_auth, get_bearer_tok
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.errors import ResourceNotFound, UserAuthError, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields
+from api.srlm.app.fairy.errors import unauthorized, not_found, forbidden, bad_request
+from api.srlm.app.fairy.schemas import DiscordSchema, LinkSuccessSchema, UpdateDiscordSchema
 from api.srlm.app.models import User, Discord
 
 
-@users.route('/users/<int:user_id>/discord', methods=['GET'])
+@users.route('/<int:user_id>/discord', methods=['GET'])
 @req_app_token
+@response(DiscordSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized | not_found)
 def get_user_discord(user_id):
+    """Get a users Discord information"""
     user_token = get_bearer_token(request.headers)['user']
     user = ensure_exists(User, id=user_id)
 
@@ -25,10 +32,15 @@ def get_user_discord(user_id):
     return user.discord.to_dict(authenticated=authenticated)
 
 
-@users.route('/users/<int:user_id>/discord', methods=['POST'])
+@users.route('/<int:user_id>/discord', methods=['POST'])
 @req_app_token
 @user_auth.login_required
+@body(DiscordSchema())
+@response(LinkSuccessSchema(), status_code=201)
+@authenticate(user_auth)
+@other_responses(unauthorized | forbidden | not_found | bad_request)
 def create_user_discord(user_id):
+    """Link a users Discord account. Requires user token"""
     user = ensure_exists(User, id=user_id)
 
     if user.id is not user_auth.current_user().id:
@@ -56,10 +68,15 @@ def create_user_discord(user_id):
     return responses.create_success('Discord account linked', 'api.users.get_user_discord', user_id=user_id)
 
 
-@users.route('/users/<int:user_id>/discord', methods=['PUT'])
+@users.route('/<int:user_id>/discord', methods=['PUT'])
 @req_app_token
 @user_auth.login_required
+@body(UpdateDiscordSchema())
+@response(LinkSuccessSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized | forbidden | not_found | bad_request)
 def update_user_discord(user_id):
+    """Update a users Discord information. Requires user token"""
     user = ensure_exists(User, id=user_id)
 
     if user.id is not user_auth.current_user().id:
@@ -89,10 +106,14 @@ def update_user_discord(user_id):
     return responses.request_success('Discord account updated', 'api.users.get_user_discord', user_id=user_id)
 
 
-@users.route('/users/<int:user_id>/discord', methods=['DELETE'])
+@users.route('/<int:user_id>/discord', methods=['DELETE'])
 @req_app_token
 @user_auth.login_required
+@response(LinkSuccessSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized | forbidden | not_found | bad_request)
 def delete_user_discord(user_id):
+    """Unlink a users Discord account. Requires user token"""
     user = ensure_exists(User, id=user_id)
 
     if user.id is not user_auth.current_user().id:

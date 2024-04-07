@@ -18,12 +18,12 @@ bad_request = {
 }
 
 
-auth_failed = {
+unauthorized = {
     401: BasicError()
 }
 
 
-user_auth_failed = {
+forbidden = {
     403: BasicError()
 }
 

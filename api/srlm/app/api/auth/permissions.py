@@ -4,7 +4,7 @@ from flask import request, url_for
 import sqlalchemy as sa
 from api.srlm.app import db
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
-from api.srlm.app.fairy.errors import auth_failed, not_found, bad_request
+from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PermissionSchema, LinkSuccessSchema, UpdatePermissionSchema, PermUsersSchema, \
     PaginationArgs, PermissionCollection
 from api.srlm.app.models import Permission
@@ -29,7 +29,7 @@ def check_key_exists(key):
 @req_app_token
 @response(PermissionSchema())
 @authenticate(user_auth)
-@other_responses(auth_failed | not_found)
+@other_responses(unauthorized | not_found)
 def get_permission(perm_id_or_key):
     """Get details of a permission"""
     permission = ensure_exists(Permission, join_method='or', id=perm_id_or_key, key=perm_id_or_key)
@@ -41,7 +41,7 @@ def get_permission(perm_id_or_key):
 @arguments(PaginationArgs())
 @response(PermissionCollection())
 @authenticate(user_auth)
-@other_responses(auth_failed | not_found)
+@other_responses(unauthorized | not_found)
 def get_permissions(pagination):
     """Get a collection of all permissions"""
     page = pagination['page']
@@ -54,7 +54,7 @@ def get_permissions(pagination):
 @body(PermissionSchema())
 @response(LinkSuccessSchema())
 @authenticate(user_auth)
-@other_responses(auth_failed | bad_request)
+@other_responses(unauthorized | bad_request)
 def new_permission():
     """Create a new permission"""
     data = request.get_json()
@@ -77,7 +77,7 @@ def new_permission():
 @body(UpdatePermissionSchema())
 @response(LinkSuccessSchema())
 @authenticate(user_auth)
-@other_responses(auth_failed | bad_request | not_found)
+@other_responses(unauthorized | bad_request | not_found)
 def update_permission(perm_id_or_key):
     """Modify a permission"""
     permission = ensure_exists(Permission, join_method='or', id=perm_id_or_key, key=perm_id_or_key)
@@ -94,7 +94,7 @@ def update_permission(perm_id_or_key):
 @req_app_token
 @response(PermUsersSchema())
 @authenticate(user_auth)
-@other_responses(auth_failed | not_found)
+@other_responses(unauthorized | not_found)
 def list_users_with_permission(perm_id_or_key):
     """List all users with the given permission"""
     permission = ensure_exists(Permission, join_method='or', id=perm_id_or_key, key=perm_id_or_key)

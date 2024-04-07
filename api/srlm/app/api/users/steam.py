@@ -1,15 +1,25 @@
 """Endpoint for linking a users steam account"""
+from apifairy import body, response, authenticate, other_responses
 from flask import request
 from api.srlm.app import db
+from api.srlm.app.api.auth.utils import req_app_token, user_auth
 from api.srlm.app.api.users import users_bp as users
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields
+from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
+from api.srlm.app.fairy.schemas import LinkSuccessSchema, LinkSteamSchema
 from api.srlm.app.models import User, Player
 from api.srlm.app.spapi.slapid import get_slap_id
 
 
-@users.route('/users/<int:user_id>/steam', methods=['POST'])
+@users.route('/<int:user_id>/steam', methods=['POST'])
+@req_app_token
+@body(LinkSteamSchema())
+@response(LinkSuccessSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized | not_found | bad_request)
 def link_user_steam(user_id):
+    """Link a users steam account. Will connect the user to player data using their SlapID"""
     user = ensure_exists(User, id=user_id)
 
     data = request.get_json()
@@ -18,9 +28,9 @@ def link_user_steam(user_id):
     user.steam_id = data['steam_id']
     db.session.commit()
 
-    response = get_slap_id(user.steam_id)
-    if response.status_code == 200:
-        slap_id = response.json()['id']
+    response_json = get_slap_id(user.steam_id)
+    if response_json.status_code == 200:
+        slap_id = response_json.json()['id']
 
         player = ensure_exists(Player, return_none=True, slap_id=slap_id)
 
