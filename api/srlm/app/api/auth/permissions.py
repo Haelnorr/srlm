@@ -1,12 +1,16 @@
 """Auth endpoints relating to permissions"""
+from apifairy import response, authenticate, other_responses, body, arguments
 from flask import request, url_for
 import sqlalchemy as sa
 from api.srlm.app import db
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
+from api.srlm.app.fairy.errors import auth_failed, not_found, bad_request
+from api.srlm.app.fairy.schemas import PermissionSchema, LinkSuccessSchema, UpdatePermissionSchema, PermUsersSchema, \
+    PaginationArgs, PermissionCollection
 from api.srlm.app.models import Permission
 from api.srlm.app.api.auth import auth_bp as auth
 from api.srlm.app.api.utils import responses
-from api.srlm.app.api.auth.utils import req_app_token
+from api.srlm.app.api.auth.utils import req_app_token, user_auth
 from api.srlm.app.api.utils.errors import BadRequest
 
 # create a new logger for this module
@@ -23,22 +27,36 @@ def check_key_exists(key):
 
 @auth.route('/permissions/<perm_id_or_key>', methods=['GET'])
 @req_app_token
+@response(PermissionSchema())
+@authenticate(user_auth)
+@other_responses(auth_failed | not_found)
 def get_permission(perm_id_or_key):
+    """Get details of a permission"""
     permission = ensure_exists(Permission, join_method='or', id=perm_id_or_key, key=perm_id_or_key)
     return permission.to_dict()
 
 
 @auth.route('/permissions', methods=['GET'])
 @req_app_token
-def get_permissions():
-    page = request.args.get('page', 1, type=int)
-    per_page = min(request.args.get('per_page', 10, type=int), 100)
+@arguments(PaginationArgs())
+@response(PermissionCollection())
+@authenticate(user_auth)
+@other_responses(auth_failed | not_found)
+def get_permissions(pagination):
+    """Get a collection of all permissions"""
+    page = pagination['page']
+    per_page = pagination['per_page']
     return Permission.to_collection_dict(sa.select(Permission), page, per_page, 'api.auth.get_permissions')
 
 
 @auth.route('/permissions', methods=['POST'])
 @req_app_token
+@body(PermissionSchema())
+@response(LinkSuccessSchema())
+@authenticate(user_auth)
+@other_responses(auth_failed | bad_request)
 def new_permission():
+    """Create a new permission"""
     data = request.get_json()
 
     required_fields = valid_fields = ['key', 'description']
@@ -56,7 +74,12 @@ def new_permission():
 
 @auth.route('/permissions/<perm_id_or_key>', methods=['PUT'])
 @req_app_token
+@body(UpdatePermissionSchema())
+@response(LinkSuccessSchema())
+@authenticate(user_auth)
+@other_responses(auth_failed | bad_request | not_found)
 def update_permission(perm_id_or_key):
+    """Modify a permission"""
     permission = ensure_exists(Permission, join_method='or', id=perm_id_or_key, key=perm_id_or_key)
     data = request.get_json()
 
@@ -69,7 +92,11 @@ def update_permission(perm_id_or_key):
 
 @auth.route('/permissions/<perm_id_or_key>/users', methods=['GET'])
 @req_app_token
+@response(PermUsersSchema())
+@authenticate(user_auth)
+@other_responses(auth_failed | not_found)
 def list_users_with_permission(perm_id_or_key):
+    """List all users with the given permission"""
     permission = ensure_exists(Permission, join_method='or', id=perm_id_or_key, key=perm_id_or_key)
 
     users = []
@@ -82,7 +109,7 @@ def list_users_with_permission(perm_id_or_key):
             }
         })
 
-    response = {
+    response_json = {
         'permission': permission.description,
         'key': permission.key,
         'users': users,
@@ -91,4 +118,4 @@ def list_users_with_permission(perm_id_or_key):
         }
     }
 
-    return response
+    return response_json

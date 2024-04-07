@@ -13,10 +13,11 @@ def create_success(message, api, **kwargs):
     return payload, 201
 
 
-def request_success(message, api, **kwargs):
+def request_success(message, api=None, **kwargs):
     payload = {
         'result': HTTP_STATUS_CODES.get(200),
-        'message': message,
-        'location': url_for(api, **kwargs)
+        'message': message
     }
+    if api:
+        payload['location'] = url_for(api, **kwargs)
     return payload, 200

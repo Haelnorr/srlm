@@ -1,6 +1,7 @@
 aiosmtpd==1.4.5
 alembic==1.10.3
 amqp==5.2.0
+apifairy==1.4.0
 apispec==6.6.0
 asgiref==3.8.0
 async-timeout==4.0.3
@@ -51,6 +52,7 @@ Mako==1.2.4
 markdown-it-py==3.0.0
 MarkupSafe==2.1.2
 marshmallow==3.21.1
+marshmallow-sqlalchemy==1.0.0
 mdurl==0.1.2
 multidict==6.0.5
 packaging==24.0
