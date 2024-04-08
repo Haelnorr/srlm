@@ -1007,6 +1007,27 @@ class Matchtype(db.Model):
 
     seasons = db.relationship('Season', back_populates='match_type', lazy=True)
 
+    def to_dict(self):
+        data = {
+            'name': self.name,
+            'description': self.description,
+            'periods': self.periods,
+            'arena': self.arena,
+            'mercy_rule': self.mercy_rule,
+            'match_length': self.match_length,
+            'game_mode': self.game_mode,
+            'num_players': self.num_players,
+            '_links': {
+                'self': url_for('api.match.get_match_type', match_type_id=self.id)
+            }
+        }
+        return data
+
+    def from_dict(self, data):
+        for field in ['name', 'description', 'periods', 'arena', 'mercy_rule', 'match_length', 'game_mode', 'num_players']:
+            if field in data:
+                setattr(self, field, data[field])
+
 
 # stores data on an in game lobby for use with Slapshot Public API
 class Lobby(db.Model):
@@ -1053,6 +1074,7 @@ class MatchData(db.Model):
 
     def to_dict(self):
         data = {
+            'id': self.id,
             'lobby_id': self.lobby_id,
             'processed': self.processed,
             'accepted': self.accepted,
@@ -1277,6 +1299,7 @@ class MatchReview(db.Model):
 
     def to_dict(self):
         data = {
+            'id': self.id,
             'type': self.type,
             'reason': self.reason,
             'raised_by': self.raised_by,

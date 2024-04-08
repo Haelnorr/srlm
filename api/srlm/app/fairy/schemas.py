@@ -1,7 +1,7 @@
 """Provides marshmallow schemas for documentation support"""
 from api.srlm.app import ma
 from api.srlm.app.models import Permission, Match, Team, MatchResult, MatchReview, PlayerMatchData, MatchData, Discord, \
-    Twitch, UserPermissions, User, Division, League, Season, SeasonDivision, Player, FreeAgent
+    Twitch, UserPermissions, User, Division, League, Season, SeasonDivision, Player, FreeAgent, Matchtype
 
 
 class Links(ma.Schema):
@@ -306,9 +306,9 @@ class PlayerMatchDataSchema(ma.SQLAlchemySchema):
         player = ma.URL()
         team = ma.URL()
 
-    id = ma.auto_field()
-    player = ma.Str()
-    team = ma.Str()
+    id = ma.auto_field(required=True)
+    player = ma.Str(dump_only=True)
+    team = ma.Str(dump_only=True)
     goals = ma.auto_field()
     shots = ma.auto_field()
     assists = ma.auto_field()
@@ -325,7 +325,7 @@ class PlayerMatchDataSchema(ma.SQLAlchemySchema):
     faceoffs_won = ma.auto_field()
     faceoffs_lost = ma.auto_field()
     score = ma.auto_field()
-    _links = ma.Nested(PlayerDataLinks())
+    _links = ma.Nested(PlayerDataLinks(), dump_only=True)
 
 
 class MatchDataSchema(ma.SQLAlchemySchema):
@@ -334,14 +334,15 @@ class MatchDataSchema(ma.SQLAlchemySchema):
         model = MatchData
         ordered = True
 
-    lobby_id = ma.auto_field()
-    processed = ma.auto_field()
-    accepted = ma.auto_field()
-    match_id = ma.auto_field()
-    region = ma.auto_field()
-    gamemode = ma.auto_field()
-    created = ma.auto_field()
-    arena = ma.auto_field()
+    id = ma.auto_field(required=True)
+    lobby_id = ma.auto_field(dump_only=True)
+    processed = ma.auto_field(dump_only=True)
+    accepted = ma.auto_field(required=True)
+    match_id = ma.auto_field(dump_only=True)
+    region = ma.auto_field(dump_only=True)
+    gamemode = ma.auto_field(dump_only=True)
+    created = ma.auto_field(dump_only=True)
+    arena = ma.auto_field(dump_only=True)
     home_score = ma.auto_field()
     away_score = ma.auto_field()
     winner = ma.auto_field()
@@ -349,31 +350,59 @@ class MatchDataSchema(ma.SQLAlchemySchema):
     periods_enabled = ma.auto_field()
     custom_mercy_rule = ma.auto_field()
     end_reason = ma.auto_field()
-    source = ma.auto_field()
+    source = ma.auto_field(dump_only=True)
 
 
-class MatchReviewSchema(ma.Schema):
+class MatchFlag(ma.SQLAlchemySchema):
+    """Defines structure of match flags"""
+    class Meta:
+        model = MatchReview
+        ordered = True
+
+    id = ma.auto_field(required=True)
+    type = ma.auto_field(dump_only=True)
+    reason = ma.auto_field(dump_only=True)
+    raised_by = ma.auto_field(dump_only=True)
+    comments = ma.auto_field()
+    resolved = ma.auto_field()
+    resolved_by = ma.auto_field(dump_only=True)
+    resolved_on = ma.auto_field(dump_only=True)
+
+
+class NewMatchFlag(MatchFlag):
+    """Defines structure for creating a new match flag"""
+    class NewLobby(ma.Schema):
+        class InitialScore(ma.Schema):
+            home = ma.Int(required=True)
+            away = ma.Int(required=True)
+
+        current_period = ma.Int()
+        stats_carryover = ma.Boolean()
+        initial_score = ma.Nested(InitialScore(), optional=True)
+
+    id = ma.auto_field(dump_only=True)
+    type = ma.auto_field(required=True)
+    reason = ma.auto_field(required=True)
+    comments = ma.auto_field(required=True)
+    resolved = ma.auto_field(dump_only=True)
+    new_lobby = ma.Nested(NewLobby(), optional=True)
+
+
+class MatchPlayerDataSchema(MatchDataSchema):
+    """Extends MatchDataSchema adding player data"""
+    player_data = ma.List(ma.Nested(PlayerMatchDataSchema()))
+
+
+class MatchStatsSchema(ma.Schema):
+    """Defines response when requesting match stats"""
+    match_id = ma.Int(dump_only=True)
+    match_details = ma.Nested(SimpleMatchSchema(), dump_only=True)
+    periods = ma.List(ma.Nested(MatchPlayerDataSchema()))
+
+
+class MatchReviewSchema(MatchStatsSchema):
     """Defines structure of MatchReview requests"""
-    class MatchFlag(ma.SQLAlchemySchema):
-        class Meta:
-            model = MatchReview
-            ordered = True
-
-        type = ma.auto_field()
-        reason = ma.auto_field()
-        raised_by = ma.auto_field()
-        comments = ma.auto_field()
-        resolved = ma.auto_field()
-        resolved_by = ma.auto_field()
-        resolved_on = ma.auto_field()
-
-    class MatchReviewDataSchema(MatchDataSchema):
-        player_data = ma.List(ma.Nested(PlayerMatchDataSchema()))
-
-    match_id = ma.Int()
-    match_details = ma.Nested(SimpleMatchSchema())
-    periods = ma.List(ma.Nested(MatchReviewDataSchema()))
-    flags = ma.List(ma.Nested(MatchFlag()))
+    flags = ma.List(ma.Nested(MatchFlag()), required=True)
 
 
 class GenerateLobbySchema(ma.Schema):
@@ -811,3 +840,19 @@ class PlayerSeasons(ma.Schema):
     _links = ma.Nested(Links() and PlayerLink(), dump_only=True)
     season_division_id = ma.Int(load_only=True, required=True)
 
+
+class MatchtypeSchema(ma.SQLAlchemySchema):
+    """Defines the structure for Matchtype requests"""
+    class Meta:
+        model = Matchtype
+        ordered = True
+
+    name = ma.auto_field(required=True)
+    description = ma.auto_field(required=True)
+    periods = ma.auto_field(required=True)
+    arena = ma.auto_field(required=True)
+    mercy_rule = ma.auto_field(required=True)
+    match_length = ma.auto_field(required=True)
+    game_mode = ma.auto_field(required=True)
+    num_players = ma.auto_field(required=True)
+    _links = ma.Nested(Links(), dump_only=True)

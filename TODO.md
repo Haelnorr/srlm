@@ -1,10 +1,10 @@
 # TODO
 
 **Before next PR**
- - matches & lobbies
+ - ~~matches & lobbies~~
    - ~~create and view matches~~
    - ~~get match results~~
-   - update match & match results
+   - ~~update match & match results~~
    - ~~lobby creation and monitoring~~
    - ~~match_stats retrieval~~
    - ~~match data validation~~
@@ -12,11 +12,12 @@
  - ~~integration with Slapshot Public API for lobby creation and retrieving match data~~
  - match_data stuff (including legacy)
  - import legacy match data
- - api endpoints
-   - match review
-   - lobby creation and details
-   - reporting system
+ - ~~api endpoints~~
+   - ~~match review~~
+   - ~~lobby creation and details~~
+   - ~~reporting system~~
  - ~~get slapid and create/link player from steamID~~
+ - ~~APIFairy~~
 
 **Future**
  - api endpoints (list incomplete)
@@ -25,6 +26,7 @@
    - awards
  - confirm user email
  - caching support
+ - route cooldowns?
  - setup mysql in docker
  - web relay for discord bot notifications
 
