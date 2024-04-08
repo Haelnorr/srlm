@@ -31,9 +31,9 @@ def generate_lobby(match, current_period=1, initial_stats=None, initial_score=No
 
     lobby_settings = {
         'region': league.server_region_value,
-        'name': 'Haelnorr Test Lobby',  # lobby_name, # TODO
+        'name': lobby_name,
         'password': password,
-        'creator_name': 'Haelnorr',  # creator_name, # TODO
+        'creator_name': creator_name,
         'is_periods': match_type.periods,
         'arena': match_type.arena,
         'mercy_rule': match_type.mercy_rule,

@@ -10,7 +10,7 @@ from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, LeagueCollection, LeagueSchema, LinkSuccessSchema, \
     EditLeagueSchema, DivisionsInLeague, SeasonsInLeague
 from api.srlm.app.models import League, Season, Division
-from api.srlm.app.api.auth.utils import req_app_token, user_auth
+from api.srlm.app.api.auth.utils import app_auth
 import sqlalchemy as sa
 
 # create a new logger for this module
@@ -23,10 +23,9 @@ bp.register_blueprint(leagues, url_prefix='/leagues')
 
 
 @leagues.route('/', methods=['GET'])
-@req_app_token
 @arguments(PaginationArgs())
 @response(LeagueCollection())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized)
 def get_leagues(pagination):
     """Get the collection of all leagues"""
@@ -36,9 +35,8 @@ def get_leagues(pagination):
 
 
 @leagues.route('/<league_id_or_acronym>', methods=['GET'])
-@req_app_token
 @response(LeagueSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_league(league_id_or_acronym):
     """Get the details of a league"""
@@ -48,10 +46,9 @@ def get_league(league_id_or_acronym):
 
 
 @leagues.route('/', methods=['POST'])
-@req_app_token
 @body(LeagueSchema())
 @response(LinkSuccessSchema(), status_code=201)
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
 def add_leagues():
     """Create a new league"""
@@ -72,10 +69,9 @@ def add_leagues():
 
 
 @leagues.route('/<league_id_or_acronym>', methods=['PUT'])
-@req_app_token
 @body(EditLeagueSchema())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def update_leagues(league_id_or_acronym):
     """Update an existing league"""
@@ -95,10 +91,9 @@ def update_leagues(league_id_or_acronym):
 
 
 @leagues.route('/<league_id_or_acronym>/seasons', methods=['GET'])
-@req_app_token
 @arguments(PaginationArgs())
 @response(SeasonsInLeague())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_league_seasons(pagination, league_id_or_acronym):
     """Get the list of seasons in a league"""
@@ -121,10 +116,9 @@ def get_league_seasons(pagination, league_id_or_acronym):
 
 
 @leagues.route('/<league_id_or_acronym>/divisions', methods=['GET'])
-@req_app_token
 @arguments(PaginationArgs())
 @response(DivisionsInLeague())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_league_divisions(pagination, league_id_or_acronym):
     """Get the list of division in a league"""

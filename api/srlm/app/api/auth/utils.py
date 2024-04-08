@@ -4,12 +4,14 @@ from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth
 from api.srlm.api_access.models import AuthorizedApp
 from api.srlm.app import db
 from api.srlm.app.models import User
-from api.srlm.app.api.utils.errors import error_response, AppAuthError, UserAuthError
+from api.srlm.app.api.utils.errors import error_response, AppAuthError, UserAuthError, DualAuthError
 from functools import wraps
 from flask import request
 
 basic_auth = HTTPBasicAuth()
 user_auth = HTTPTokenAuth()
+app_auth = HTTPTokenAuth()
+dual_auth = HTTPTokenAuth()
 
 
 @basic_auth.verify_password
@@ -25,7 +27,7 @@ def basic_auth_error(status):
 
 
 @user_auth.verify_token
-def verify_token(token):
+def verify_user_token(token):
     user_token = token[34:]
     return User.check_token(user_token) if user_token else None
 
@@ -35,19 +37,30 @@ def token_auth_error(status):
     raise UserAuthError()
 
 
-def req_app_token(f):
-    @wraps(f)
-    def decorated_function(*args, **kws):
-        if 'Authorization' not in request.headers:
-            raise AppAuthError()
+@app_auth.verify_token
+def verify_app_token(token):
+    app_token = token[:34]
+    return AuthorizedApp.check_token(app_token) if app_token else None
 
-        app_token = get_bearer_token(request.headers)['app']
 
-        if AuthorizedApp.check_token(app_token):
-            return f(*args, **kws)
-        else:
-            raise AppAuthError()
-    return decorated_function
+@app_auth.error_handler
+def app_auth_error(status):
+    raise AppAuthError()
+
+
+@dual_auth.verify_token
+def verify_dual_token(token):
+    app_token = token[:34]
+    user_token = token[34:]
+    if app_token and user_token:
+        return User.check_token(user_token)
+    else:
+        return None
+
+
+@dual_auth.error_handler
+def dual_auth_error(status):
+    raise DualAuthError()
 
 
 def get_basic_token(headers):

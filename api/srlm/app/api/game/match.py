@@ -10,10 +10,10 @@ from api.srlm.app.task_manager.tasks import cancel_task
 from api.srlm.app import db
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
-from api.srlm.app.api.auth.utils import req_app_token, user_auth, get_bearer_token
+from api.srlm.app.api.auth.utils import get_bearer_token, app_auth, dual_auth
 from api.srlm.app.api.utils.errors import BadRequest
 from api.srlm.app.api.utils.functions import force_fields, ensure_exists, clean_data, force_unique
-from api.srlm.app.fairy.errors import unauthorized, bad_request, not_found, forbidden
+from api.srlm.app.fairy.errors import unauthorized, bad_request, not_found
 from api.srlm.app.fairy.schemas import LinkSuccessSchema, NewMatchSchema, ViewMatchSchema, MatchReviewSchema, \
     MatchtypeSchema, MatchStatsSchema, NewMatchFlag
 from api.srlm.app.models import SeasonDivision, Team, Match, MatchSchedule, MatchReview, MatchData, Matchtype, User, \
@@ -25,10 +25,9 @@ bp.register_blueprint(match, url_prefix='/match')
 
 
 @match.route('/', methods=['POST'])
-@req_app_token
 @body(NewMatchSchema())
 @response(LinkSuccessSchema(), 201)
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
 def create_match():
     """Create a new match"""
@@ -64,9 +63,8 @@ def create_match():
 
 
 @match.route('/<int:match_id>', methods=['GET'])
-@req_app_token
 @response(ViewMatchSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_match(match_id):
     """Get details of a match"""
@@ -76,9 +74,8 @@ def get_match(match_id):
 
 
 @match.route('/<int:match_id>/review', methods=['GET'])
-@req_app_token
 @response(MatchReviewSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_match_review(match_id):
     """Get the flags and match data of a match"""
@@ -114,12 +111,10 @@ def get_match_review(match_id):
 
 
 @match.route('/<int:match_id>/review', methods=['PUT'])
-@req_app_token
-@user_auth.login_required
 @body(MatchReviewSchema())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
-@other_responses(unauthorized | forbidden | bad_request | not_found)
+@authenticate(dual_auth)
+@other_responses(unauthorized | bad_request | not_found)
 def update_match_review(match_id):
     """Updates a match review. Requires user token"""
     match_db = ensure_exists(Match, id=match_id)
@@ -165,9 +160,8 @@ def update_match_review(match_id):
 
 
 @match.route('/<int:match_id>/stats', methods=['GET'])
-@req_app_token
 @response(MatchStatsSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_match_stats(match_id):
     """Get the accepted match stats"""
@@ -191,12 +185,10 @@ def get_match_stats(match_id):
 
 
 @match.route('/<int:match_id>/review', methods=['POST'])
-@req_app_token
-@user_auth.login_required
 @body(NewMatchFlag())
 @response(LinkSuccessSchema(), status_code=201)
-@authenticate(user_auth)
-@other_responses(unauthorized | forbidden | not_found | bad_request)
+@authenticate(dual_auth)
+@other_responses(unauthorized | not_found | bad_request)
 def report_issue(match_id):
     """Reports an issue with a match. Requires user token
     Valid values for `type` are: "Technical", "Forfeit", "Report"
@@ -261,9 +253,8 @@ def report_issue(match_id):
 
 
 @match.route('/type/<int:match_type_id>', methods=['GET'])
-@req_app_token
 @response(MatchtypeSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_match_type(match_type_id):
     """Get the details of a match type"""
@@ -272,10 +263,9 @@ def get_match_type(match_type_id):
 
 
 @match.route('/type', methods=['POST'])
-@req_app_token
 @body(MatchtypeSchema())
 @response(LinkSuccessSchema(), status_code=201)
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
 def add_match_type():
     """Create a new match type"""

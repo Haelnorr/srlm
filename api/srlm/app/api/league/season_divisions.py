@@ -11,7 +11,7 @@ from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import LinkSuccessSchema, SeasonDivisionSchema, SeasonDivisionTeams, \
     SeasonDivisionFreeAgents, SeasonDivisionRookies, SeasonDivisionMatches
 from api.srlm.app.models import SeasonDivision, FreeAgent, Season, Division
-from api.srlm.app.api.auth.utils import req_app_token, user_auth
+from api.srlm.app.api.auth.utils import app_auth
 
 # create a new logger for this module
 from api.srlm.logger import get_logger
@@ -23,9 +23,8 @@ bp.register_blueprint(season_division, url_prefix='/season_division')
 
 
 @season_division.route('/<int:season_division_id>', methods=['GET'])
-@req_app_token
 @response(SeasonDivisionSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_season_division(season_division_id):
     """Get details of a SeasonDivision"""
@@ -34,10 +33,9 @@ def get_season_division(season_division_id):
 
 
 @season_division.route('/', methods=['POST'])
-@req_app_token
 @body(SeasonDivisionSchema())
 @response(LinkSuccessSchema(), status_code=201)
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
 def add_season_division():
     """Create a new SeasonDivision"""
@@ -64,9 +62,8 @@ def add_season_division():
 
 
 @season_division.route('/<int:season_division_id>/teams', methods=['GET'])
-@req_app_token
 @response(SeasonDivisionTeams())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_teams_in_season_division(season_division_id):
     """Get a list of teams in a SeasonDivision"""
@@ -79,9 +76,8 @@ def get_teams_in_season_division(season_division_id):
 
 
 @season_division.route('/<int:season_division_id>/rookies', methods=['GET'])
-@req_app_token
 @response(SeasonDivisionRookies())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_rookies_in_season_division(season_division_id):
     """Get a list of rookies in a SeasonDivision"""
@@ -92,9 +88,8 @@ def get_rookies_in_season_division(season_division_id):
 
 
 @season_division.route('/<int:season_division_id>/free_agents', methods=['GET'])
-@req_app_token
 @response(SeasonDivisionFreeAgents())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized)
 def get_free_agents_in_season_division(season_division_id):
     """Get a list of free agents in a SeasonDivision"""
@@ -109,9 +104,8 @@ def get_free_agents_in_season_division(season_division_id):
 
 
 @season_division.route('/<int:season_division_id>/matches', methods=['GET'])
-@req_app_token
 @response(SeasonDivisionMatches())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_matches_in_season_division(season_division_id):
     """Get a list of matches in a Season Division"""
@@ -124,6 +118,5 @@ def get_matches_in_season_division(season_division_id):
 
 
 @season_division.route('/<int:season_division_id>/finals', methods=['GET'])
-@req_app_token
 def get_finals_in_season_division(season_division_id):
     pass

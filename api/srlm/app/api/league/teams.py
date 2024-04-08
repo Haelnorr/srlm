@@ -12,9 +12,9 @@ from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, TeamCollection, TeamSchema, LinkSuccessSchema, EditTeamSchema, \
-    TeamPlayers, TeamSeasonPlayers, TeamSeasons
+    TeamPlayers, TeamSeasonPlayers, TeamSeasons, FilterSchema
 from api.srlm.app.models import Team, SeasonDivision, PlayerTeam
-from api.srlm.app.api.auth.utils import req_app_token, user_auth
+from api.srlm.app.api.auth.utils import app_auth
 
 # create a new logger for this module
 from api.srlm.logger import get_logger
@@ -26,10 +26,9 @@ bp.register_blueprint(teams, url_prefix='/teams')
 
 
 @teams.route('/', methods=['GET'])
-@req_app_token
 @arguments(PaginationArgs())
 @response(TeamCollection())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized)
 def get_teams(pagination):
     """Get the collection of all teams"""
@@ -39,9 +38,8 @@ def get_teams(pagination):
 
 
 @teams.route('/<int:team_id>', methods=['GET'])
-@req_app_token
 @response(TeamSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_team(team_id):
     """Get details of a team"""
@@ -50,10 +48,9 @@ def get_team(team_id):
 
 
 @teams.route('/', methods=['POST'])
-@req_app_token
 @body(TeamSchema())
 @response(LinkSuccessSchema(), status_code=201)
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
 def add_team():
     """Create a new team"""
@@ -80,10 +77,9 @@ def add_team():
 
 
 @teams.route('/<int:team_id>', methods=['PUT'])
-@req_app_token
 @body(EditTeamSchema())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def update_team(team_id):
     """Update an existing team"""
@@ -104,15 +100,14 @@ def update_team(team_id):
 
 
 @teams.route('/<int:team_id>/players', methods=['GET'])
-@req_app_token
+@arguments(FilterSchema())
 @response(TeamPlayers())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
-def get_team_players(team_id):
+def get_team_players(search_filter, team_id):
     """Get a list of the teams players"""
     team = ensure_exists(Team, id=team_id)
-
-    current = request.args.get('current', False, bool)  # TODO
+    current = search_filter.get('current')
 
     team_players = PlayerTeam.get_players_dict(team.id, current)
 
@@ -120,9 +115,8 @@ def get_team_players(team_id):
 
 
 @teams.route('/<int:team_id>/players/season/<int:season_division_id>', methods=['GET'])
-@req_app_token
 @response(TeamSeasonPlayers())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_team_players_in_season(team_id, season_division_id):
     """Get a list of players on the team in a given season"""
@@ -166,9 +160,8 @@ def get_team_players_in_season(team_id, season_division_id):
 
 
 @teams.route('/<int:team_id>/seasons', methods=['GET'])
-@req_app_token
 @response(TeamSeasons())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_team_seasons(team_id):
     """Get a list of seasons the team has played in"""
@@ -184,10 +177,9 @@ def get_team_seasons(team_id):
 
 
 @teams.route('/<int:team_id>/seasons', methods=['POST'])
-@req_app_token
 @body(TeamSeasons())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def register_team_season(team_id):
     """Register a team to a season"""
@@ -215,9 +207,8 @@ def register_team_season(team_id):
 
 
 @teams.route('/<int:team_id>/seasons/<int:season_division_id>', methods=['DELETE'])
-@req_app_token
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def deregister_team_season(team_id, season_division_id):
     """De-register a team from a season"""
@@ -240,12 +231,10 @@ def deregister_team_season(team_id, season_division_id):
 
 
 @teams.route('/<int:team_id>/awards', methods=['GET'])
-@req_app_token
 def get_team_awards(team_id):  # TODO
     pass
 
 
 @teams.route('/<int:team_id>/awards', methods=['POST'])
-@req_app_token
 def give_team_award(team_id):  # TODO
     pass

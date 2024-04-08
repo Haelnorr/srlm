@@ -11,7 +11,7 @@ from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, SeasonSchema, LinkSuccessSchema, SeasonCollection, \
     DivisionsInSeason
 from api.srlm.app.models import Season, League, SeasonDivision, Matchtype
-from api.srlm.app.api.auth.utils import req_app_token, user_auth
+from api.srlm.app.api.auth.utils import app_auth
 import sqlalchemy as sa
 
 # create a new logger for this module
@@ -24,10 +24,9 @@ bp.register_blueprint(seasons, url_prefix='/seasons')
 
 
 @seasons.route('/', methods=['GET'])
-@req_app_token
 @arguments(PaginationArgs())
 @response(SeasonCollection())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized)
 def get_seasons(pagination):
     """Get the collection of all seasons"""
@@ -37,9 +36,8 @@ def get_seasons(pagination):
 
 
 @seasons.route('/<int:season_id>', methods=['GET'])
-@req_app_token
 @response(SeasonSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_season(season_id):
     """Get details on a season"""
@@ -49,10 +47,9 @@ def get_season(season_id):
 
 
 @seasons.route('/', methods=['POST'])
-@req_app_token
 @body(SeasonSchema())
 @response(LinkSuccessSchema(), status_code=201)
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
 def add_season():
     """Create a new season"""
@@ -85,10 +82,9 @@ def add_season():
 
 
 @seasons.route('/<int:season_id>', methods=['PUT'])
-@req_app_token
 @body(SeasonSchema())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def update_season(season_id):
     """Update an existing season"""
@@ -113,10 +109,9 @@ def update_season(season_id):
 
 
 @seasons.route('/<int:season_id>/divisions', methods=['GET'])
-@req_app_token
 @arguments(PaginationArgs())
 @response(DivisionsInSeason())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_divisions_in_season(pagination, season_id):
     """Get a list of divisions in a season"""

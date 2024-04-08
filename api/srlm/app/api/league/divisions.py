@@ -10,7 +10,7 @@ from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, DivisionCollection, DivisionSchema, LinkSuccessSchema, \
     UpdateDivisionSchema, SeasonsOfDivision
 from api.srlm.app.models import Division, League
-from api.srlm.app.api.auth.utils import req_app_token, user_auth
+from api.srlm.app.api.auth.utils import app_auth
 import sqlalchemy as sa
 
 # create a new logger for this module
@@ -23,10 +23,9 @@ bp.register_blueprint(divisions, url_prefix='/divisions')
 
 
 @divisions.route('/', methods=['GET'])
-@req_app_token
 @arguments(PaginationArgs())
 @response(DivisionCollection())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized)
 def get_divisions(pagination):
     """Get the collection of all divisions"""
@@ -36,9 +35,8 @@ def get_divisions(pagination):
 
 
 @divisions.route('/<int:division_id>', methods=['GET'])
-@req_app_token
 @response(DivisionSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_division(division_id):
     """Get details of a division"""
@@ -48,10 +46,9 @@ def get_division(division_id):
 
 
 @divisions.route('/', methods=['POST'])
-@req_app_token
 @body(DivisionSchema())
 @response(LinkSuccessSchema(), status_code=201)
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
 def add_division():
     """Create a new division"""
@@ -79,10 +76,9 @@ def add_division():
 
 
 @divisions.route('/<int:division_id>', methods=['PUT'])
-@req_app_token
 @body(UpdateDivisionSchema())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def update_division(division_id):
     """Update an existing division"""
@@ -103,9 +99,8 @@ def update_division(division_id):
 
 
 @divisions.route('/<int:division_id>/seasons', methods=['GET'])
-@req_app_token
 @response(SeasonsOfDivision())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_seasons_of_division(division_id):
     """Get a list of seasons the division has been part of"""

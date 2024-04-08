@@ -7,7 +7,7 @@ import sqlalchemy as sa
 from api.srlm.app import db
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
-from api.srlm.app.api.auth.utils import req_app_token, user_auth
+from api.srlm.app.api.auth.utils import app_auth
 from api.srlm.app.api.utils.errors import BadRequest, ResourceNotFound
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
@@ -23,9 +23,8 @@ bp.register_blueprint(players, url_prefix='/players')
 
 
 @players.route('/<int:player_id>', methods=['GET'])
-@req_app_token
 @response(PlayerSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_player(player_id):
     """Get details of a player"""
@@ -34,10 +33,9 @@ def get_player(player_id):
 
 
 @players.route('/', methods=['GET'])
-@req_app_token
 @arguments(PaginationArgs())
 @response(PlayerCollection())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized)
 def get_players(pagination):
     """Get the collection of all players"""
@@ -47,10 +45,9 @@ def get_players(pagination):
 
 
 @players.route('/', methods=['POST'])
-@req_app_token
 @body(PlayerSchema())
 @response(LinkSuccessSchema(), status_code=201)
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
 def new_player():
     """Create a new player"""
@@ -77,10 +74,9 @@ def new_player():
 
 
 @players.route('/<int:player_id>', methods=['PUT'])
-@req_app_token
 @body(EditPlayerSchema())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def update_player(player_id):
     """Update an existing player"""
@@ -104,9 +100,8 @@ def update_player(player_id):
 
 
 @players.route('/<int:player_id>/teams', methods=['GET'])
-@req_app_token
 @response(PlayerTeams())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_player_teams(player_id):
     """Get a list of teams the player has played on"""
@@ -122,16 +117,14 @@ def get_player_teams(player_id):
 
 
 @players.route('/<int:player_id>/stats', methods=['GET'])
-@req_app_token
 def get_player_stats(player_id):  # TODO
     pass
 
 
 @players.route('/<int:player_id>/teams', methods=['POST'])
-@req_app_token
 @body(PlayerTeams())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def register_player_team(player_id):
     """Register a player to a team"""
@@ -163,9 +156,8 @@ def register_player_team(player_id):
 
 
 @players.route('/<int:player_id>/teams', methods=['DELETE'])
-@req_app_token
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def deregister_player_team(player_id):
     """De-register a player from a team"""
@@ -188,9 +180,8 @@ def deregister_player_team(player_id):
 
 
 @players.route('/<int:player_id>/free_agent', methods=['GET'])
-@req_app_token
 @response(PlayerSeasons())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_player_free_agent(player_id):
     """Get a list of seasons a player has been a free agent in"""
@@ -205,10 +196,9 @@ def get_player_free_agent(player_id):
 
 
 @players.route('/<int:player_id>/free_agent', methods=['POST'])
-@req_app_token
 @body(PlayerSeasons())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def register_player_free_agent(player_id):
     """Register a player to a season as a free agent"""
@@ -246,12 +236,10 @@ def register_player_free_agent(player_id):
 
 
 @players.route('/<int:player_id>/awards', methods=['GET'])
-@req_app_token
 def get_player_awards(player_id):  # TODO
     pass
 
 
 @players.route('/<int:player_id>/awards', methods=['POST'])
-@req_app_token
 def give_player_award(player_id):  # TODO
     pass

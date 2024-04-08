@@ -41,7 +41,7 @@ class Collection(ma.Schema):
 
 class FilterSchema(ma.Schema):
     """Defines filter arg"""
-    f = ma.Str()
+    current = ma.Bool()
 
 
 class BasicAuthSchema(ma.Schema):

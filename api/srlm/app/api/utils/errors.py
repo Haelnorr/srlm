@@ -48,6 +48,15 @@ def handle_app_auth_error(e):
     return error_response(e.code, 'Invalid or missing app token')
 
 
+class DualAuthError(HTTPException):
+    code = 401
+
+
+@bp.errorhandler(DualAuthError)
+def handle_app_auth_error(e):
+    return error_response(e.code, 'Invalid or missing app and/or user tokens')
+
+
 class ResourceNotFound(HTTPException):
     code = 404
 

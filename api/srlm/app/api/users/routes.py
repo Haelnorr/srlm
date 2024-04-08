@@ -6,13 +6,12 @@ from api.srlm.app import db
 from api.srlm.app.api.users import users_bp as users
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import force_fields, force_unique, clean_data, ensure_exists
-from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request, forbidden
+from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, TokenSchema, PasswordResetSchema, ChangePasswordSchema, \
     UserSchema, UserCollection, LinkSuccessSchema, UpdateUserSchema
 from api.srlm.app.models import User
 from api.srlm.app.api.utils.errors import UserAuthError, BadRequest, error_response
-from api.srlm.app.api.auth.utils import user_auth, req_app_token, get_bearer_token
-from api.srlm.app.email import send_password_reset_email  # TODO change this
+from api.srlm.app.api.auth.utils import get_bearer_token, app_auth, dual_auth
 
 # create a new logger for this module
 from api.srlm.logger import get_logger
@@ -20,9 +19,8 @@ log = get_logger(__name__)
 
 
 @users.route('/<int:user_id>', methods=['GET'])
-@req_app_token
 @response(UserSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_user(user_id):
     """Get a users details"""
@@ -39,10 +37,9 @@ def get_user(user_id):
 
 
 @users.route('/', methods=['GET'])
-@req_app_token
 @arguments(PaginationArgs())
 @response(UserCollection())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized)
 def get_users(pagination):
     """Get the collection of all users"""
@@ -52,10 +49,9 @@ def get_users(pagination):
 
 
 @users.route('/', methods=['POST'])
-@req_app_token
 @body(UserSchema())
 @response(LinkSuccessSchema(), status_code=201)
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
 def add_user():
     """Create a new user"""
@@ -78,15 +74,13 @@ def add_user():
 
 
 @users.route('/<int:user_id>', methods=['PUT'])
-@req_app_token
-@user_auth.login_required
 @body(UpdateUserSchema())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
-@other_responses(unauthorized | forbidden | bad_request | not_found)
+@authenticate(dual_auth)
+@other_responses(unauthorized | bad_request | not_found)
 def update_user(user_id):
     """Update a users details. Requires user token"""
-    if user_auth.current_user().id != user_id:
+    if dual_auth.current_user().id != user_id:
         raise UserAuthError()
     data = request.get_json()
 
@@ -102,15 +96,13 @@ def update_user(user_id):
 
 
 @users.route('/<int:user_id>/new_password', methods=['POST'])
-@req_app_token
-@user_auth.login_required
 @body(ChangePasswordSchema())
 @response(TokenSchema())
-@authenticate(user_auth)
-@other_responses(unauthorized | forbidden | not_found | bad_request)
+@authenticate(dual_auth)
+@other_responses(unauthorized | not_found | bad_request)
 def update_user_password(user_id):
     """Update a users. Revokes and issues a new token. Requires user token"""
-    if user_auth.current_user().id != user_id:
+    if dual_auth.current_user().id != user_id:
         raise UserAuthError()
     user = ensure_exists(User, id=user_id)
     data = request.get_json()
@@ -131,22 +123,19 @@ def update_user_password(user_id):
 
 
 @users.route('/<int:user_id>/matches_streamed', methods=['GET'])
-@req_app_token
 def get_user_matches_streamed(user_id):
     pass
 
 
 @users.route('/<int:user_id>/matches_reviewed', methods=['GET'])
-@req_app_token
 def get_user_matches_reviewed(user_id):
     pass
 
 
 @users.route('/forgot_password', methods=['POST'])
-@req_app_token
 @body(PasswordResetSchema())
 @response(PasswordResetSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def request_password_reset():
     """Request a password reset token"""
@@ -171,9 +160,8 @@ def request_password_reset():
 
 
 @users.route('/forgot_password/<reset_token>', methods=['GET'])
-@req_app_token
 @response(TokenSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized)
 def get_temp_token(reset_token):
     """Get a temporary user auth token using the password reset token"""

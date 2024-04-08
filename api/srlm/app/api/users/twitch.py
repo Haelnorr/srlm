@@ -3,7 +3,7 @@ from apifairy import response, authenticate, other_responses, body
 from flask import request, Blueprint
 from api.srlm.app import db
 from api.srlm.app.api.users import users_bp
-from api.srlm.app.api.auth.utils import req_app_token, user_auth, get_bearer_token
+from api.srlm.app.api.auth.utils import get_bearer_token, dual_auth, app_auth
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.errors import ResourceNotFound, UserAuthError, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, clean_data
@@ -17,9 +17,8 @@ users_bp.register_blueprint(twitch)
 
 
 @twitch.route('/<int:user_id>/twitch', methods=['GET'])
-@req_app_token
 @response(TwitchSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def get_user_twitch(user_id):
     """Get a users Twitch information"""
@@ -37,17 +36,15 @@ def get_user_twitch(user_id):
 
 
 @twitch.route('/<int:user_id>/twitch', methods=['POST'])
-@req_app_token
-@user_auth.login_required
 @body(TwitchSchema())
 @response(LinkSuccessSchema(), status_code=201)
-@authenticate(user_auth)
-@other_responses(unauthorized | forbidden | not_found | bad_request)
+@authenticate(dual_auth)
+@other_responses(unauthorized | not_found | bad_request)
 def create_user_twitch(user_id):
     """Link a users Twitch account. Requires user token"""
     user = ensure_exists(User, id=user_id)
 
-    if user.id is not user_auth.current_user().id:
+    if user.id is not dual_auth.current_user().id:
         raise UserAuthError()
 
     if user.twitch:
@@ -59,34 +56,32 @@ def create_user_twitch(user_id):
 
     force_fields(data, required_fields)
 
-    twitch = db.session.query(Twitch).filter(Twitch.twitch_id == data['twitch_id']).first()
-    if twitch is not None:
+    twitch_db = db.session.query(Twitch).filter(Twitch.twitch_id == data['twitch_id']).first()
+    if twitch_db is not None:
         raise BadRequest('Twitch account is linked to another user')
 
-    twitch = Twitch()
-    twitch.from_dict(clean_data(data, valid_fields))
-    twitch.user = user
+    twitch_db = Twitch()
+    twitch_db.from_dict(clean_data(data, valid_fields))
+    twitch_db.user = user
 
-    db.session.add(twitch)
+    db.session.add(twitch_db)
     db.session.commit()
 
     return responses.create_success('Twitch account linked', 'api.users.twitch.get_user_twitch', user_id=user_id)
 
 
 @twitch.route('/<int:user_id>/twitch', methods=['PUT'])
-@req_app_token
-@user_auth.login_required
 @body(UpdateTwitchSchema())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
-@other_responses(unauthorized | forbidden | not_found | bad_request)
+@authenticate(dual_auth)
+@other_responses(unauthorized | not_found | bad_request)
 def update_user_twitch(user_id):
     """Update a users Twitch information. Requires user token"""
     user = db.session.get(User, user_id)
     if user is None:
         raise ResourceNotFound(f'User with ID {user_id}')
 
-    if user.id is not user_auth.current_user().id:
+    if user.id is not dual_auth.current_user().id:
         raise UserAuthError()
 
     if user.twitch is None:
@@ -103,8 +98,8 @@ def update_user_twitch(user_id):
         raise BadRequest("No valid fields provided - provide one of the following: twitch_id, access_token, refresh_token, expires_in")
 
     if 'twitch_id' in data:
-        twitch = db.session.query(Twitch).filter(Twitch.twitch_id == data['twitch_id']).first()
-        if twitch is not None:
+        twitch_db = db.session.query(Twitch).filter(Twitch.twitch_id == data['twitch_id']).first()
+        if twitch_db is not None:
             raise BadRequest('Twitch account is linked to another user')
 
     user.twitch.from_dict(data)
@@ -114,18 +109,16 @@ def update_user_twitch(user_id):
 
 
 @twitch.route('/<int:user_id>/twitch', methods=['DELETE'])
-@req_app_token
-@user_auth.login_required
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
-@other_responses(unauthorized | forbidden | not_found)
+@authenticate(dual_auth)
+@other_responses(unauthorized | not_found)
 def delete_user_twitch(user_id):
     """Unlink a users Twitch account. Requires user token"""
     user = db.session.get(User, user_id)
     if user is None:
         raise ResourceNotFound(f'User with ID {user_id}')
 
-    if user.id is not user_auth.current_user().id:
+    if user.id is not dual_auth.current_user().id:
         raise UserAuthError()
 
     if user.twitch is None:

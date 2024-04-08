@@ -3,11 +3,11 @@ from apifairy import body, response, authenticate, other_responses
 from flask import url_for, request, Blueprint
 from api.srlm.app import db
 from api.srlm.app.api.users import users_bp
-from api.srlm.app.api.auth.utils import req_app_token, user_auth
+from api.srlm.app.api.auth.utils import app_auth
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.errors import BadRequest, ResourceNotFound
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields
-from api.srlm.app.fairy.errors import unauthorized, forbidden, not_found, bad_request
+from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import UserPermissionsCollection, UserPermissionsSchema, LinkSuccessSchema, \
     UpdateUserPermissionsSchema, RevokeUserPermission
 from api.srlm.app.models import User, Permission, UserPermissions
@@ -18,9 +18,8 @@ users_bp.register_blueprint(permissions)
 
 
 @permissions.route('/<int:user_id>/permissions', methods=['GET'])
-@req_app_token
 @response(UserPermissionsCollection())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_user_permissions(user_id):
     """Get the users permissions"""
@@ -42,10 +41,9 @@ def get_user_permissions(user_id):
 
 
 @permissions.route('/<int:user_id>/permissions', methods=['POST'])
-@req_app_token
 @body(UserPermissionsSchema())
 @response(LinkSuccessSchema(), status_code=201)
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def add_user_permissions(user_id):
     """Grant a permission to a user"""
@@ -73,10 +71,9 @@ def add_user_permissions(user_id):
 
 
 @permissions.route('/<int:user_id>/permissions', methods=['PUT'])
-@req_app_token
 @body(UpdateUserPermissionsSchema())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def update_user_permissions(user_id):
     """Update a users existing permission"""
@@ -101,10 +98,9 @@ def update_user_permissions(user_id):
 
 
 @permissions.route('/<int:user_id>/permissions/revoke', methods=['POST'])
-@req_app_token
 @body(RevokeUserPermission())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def revoke_user_permissions(user_id):
     """Revoke a permission from a user"""

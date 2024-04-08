@@ -10,7 +10,7 @@ from api.srlm.app.fairy.schemas import PermissionSchema, LinkSuccessSchema, Upda
 from api.srlm.app.models import Permission
 from api.srlm.app.api.auth import auth_bp as auth
 from api.srlm.app.api.utils import responses
-from api.srlm.app.api.auth.utils import req_app_token, user_auth
+from api.srlm.app.api.auth.utils import app_auth
 from api.srlm.app.api.utils.errors import BadRequest
 
 # create a new logger for this module
@@ -30,9 +30,8 @@ def check_key_exists(key):
 
 
 @permissions.route('/<perm_id_or_key>', methods=['GET'])
-@req_app_token
 @response(PermissionSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_permission(perm_id_or_key):
     """Get details of a permission"""
@@ -41,10 +40,9 @@ def get_permission(perm_id_or_key):
 
 
 @permissions.route('/', methods=['GET'])
-@req_app_token
 @arguments(PaginationArgs())
 @response(PermissionCollection())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_permissions(pagination):
     """Get a collection of all permissions"""
@@ -54,10 +52,9 @@ def get_permissions(pagination):
 
 
 @permissions.route('/', methods=['POST'])
-@req_app_token
 @body(PermissionSchema())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
 def new_permission():
     """Create a new permission"""
@@ -77,10 +74,9 @@ def new_permission():
 
 
 @permissions.route('/<perm_id_or_key>', methods=['PUT'])
-@req_app_token
 @body(UpdatePermissionSchema())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | bad_request | not_found)
 def update_permission(perm_id_or_key):
     """Modify a permission"""
@@ -95,9 +91,8 @@ def update_permission(perm_id_or_key):
 
 
 @permissions.route('/<perm_id_or_key>/users', methods=['GET'])
-@req_app_token
 @response(PermUsersSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def list_users_with_permission(perm_id_or_key):
     """List all users with the given permission"""

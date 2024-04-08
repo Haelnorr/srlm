@@ -4,16 +4,16 @@ from apifairy import response, body, other_responses, authenticate
 from api.srlm.api_access.models import AuthorizedApp
 from api.srlm.app import db
 from api.srlm.app.api.auth import auth_bp as auth
-from api.srlm.app.api.auth.utils import basic_auth, req_app_token, user_auth
+from api.srlm.app.api.auth.utils import basic_auth, user_auth, dual_auth, app_auth
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.auth.utils import get_bearer_token
 from api.srlm.app.fairy.schemas import TokenSchema, BasicAuthSchema, BasicSuccessSchema, UserVerifySchema
-from api.srlm.app.fairy.errors import unauthorized, forbidden
+from api.srlm.app.fairy.errors import unauthorized
 from api.srlm.app.models import User
 
 
 @auth.route('/user', methods=['POST'])
-@basic_auth.login_required
+@authenticate(basic_auth)
 @body(BasicAuthSchema())
 @response(TokenSchema())
 @other_responses(unauthorized)
@@ -26,11 +26,9 @@ def get_user_token():
 
 
 @auth.route('/user', methods=['DELETE'])
-@req_app_token
-@user_auth.login_required
 @response(BasicSuccessSchema())
-@authenticate(user_auth)
-@other_responses(unauthorized | forbidden)
+@authenticate(dual_auth)
+@other_responses(unauthorized)
 def revoke_user_token():
     """Revoke the users current auth token"""
     user_auth.current_user().revoke_token()
@@ -39,11 +37,9 @@ def revoke_user_token():
 
 
 @auth.route('/user/validate', methods=['POST'])
-@req_app_token
-@user_auth.login_required
 @response(UserVerifySchema())
-@authenticate(user_auth)
-@other_responses(unauthorized | forbidden)
+@authenticate(dual_auth)
+@other_responses(unauthorized)
 def validate_user_token():
     """Check if the user token provided is valid"""
     user_token = get_bearer_token(request.headers)['user']
@@ -60,9 +56,8 @@ def validate_user_token():
 
 
 @auth.route('/app', methods=['POST'])
-@req_app_token
 @response(TokenSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized)
 def request_new_app_token():
     """Request a new app token for the authorized app.
@@ -80,9 +75,8 @@ def request_new_app_token():
 
 
 @auth.route('/app', methods=['GET'])
-@req_app_token
 @response(TokenSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized)
 def get_app_token():
     """Get the current app token and expiry date"""

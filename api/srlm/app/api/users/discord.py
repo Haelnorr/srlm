@@ -3,11 +3,11 @@ from apifairy import body, response, authenticate, other_responses
 from flask import request, Blueprint
 from api.srlm.app import db
 from api.srlm.app.api.users import users_bp
-from api.srlm.app.api.auth.utils import req_app_token, user_auth, get_bearer_token
+from api.srlm.app.api.auth.utils import user_auth, get_bearer_token, dual_auth, app_auth
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.errors import ResourceNotFound, UserAuthError, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields
-from api.srlm.app.fairy.errors import unauthorized, not_found, forbidden, bad_request
+from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import DiscordSchema, LinkSuccessSchema, UpdateDiscordSchema
 from api.srlm.app.models import User, Discord
 
@@ -17,9 +17,8 @@ users_bp.register_blueprint(discord)
 
 
 @discord.route('/<int:user_id>/discord', methods=['GET'])
-@req_app_token
 @response(DiscordSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_user_discord(user_id):
     """Get a users Discord information"""
@@ -37,12 +36,10 @@ def get_user_discord(user_id):
 
 
 @discord.route('/<int:user_id>/discord', methods=['POST'])
-@req_app_token
-@user_auth.login_required
 @body(DiscordSchema())
 @response(LinkSuccessSchema(), status_code=201)
-@authenticate(user_auth)
-@other_responses(unauthorized | forbidden | not_found | bad_request)
+@authenticate(dual_auth)
+@other_responses(unauthorized | not_found | bad_request)
 def create_user_discord(user_id):
     """Link a users Discord account. Requires user token"""
     user = ensure_exists(User, id=user_id)
@@ -73,12 +70,10 @@ def create_user_discord(user_id):
 
 
 @discord.route('/<int:user_id>/discord', methods=['PUT'])
-@req_app_token
-@user_auth.login_required
 @body(UpdateDiscordSchema())
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
-@other_responses(unauthorized | forbidden | not_found | bad_request)
+@authenticate(dual_auth)
+@other_responses(unauthorized | not_found | bad_request)
 def update_user_discord(user_id):
     """Update a users Discord information. Requires user token"""
     user = ensure_exists(User, id=user_id)
@@ -111,11 +106,9 @@ def update_user_discord(user_id):
 
 
 @discord.route('/<int:user_id>/discord', methods=['DELETE'])
-@req_app_token
-@user_auth.login_required
 @response(LinkSuccessSchema())
-@authenticate(user_auth)
-@other_responses(unauthorized | forbidden | not_found | bad_request)
+@authenticate(dual_auth)
+@other_responses(unauthorized | not_found | bad_request)
 def delete_user_discord(user_id):
     """Unlink a users Discord account. Requires user token"""
     user = ensure_exists(User, id=user_id)

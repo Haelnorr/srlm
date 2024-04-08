@@ -2,7 +2,7 @@
 from apifairy import body, response, authenticate, other_responses
 from flask import request, Blueprint
 from api.srlm.app.api import bp
-from api.srlm.app.api.auth.utils import req_app_token, user_auth
+from api.srlm.app.api.auth.utils import app_auth
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import force_fields, ensure_exists
 from api.srlm.app.fairy.errors import unauthorized, bad_request, not_found
@@ -17,10 +17,9 @@ bp.register_blueprint(lobby, url_prefix='/lobby')
 
 
 @lobby.route('/', methods=['POST'])
-@req_app_token
 @body(GenerateLobbySchema())
 @response(LinkSuccessSchema(), status_code=201)
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | bad_request | not_found)
 def generate_lobby():
     """Generate a new in-game lobby"""
@@ -35,9 +34,8 @@ def generate_lobby():
 
 
 @lobby.route('/<int:lobby_id>', methods=['DELETE'])
-@req_app_token
 @response(BasicSuccessSchema())
-@authenticate(user_auth)
+@authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def abort_lobby(lobby_id):
     """Delete an active in-game lobby"""
