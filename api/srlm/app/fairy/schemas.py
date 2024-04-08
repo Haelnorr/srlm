@@ -39,10 +39,21 @@ class Collection(ma.Schema):
     _links = ma.Nested(PaginationLinks())
 
 
-class FilterSchema(ma.Schema):
-    """Defines filter arg"""
+class CurrentFilterSchema(ma.Schema):
+    """Defines filter arg for current"""
     current = ma.Bool()
+
+
+class UnplayedFilterSchema(ma.Schema):
+    """Defines filter arg for unplayed"""
     unplayed = ma.Bool()
+
+
+class StatsFilterSchema(ma.Schema):
+    """Defines filter arg for stats"""
+    season = ma.Int()
+    division = ma.Int()
+    team = ma.Int()
 
 
 class BasicAuthSchema(ma.Schema):
@@ -858,3 +869,46 @@ class MatchtypeSchema(ma.SQLAlchemySchema):
     game_mode = ma.auto_field(required=True)
     num_players = ma.auto_field(required=True)
     _links = ma.Nested(Links(), dump_only=True)
+
+
+class StatsSchema(ma.SQLAlchemySchema):
+    """Defines structure of stats output"""
+    class Meta:
+        model = PlayerMatchData
+        ordered = True
+
+    goals = ma.auto_field()
+    shots = ma.auto_field()
+    assists = ma.auto_field()
+    saves = ma.auto_field()
+    primary_assists = ma.auto_field()
+    secondary_assists = ma.auto_field()
+    passes = ma.auto_field()
+    blocks = ma.auto_field()
+    takeaways = ma.auto_field()
+    turnovers = ma.auto_field()
+    possession_time_sec = ma.auto_field()
+    game_winning_goals = ma.auto_field()
+    post_hits = ma.auto_field()
+    faceoffs_won = ma.auto_field()
+    faceoffs_lost = ma.auto_field()
+    score = ma.auto_field()
+
+
+class PlayerStatsSchema(ma.Schema):
+    """Defines response for retreiving player stats"""
+    class PlayerStatsLinks(Links):
+        player = ma.URL()
+        season = ma.URL()
+        division = ma.URL()
+        team = ma.URL()
+
+    player = ma.Nested(PlayerSchema())
+    season = ma.Str()
+    division = ma.Str()
+    team = ma.Str()
+    stats = ma.Nested(StatsSchema())
+    _links = ma.Nested(PlayerStatsLinks())
+
+
+

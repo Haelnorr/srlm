@@ -9,7 +9,7 @@ from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import LinkSuccessSchema, SeasonDivisionSchema, SeasonDivisionTeams, \
-    SeasonDivisionFreeAgents, SeasonDivisionRookies, SeasonDivisionMatches, FilterSchema
+    SeasonDivisionFreeAgents, SeasonDivisionRookies, SeasonDivisionMatches, UnplayedFilterSchema
 from api.srlm.app.models import SeasonDivision, FreeAgent, Season, Division
 from api.srlm.app.api.auth.utils import app_auth
 
@@ -104,7 +104,7 @@ def get_free_agents_in_season_division(season_division_id):
 
 
 @season_division.route('/<int:season_division_id>/matches', methods=['GET'])
-@arguments(FilterSchema())
+@arguments(UnplayedFilterSchema())
 @response(SeasonDivisionMatches())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)

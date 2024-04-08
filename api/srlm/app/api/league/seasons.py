@@ -68,7 +68,7 @@ def add_season():
     force_unique(Season, data, unique_fields, restrict_query={'league_id': league_db.id})
 
     date_fields = ['start_date', 'end_date', 'finals_start', 'finals_end']
-    force_date_format(data, date_fields)  # TODO
+    force_date_format(data, date_fields)
 
     cleaned_data = clean_data(data, valid_fields)
 

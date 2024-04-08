@@ -319,7 +319,7 @@ class Player(PaginatedAPIMixin, db.Model):
                 'current_team': url_for('api.teams.get_team', team_id=current_team.team.id) if current_team else None,
                 'teams': url_for('api.players.get_player_teams', player_id=self.id),
                 'free_agent_seasons': url_for('api.players.get_player_free_agent', player_id=self.id),
-                'awards': url_for('api.players.get_player_awards', team_id=self.id)
+                'awards': url_for('api.players.get_player_awards', player_id=self.id)
             }
         }
 

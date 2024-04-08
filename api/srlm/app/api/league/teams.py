@@ -12,7 +12,7 @@ from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, TeamCollection, TeamSchema, LinkSuccessSchema, EditTeamSchema, \
-    TeamPlayers, TeamSeasonPlayers, TeamSeasons, FilterSchema
+    TeamPlayers, TeamSeasonPlayers, TeamSeasons, CurrentFilterSchema
 from api.srlm.app.models import Team, SeasonDivision, PlayerTeam
 from api.srlm.app.api.auth.utils import app_auth
 
@@ -100,7 +100,7 @@ def update_team(team_id):
 
 
 @teams.route('/<int:team_id>/players', methods=['GET'])
-@arguments(FilterSchema())
+@arguments(CurrentFilterSchema())
 @response(TeamPlayers())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)

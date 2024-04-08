@@ -2,8 +2,10 @@
 from datetime import datetime, timezone
 
 from apifairy import arguments, response, authenticate, other_responses, body
-from flask import request, Blueprint
+from flask import request, Blueprint, url_for
 import sqlalchemy as sa
+from sqlalchemy import func
+
 from api.srlm.app import db
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
@@ -12,8 +14,9 @@ from api.srlm.app.api.utils.errors import BadRequest, ResourceNotFound
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, PlayerSchema, PlayerCollection, LinkSuccessSchema, \
-    EditPlayerSchema, PlayerTeams, PlayerSeasons, FilterSchema
-from api.srlm.app.models import Player, SeasonDivision, Team, PlayerTeam, FreeAgent
+    EditPlayerSchema, PlayerTeams, PlayerSeasons, CurrentFilterSchema, PlayerStatsSchema, StatsFilterSchema
+from api.srlm.app.models import Player, SeasonDivision, Team, PlayerTeam, FreeAgent, PlayerMatchData, Match, Lobby, \
+    MatchData, Season, Division
 from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
@@ -100,7 +103,7 @@ def update_player(player_id):
 
 
 @players.route('/<int:player_id>/teams', methods=['GET'])
-@arguments(FilterSchema())
+@arguments(CurrentFilterSchema())
 @response(PlayerTeams())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -118,8 +121,109 @@ def get_player_teams(search_filter, player_id):
 
 
 @players.route('/<int:player_id>/stats', methods=['GET'])
-def get_player_stats(player_id):  # TODO
-    pass
+@arguments(StatsFilterSchema())
+@response(PlayerStatsSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found | bad_request)
+def get_player_stats(search_filters, player_id):
+    """Get a players stats"""
+    # get player
+    player = ensure_exists(Player, id=player_id)
+
+    season_id = search_filters.get('season', None)
+    division_id = search_filters.get('division', None)
+
+    season = None
+    division = None
+    team = None
+
+    sd_filters = {}
+    if season_id:
+        season = ensure_exists(Season, id=season_id)
+        sd_filters['season_id'] = season_id
+    if division_id:
+        division = ensure_exists(Division, id=division_id)
+        sd_filters['division_id'] = division_id
+
+    filters = {
+        'player_id': player.id
+    }
+    if 'team_id' in search_filters:
+        team = ensure_exists(Team, id=search_filters['team'])
+        filters['team_id'] = search_filters['team']
+
+    season_divisions = db.session.query(SeasonDivision).filter_by(**sd_filters)
+    sd_ids = [sd.id for sd in season_divisions]
+
+    sd_match_query = db.session.query(Match).filter(Match.season_division_id.in_(sd_ids))
+    sd_matches = [sd.id for sd in sd_match_query]
+
+    lobby_query = db.session.query(Lobby).filter(Lobby.match_id.in_(sd_matches))
+    lobbies = [lb.id for lb in lobby_query]
+
+    match_data_query = db.session.query(MatchData).filter(
+        MatchData.accepted == True,
+        MatchData.lobby_id.in_(lobbies)
+    )
+    filtered_matches = [match.id for match in match_data_query]
+
+    stats = db.session.query(PlayerMatchData).with_entities(
+        func.sum(PlayerMatchData.goals).label("goals"),
+        func.max(PlayerMatchData.shots).label("shots"),
+        func.max(PlayerMatchData.assists).label("assists"),
+        func.max(PlayerMatchData.saves).label("saves"),
+        func.max(PlayerMatchData.primary_assists).label("primary_assists"),
+        func.max(PlayerMatchData.secondary_assists).label("secondary_assists"),
+        func.max(PlayerMatchData.passes).label("passes"),
+        func.max(PlayerMatchData.blocks).label("blocks"),
+        func.max(PlayerMatchData.takeaways).label("takeaways"),
+        func.max(PlayerMatchData.turnovers).label("turnovers"),
+        func.max(PlayerMatchData.game_winning_goals).label("game_winning_goals"),
+        func.max(PlayerMatchData.overtime_goals).label("overtime_goals"),
+        func.max(PlayerMatchData.post_hits).label("post_hits"),
+        func.max(PlayerMatchData.faceoffs_won).label("faceoffs_won"),
+        func.max(PlayerMatchData.faceoffs_lost).label("faceoffs_lost"),
+        func.max(PlayerMatchData.score).label("score"),
+        func.max(PlayerMatchData.possession_time_sec).label("possession_time_sec")
+    ).filter_by(
+        **filters
+    ).filter(
+        PlayerMatchData.match_id.in_(filtered_matches)
+    ).first()
+
+    response_json = {
+        'player': player.to_dict(),
+        'stats': {
+            'goals': stats.goals,
+            'shots': stats.shots,
+            'assists': stats.assists,
+            'saves': stats.saves,
+            'primary_assists': stats.primary_assists,
+            'secondary_assists': stats.secondary_assists,
+            'passes': stats.passes,
+            'blocks': stats.blocks,
+            'takeaways': stats.takeaways,
+            'turnovers': stats.turnovers,
+            'game_winning_goals': stats.game_winning_goals,
+            'overtime_goals': stats.overtime_goals,
+            'post_hits': stats.post_hits,
+            'faceoffs_won': stats.faceoffs_won,
+            'faceoffs_lost': stats.faceoffs_lost,
+            'score': stats.score,
+            'possession_time_sec': stats.goals
+        },
+        'season': season.name if season else None,
+        'division': division.name if division else None,
+        'team': team.name if team else None,
+        '_links': {
+            'self': url_for('api.players.get_player_stats', player_id=player_id),
+            'player': url_for('api.players.get_player', player_id=player_id),
+            'season': url_for('api.seasons.get_season', season_id=season_id) if season else None,
+            'division': url_for('api.divisions.get_division', division_id=division_id) if division else None,
+            'team': url_for('api.teams.get_team', team_id=team.id) if team else None
+        }
+    }
+    return response_json
 
 
 @players.route('/<int:player_id>/teams', methods=['POST'])
