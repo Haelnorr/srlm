@@ -1,3 +1,8 @@
+"""
+Where all the models for the main league_manager database are defined
+These models are used by both Alembic to create and migrate the database using Flask-Migrate and to interface with the
+database using SQLAlchemy
+"""
 import jwt
 import secrets
 from time import time
@@ -45,7 +50,6 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
     discord = db.relationship('Discord', back_populates='user', lazy=True, uselist=False)
     twitch = db.relationship('Twitch', back_populates='user', lazy=True, uselist=False)
     streamed_matches = db.relationship('Match', back_populates='streamer', lazy=True)
-    reviewed_matches = db.relationship('PlayerMatchData', back_populates='reviewed_by')
     permission_assoc = db.relationship('UserPermissions', back_populates='user', lazy=True)
     permissions = association_proxy('permission_assoc', 'permission')
 
@@ -87,15 +91,13 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
             'discord': self.discord.id if self.discord is not None else None,
             'permissions': self.permissions_list(),
             'matches_streamed': len(self.streamed_matches),
-            'matches_reviewed': len(self.reviewed_matches),
             'reset_pass': self.reset_pass,
             '_links': {
-                'self': url_for('api.get_user', user_id=self.id),
-                'player': url_for('api.get_player', player_id=self.player.id) if self.player is not None else None,
-                'discord': url_for('api.get_user_discord', user_id=self.id) if self.discord is not None else None,
-                'permissions': url_for('api.get_user_permissions', user_id=self.id),
-                'matches_streamed': url_for('api.get_user_matches_streamed', user_id=self.id),
-                'matches_reviewed': url_for('api.get_user_matches_reviewed', user_id=self.id)
+                'self': url_for('api.users.get_user', user_id=self.id),
+                'player': url_for('api.players.get_player', player_id=self.player.id) if self.player is not None else None,
+                'discord': url_for('api.users.discord.get_user_discord', user_id=self.id) if self.discord is not None else None,
+                'permissions': url_for('api.users.permissions.get_user_permissions', user_id=self.id),
+                'matches_streamed': url_for('api.users.get_user_matches_streamed', user_id=self.id),
             }
         }
         if include_email:
@@ -154,7 +156,7 @@ class Permission(PaginatedAPIMixin, db.Model):
             'description': self.description,
             'users_count': len(self.users),
             '_links': {
-                'self': url_for('api.get_permission', perm_id_or_key=self.id)
+                'self': url_for('api.auth.permissions.get_permission', perm_id_or_key=self.id)
             }
         }
         return data
@@ -180,14 +182,14 @@ class UserPermissions(db.Model):
 
     def to_dict(self):
         data = {
-            'id': self.permission.id,
+            'permission_id': self.permission_id,
             'user': self.user.username,
             'key': self.permission.key,
             'description': self.permission.description,
-            'modifiers': self.additional_modifiers,
+            'additional_modifiers': self.additional_modifiers,
             '_links': {
-                'self': url_for('api.get_permission', perm_id_or_key=self.permission.id),
-                'user': url_for('api.get_user', user_id=self.user_id),
+                'self': url_for('api.auth.permissions.get_permission', perm_id_or_key=self.permission.id),
+                'user': url_for('api.users.get_user', user_id=self.user_id),
             }
         }
         return data
@@ -212,8 +214,8 @@ class Discord(db.Model):
             'discord_id': self.discord_id,
             'token_expiration': self.token_expiration,
             '_links': {
-                'self': url_for('api.get_user_discord', user_id=self.user_id),
-                'user': url_for('api.get_user', user_id=self.user_id)
+                'self': url_for('api.users.discord.get_user_discord', user_id=self.user_id),
+                'user': url_for('api.users.get_user', user_id=self.user_id)
             }
         }
         if authenticated:
@@ -249,8 +251,8 @@ class Twitch(db.Model):
             'twitch_id': self.twitch_id,
             'token_expiration': self.token_expiration,
             '_links': {
-                'self': url_for('api.get_user_twitch', user_id=self.user_id),
-                'user': url_for('api.get_user', user_id=self.user_id)
+                'self': url_for('api.users.twitch.get_user_twitch', user_id=self.user_id),
+                'user': url_for('api.users.get_user', user_id=self.user_id)
             }
         }
         if authenticated:
@@ -280,7 +282,7 @@ class Player(PaginatedAPIMixin, db.Model):
     first_season = db.relationship('SeasonDivision', back_populates='rookies')
     team_association = db.relationship('PlayerTeam', back_populates='player', lazy='dynamic')
     teams = association_proxy('team_association', 'team')
-    season_association = db.relationship('FreeAgent', back_populates='player')
+    season_association = db.relationship('FreeAgent', back_populates='player', lazy='dynamic')
     seasons = association_proxy('season_association', 'season_division')
     match_data_assoc = db.relationship('PlayerMatchData', back_populates='player')
     match_data = association_proxy('player_data_assoc', 'match')
@@ -308,16 +310,16 @@ class Player(PaginatedAPIMixin, db.Model):
             'next_name_change': self.next_name_change,
             'current_team': current_team.team.name if current_team else None,
             'teams': len(unique_teams),
-            'free_agent_seasons': len(self.seasons),
+            'free_agent_seasons': self.season_association.count(),
             'awards': len(self.awards_association),
             '_links': {
-                'self': url_for('api.get_player', player_id=self.id),
-                'user': url_for('api.get_user', user_id=self.user_id) if self.user else None,
-                'first_season': url_for('api.get_season_division', season_division_id=self.first_season_id),
-                'current_team': url_for('api.get_team', team_id=current_team.team.id) if current_team else None,
-                'teams': url_for('api.get_player_teams', player_id=self.id),
-                'free_agent_seasons': url_for('api.get_player_free_agent', player_id=self.id),
-                'awards': url_for('api.get_team_awards', team_id=self.id)
+                'self': url_for('api.players.get_player', player_id=self.id),
+                'user': url_for('api.users.get_user', user_id=self.user_id) if self.user else None,
+                'first_season': url_for('api.season_division.get_season_division', season_division_id=self.first_season_id),
+                'current_team': url_for('api.teams.get_team', team_id=current_team.team.id) if current_team else None,
+                'teams': url_for('api.players.get_player_teams', player_id=self.id),
+                'free_agent_seasons': url_for('api.players.get_player_free_agent', player_id=self.id),
+                'awards': url_for('api.players.get_player_awards', player_id=self.id)
             }
         }
 
@@ -333,9 +335,9 @@ class Player(PaginatedAPIMixin, db.Model):
             'slap_id': self.slap_id,
             'current_team': current_team.team.name if current_team else None,
             '_links': {
-                'self': url_for('api.get_player', player_id=self.id),
-                'user': url_for('api.get_user', user_id=self.user_id) if self.user else None,
-                'current_team': url_for('api.get_team', team_id=current_team.team.id) if current_team else None
+                'self': url_for('api.players.get_player', player_id=self.id),
+                'user': url_for('api.users.get_user', user_id=self.user_id) if self.user else None,
+                'current_team': url_for('api.teams.get_team', team_id=current_team.team.id) if current_team else None
             }
         }
 
@@ -369,7 +371,8 @@ class Team(PaginatedAPIMixin, db.Model):
 
     player_association = db.relationship('PlayerTeam', back_populates='team', lazy='dynamic')
     players = association_proxy('player_association', 'player')
-    season_divisions = db.relationship('SeasonDivision', secondary=season_division_team, back_populates='teams', lazy='dynamic')
+    season_divisions = db.relationship('SeasonDivision', secondary=season_division_team, back_populates='teams',
+                                       lazy='dynamic')
     player_match_data = db.relationship('PlayerMatchData', back_populates='team')
     awards_association = db.relationship('TeamAward', back_populates='team', lazy=True)
     awards = association_proxy('awards_association', 'award')
@@ -380,7 +383,8 @@ class Team(PaginatedAPIMixin, db.Model):
 
     def to_dict(self):
         now = datetime.now(timezone.utc)
-        active_players = self.player_association.filter(sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))
+        active_players = self.player_association.filter(
+            sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))
         data = {
             'id': self.id,
             'name': self.name,
@@ -392,11 +396,11 @@ class Team(PaginatedAPIMixin, db.Model):
             'seasons_played': len(self.season_divisions),
             'awards': len(self.awards_association),
             '_links': {
-                'self': url_for('api.get_team', team_id=self.id),
+                'self': url_for('api.teams.get_team', team_id=self.id),
                 'logo': self.logo,
-                'active_players': url_for('api.get_team_players', team_id=self.id, current=True),
-                'seasons_played': url_for('api.get_team_seasons', team_id=self.id),
-                'awards': url_for('api.get_team_awards', team_id=self.id)
+                'active_players': url_for('api.teams.get_team_players', team_id=self.id, current=True),
+                'seasons_played': url_for('api.teams.get_team_seasons', team_id=self.id),
+                'awards': url_for('api.teams.get_team_awards', team_id=self.id)
             }
         }
 
@@ -408,7 +412,7 @@ class Team(PaginatedAPIMixin, db.Model):
             'acronym': self.acronym,
             'color': self.color,
             '_links': {
-                'self': url_for('api.get_team', team_id=self.id)
+                'self': url_for('api.teams.get_team', team_id=self.id)
             }
         }
         return data
@@ -435,6 +439,7 @@ class PlayerTeam(db.Model):
 
     def player_to_dict(self):
         data = {
+            'id': self.player.id,
             'name': self.player.player_name,
             'dates': [
                 {
@@ -443,7 +448,7 @@ class PlayerTeam(db.Model):
                 }
             ],
             '_links': {
-                'self': url_for('api.get_player', player_id=self.player.id)
+                'self': url_for('api.players.get_player', player_id=self.player.id)
             }
         }
         return data
@@ -460,7 +465,7 @@ class PlayerTeam(db.Model):
                 }
             ],
             '_links': {
-                'self': url_for('api.get_team', team_id=self.team.id)
+                'self': url_for('api.teams.get_team', team_id=self.team.id)
             }
         }
         return data
@@ -468,23 +473,26 @@ class PlayerTeam(db.Model):
     @staticmethod
     def get_players_dict(team_id, current=False):
         team = db.session.get(Team, team_id)
-        players = {}
+        players = []
         if current:
             for player_assoc in team.player_association:
                 now = datetime.now(timezone.utc)
-                if player_assoc.start_date.replace(tzinfo=timezone.utc) < now and (player_assoc.end_date is None or player_assoc.end_date.replace(tzinfo=timezone.utc) > now):
-                    players[player_assoc.player.id] = player_assoc.player_to_dict()
+                if player_assoc.start_date.replace(tzinfo=timezone.utc) < now and (
+                        player_assoc.end_date is None or player_assoc.end_date.replace(tzinfo=timezone.utc) > now):
+                    players.append(player_assoc.player_to_dict())
 
         else:
             for player_assoc in team.player_association:
-                if player_assoc.player.id not in players:
-                    players[player_assoc.player.id] = player_assoc.player_to_dict()
-                else:
+                index = next((i for i, player, in enumerate(players) if player['id'] == player_assoc.player.id), None)
+                if index:
                     dates = {
                         'start': player_assoc.start_date,
                         'end': player_assoc.end_date
                     }
-                    players[player_assoc.player.id]['dates'].append(dates)
+
+                    players[index]['dates'].append(dates)
+                else:
+                    players.append(player_assoc.player_to_dict())
 
         response = {
             'team': team.name,
@@ -492,8 +500,8 @@ class PlayerTeam(db.Model):
             'color': team.color,
             'players': players,
             '_links': {
-                'self': url_for('api.get_team_players', team_id=team.id, current=current),
-                'team': url_for('api.get_team', team_id=team.id)
+                'self': url_for('api.teams.get_team_players', team_id=team.id, current=current),
+                'team': url_for('api.teams.get_team', team_id=team.id)
             }
         }
         return response
@@ -505,13 +513,14 @@ class PlayerTeam(db.Model):
             response = None
             for team_assoc in player.team_association:
                 now = datetime.now(timezone.utc)
-                if team_assoc.start_date.replace(tzinfo=timezone.utc) < now and (team_assoc.end_date is None or team_assoc.end_date.replace(tzinfo=timezone.utc) > now):
+                if team_assoc.start_date.replace(tzinfo=timezone.utc) < now and (
+                        team_assoc.end_date is None or team_assoc.end_date.replace(tzinfo=timezone.utc) > now):
                     response = {
                         'player': player.player_name,
                         'current_team': team_assoc.team_to_dict(),
                         '_links': {
-                            'self': url_for('api.get_player_teams', player_id=player.id, current=True),
-                            'player': url_for('api.get_player', player_id=player.id)
+                            'self': url_for('api.players.get_player_teams', player_id=player.id, current=True),
+                            'player': url_for('api.players.get_player', player_id=player.id)
                         }
                     }
                     break
@@ -533,8 +542,8 @@ class PlayerTeam(db.Model):
                 'player': player.player_name,
                 'teams': teams,
                 '_links': {
-                    'self': url_for('api.get_player_teams', player_id=player.id),
-                    'player': url_for('api.get_player', player_id=player.id)
+                    'self': url_for('api.players.get_player_teams', player_id=player.id),
+                    'player': url_for('api.players.get_player', player_id=player.id)
                 }
             }
             return response
@@ -552,15 +561,15 @@ class FreeAgent(db.Model):
     season_division = db.relationship('SeasonDivision', back_populates='free_agent_association')
 
     def to_dict(self, parent):
-        if parent is 'player':
+        if parent == 'player':
             return self.season_division.to_simple_dict()
-        elif parent is 'season_division':
+        elif parent == 'season_division':
             data = {
                 'player': self.player.player_name,
                 'start_date': self.start_date,
                 'end_date': self.end_date,
                 '_links': {
-                    'player': url_for('api.get_player', player_id=self.player_id)
+                    'player': url_for('api.players.get_player', player_id=self.player_id)
                 }
             }
         else:
@@ -576,9 +585,10 @@ class FreeAgent(db.Model):
     @staticmethod
     def get_free_agent_seasons(player_id):
         player = db.session.get(Player, player_id)
-        season_query = db.session.query(FreeAgent).filter_by(player_id=player_id).order_by(sa.desc(FreeAgent.season_division_id))
+        season_query = db.session.query(FreeAgent).filter_by(player_id=player_id).order_by(
+            sa.desc(FreeAgent.season_division_id))
 
-        if season_query.count() is 0:
+        if season_query.count() == 0:
             return None
 
         seasons = []
@@ -589,8 +599,8 @@ class FreeAgent(db.Model):
             'player': player.player_name,
             'free_agent_seasons': seasons,
             '_links': {
-                'self': url_for('api.get_player_free_agent', player_id=player.id),
-                'player': url_for('api.get_player', player_id=player.id)
+                'self': url_for('api.players.get_player_free_agent', player_id=player.id),
+                'player': url_for('api.players.get_player', player_id=player.id)
             }
         }
         return response
@@ -602,7 +612,7 @@ class FreeAgent(db.Model):
         # query free agents
         player_query = db.session.query(FreeAgent).filter_by(season_division_id=season_division.id)
         # return none if no players
-        if player_query.count() is 0:
+        if player_query.count() == 0:
             return None
         # get players
         players = []
@@ -610,13 +620,15 @@ class FreeAgent(db.Model):
             players.append(free_agent_record.to_dict(parent='season_division'))
         # build response
         response = {
-            'season_division': season_division.get_readable_name(),
+            'id': season_division_id,
+            'season': season_division.season.name,
+            'division': season_division.division.name,
             'league': season_division.season.league.acronym,
             'free_agents': players,
             '_links': {
-                'self': url_for('api.get_free_agents_in_season_division', season_division_id=season_division.id),
-                'season_division': url_for('api.get_season_division', season_division_id=season_division.id),
-                'league': url_for('api.get_league', league_id_or_acronym=season_division.season.league.id)
+                'self': url_for('api.season_division.get_free_agents_in_season_division', season_division_id=season_division.id),
+                'season_division': url_for('api.season_division.get_season_division', season_division_id=season_division.id),
+                'league': url_for('api.leagues.get_league', league_id_or_acronym=season_division.season.league.id)
             }
         }
         return response
@@ -643,9 +655,9 @@ class League(PaginatedAPIMixin, db.Model):
             'seasons_count': self.seasons.count(),
             'divisions_count': self.divisions.count(),
             '_links': {
-                'self': url_for('api.get_league', league_id_or_acronym=self.id),
-                'seasons': url_for('api.get_league_seasons', league_id_or_acronym=self.id),
-                'divisions': url_for('api.get_league_divisions', league_id_or_acronym=self.id)
+                'self': url_for('api.leagues.get_league', league_id_or_acronym=self.id),
+                'seasons': url_for('api.leagues.get_league_seasons', league_id_or_acronym=self.id),
+                'divisions': url_for('api.leagues.get_league_divisions', league_id_or_acronym=self.id)
             }
         }
         return data
@@ -688,10 +700,10 @@ class Season(PaginatedAPIMixin, db.Model):
             'match_type': self.match_type.name,
             'divisions_count': self.division_association.count(),
             '_links': {
-                'self': url_for('api.get_season', season_id=self.id),
-                'league': url_for('api.get_league', league_id_or_acronym=self.league_id),
-                'match_type': None,  # url_for('api.get_match_type', match_type_id=self.match_type_id),
-                'divisions': url_for('api.get_divisions_in_season', season_id=self.id)
+                'self': url_for('api.seasons.get_season', season_id=self.id),
+                'league': url_for('api.leagues.get_league', league_id_or_acronym=self.league_id),
+                'match_type': url_for('api.match.get_match_type', match_type_id=self.match_type_id),
+                'divisions': url_for('api.seasons.get_divisions_in_season', season_id=self.id)
             }
         }
         return data
@@ -726,9 +738,9 @@ class Division(PaginatedAPIMixin, db.Model):
             'description': self.description,
             'seasons_count': self.season_association.count(),
             '_links': {
-                'self': url_for('api.get_league', league_id_or_acronym=self.id),
-                'league': url_for('api.get_league', league_id_or_acronym=self.league_id),
-                'seasons': url_for('api.get_seasons_of_division', division_id=self.id)
+                'self': url_for('api.divisions.get_division', division_id=self.id),
+                'league': url_for('api.leagues.get_league', league_id_or_acronym=self.league_id),
+                'seasons': url_for('api.divisions.get_seasons_of_division', division_id=self.id)
             }
         }
         return data
@@ -776,15 +788,15 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
             'matches_count': len(self.matches),
             'finals_count': len(self.finals),
             '_links': {
-                'self': url_for('api.get_league', league_id_or_acronym=self.id),
-                'league': url_for('api.get_league', league_id_or_acronym=self.season.league_id),
-                'season': url_for('api.get_season', season_id=self.season_id),
-                'division': url_for('api.get_division', division_id=self.division_id),
-                'teams': url_for('api.get_teams_in_season_division', season_division_id=self.id),
-                'free_agents': url_for('api.get_free_agents_in_season_division', season_division_id=self.id),
-                'rookies': url_for('api.get_rookies_in_season_division', season_division_id=self.id),
-                'matches': url_for('api.get_matches_in_season_division', season_division_id=self.id),
-                'finals': url_for('api.get_finals_in_season_division', season_division_id=self.id)
+                'self': url_for('api.season_division.get_season_division', season_division_id=self.id),
+                'league': url_for('api.leagues.get_league', league_id_or_acronym=self.season.league_id),
+                'season': url_for('api.seasons.get_season', season_id=self.season_id),
+                'division': url_for('api.divisions.get_division', division_id=self.division_id),
+                'teams': url_for('api.season_division.get_teams_in_season_division', season_division_id=self.id),
+                'free_agents': url_for('api.season_division.get_free_agents_in_season_division', season_division_id=self.id),
+                'rookies': url_for('api.season_division.get_rookies_in_season_division', season_division_id=self.id),
+                'matches': url_for('api.season_division.get_matches_in_season_division', season_division_id=self.id),
+                'finals': url_for('api.season_division.get_finals_in_season_division', season_division_id=self.id)
             }
         }
         return data
@@ -796,10 +808,10 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
             'division': self.division.name,
             'league': self.season.league.acronym,
             '_links': {
-                'self': url_for('api.get_season_division', season_division_id=self.id),
-                'season': url_for('api.get_season', season_id=self.season.id),
-                'division': url_for('api.get_division', division_id=self.division.id),
-                'league': url_for('api.get_league', league_id_or_acronym=self.season.league.id)
+                'self': url_for('api.season_division.get_season_division', season_division_id=self.id),
+                'season': url_for('api.seasons.get_season', season_id=self.season.id),
+                'division': url_for('api.divisions.get_division', division_id=self.division.id),
+                'league': url_for('api.leagues.get_league', league_id_or_acronym=self.season.league.id)
             }
         }
         return data
@@ -813,8 +825,9 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
         response = season_division.to_simple_dict()
         response['teams'] = teams
         links = {
-            'self': url_for('api.get_teams_in_season_division', season_division_id=season_division.id),
-            'season_division': url_for('api.get_season_division', season_division_id=season_division.id)
+            'self': url_for('api.season_division.get_teams_in_season_division', season_division_id=season_division.id),
+            'season_division': url_for('api.season_division.get_season_division', season_division_id=season_division.id),
+            'league': url_for('api.leagues.get_league', league_id_or_acronym=season_division.season.league.id)
         }
         response['_links'] = links
         return response
@@ -828,8 +841,8 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
         response = team.to_simple_dict()
         response['season_divisions'] = seasons
         links = {
-            'self': url_for('api.get_team_seasons', team_id=team.id),
-            'team': url_for('api.get_team', team_id=team.id)
+            'self': url_for('api.teams.get_team_seasons', team_id=team.id),
+            'team': url_for('api.teams.get_team', team_id=team.id)
         }
         response['_links'] = links
         return response
@@ -842,8 +855,25 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
         response = self.to_simple_dict()
         response['rookies'] = rookies
         links = {
-            'self': url_for('api.get_rookies_in_season_division', season_division_id=self.id),
-            'season_division': url_for('api.get_season_division', season_division_id=self.id)
+            'self': url_for('api.season_division.get_rookies_in_season_division', season_division_id=self.id),
+            'season_division': url_for('api.season_division.get_season_division', season_division_id=self.id),
+            'league': url_for('api.leagues.get_league', league_id_or_acronym=self.season.league.id)
+        }
+        response['_links'] = links
+        return response
+
+    def get_matches_dict(self, unplayed=False):
+        matches = []
+        for match in self.matches:
+            if match.results is None or not unplayed:
+                matches.append(match.to_simple_dict())
+
+        response = self.to_simple_dict()
+        response['matches'] = matches
+        links = {
+            'self': url_for('api.season_division.get_rookies_in_season_division', season_division_id=self.id),
+            'season_division': url_for('api.season_division.get_season_division', season_division_id=self.id),
+            'league': url_for('api.leagues.get_league', league_id_or_acronym=self.season.league.id)
         }
         response['_links'] = links
         return response
@@ -866,10 +896,62 @@ class Match(db.Model):
     away_team = db.relationship('Team', backref='matches_away', foreign_keys=away_team_id)
     streamer = db.relationship('User', back_populates='streamed_matches')
     final = db.relationship('Final', back_populates='matches')
-    results = db.relationship('MatchResult', back_populates='match', lazy=True, uselist=False)  # null if not completed?
+    results = db.relationship('MatchResult', back_populates='match', lazy=True, uselist=False)
     schedule = db.relationship('MatchSchedule', back_populates='match', uselist=False)
     team_availability = db.relationship('MatchAvailability', back_populates='match')
-    lobbies = db.relationship('Lobby', back_populates='match', lazy=True)
+    lobbies = db.relationship('Lobby', back_populates='match', lazy='dynamic')
+
+    def from_dict(self, data):
+        for field in ['season_division_id', 'home_team_id', 'away_team_id', 'round', 'match_week']:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def current_lobby(self):
+        current_lobby = self.lobbies.filter_by(active=True).first()
+        return {'id': current_lobby.id, 'password': current_lobby.password} if current_lobby else None
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            'season_division': self.season_division.get_readable_name(),
+            'home_team': self.home_team.to_simple_dict(),
+            'away_team': self.away_team.to_simple_dict(),
+            'round': self.round,
+            'match_week': self.match_week,
+            'cancelled': self.cancelled,
+            'streamer': self.streamer.twitch.to_dict() if self.streamer else None,
+            'final': bool(self.final_id),
+            'scheduled_time': self.schedule.scheduled_time,
+            'current_lobby': self.current_lobby(),
+            'results': self.results.to_dict() if self.results else None,
+            '_links': {
+                'self': url_for('api.match.get_match', match_id=self.id),
+                'season_division': url_for('api.season_division.get_season_division', season_division_id=self.season_division_id),
+                'home_team': url_for('api.teams.get_team', team_id=self.home_team_id),
+                'away_team': url_for('api.teams.get_team', team_id=self.away_team_id),
+                'streamer': url_for('api.users.twitch.get_user_twitch', user_id=self.streamer_id) if self.streamer else None
+            }
+        }
+        return data
+
+    def to_simple_dict(self):
+        data = {
+            'id': self.id,
+            'home_team': self.home_team.name,
+            'away_team': self.away_team.name,
+            'result': self.results.get_result() if self.results else None,
+            'round': self.round,
+            'match_week': self.match_week,
+            'final': bool(self.final_id),
+            'scheduled_time': self.schedule.scheduled_time,
+            'current_lobby': self.current_lobby(),
+            '_links': {
+                'self': url_for('api.match.get_match', match_id=self.id),
+                'home_team': url_for('api.teams.get_team', team_id=self.home_team_id),
+                'away_team': url_for('api.teams.get_team', team_id=self.away_team_id),
+            }
+        }
+        return data
 
 
 # result of a match between two registered league teams, one-to-one relationship with match
@@ -883,10 +965,35 @@ class MatchResult(db.Model):
     overtime = db.Column(db.Boolean, nullable=False, default=False)
     forfeit = db.Column(db.Boolean, nullable=False, default=False)
     vod = db.Column(db.String(128))
+    completed_date = db.Column(db.DateTime)
 
     match = db.relationship('Match', back_populates='results', uselist=False)
     winner = db.relationship('Team', backref='matches_won', foreign_keys=winner_id)
     loser = db.relationship('Team', backref='matches_lost', foreign_keys=loser_id)
+
+    def get_result(self):
+        return f"{self.winner.name} {self.score_winner}-{self.score_loser} {self.loser.name}"
+
+    def from_dict(self, data):
+        for field in ['winner_id', 'loser_id', 'draw', 'score_winner', 'score_loser', 'overtime', 'forfeit', 'vod']:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def to_dict(self):
+        data = {
+            'winner': self.winner.name,
+            'loser': self.loser.name,
+            'draw': self.draw,
+            'score_winner': self.score_winner,
+            'score_loser': self.score_loser,
+            'overtime': self.overtime,
+            'forfeit': self.forfeit,
+            'vod': self.vod,
+            '_links': {
+                'self': url_for('api.match.get_match', match_id=self.id)
+            }
+        }
+        return data
 
 
 # presets for creating lobbies using different match types
@@ -899,8 +1006,30 @@ class Matchtype(db.Model):
     mercy_rule = db.Column(db.Integer, nullable=False, default=0)
     match_length = db.Column(db.Integer, nullable=False, default=300)
     game_mode = db.Column(db.String(32), db.ForeignKey('game_mode.value'), nullable=False)
+    num_players = db.Column(db.Integer, nullable=False, default=3)
 
     seasons = db.relationship('Season', back_populates='match_type', lazy=True)
+
+    def to_dict(self):
+        data = {
+            'name': self.name,
+            'description': self.description,
+            'periods': self.periods,
+            'arena': self.arena,
+            'mercy_rule': self.mercy_rule,
+            'match_length': self.match_length,
+            'game_mode': self.game_mode,
+            'num_players': self.num_players,
+            '_links': {
+                'self': url_for('api.match.get_match_type', match_type_id=self.id)
+            }
+        }
+        return data
+
+    def from_dict(self, data):
+        for field in ['name', 'description', 'periods', 'arena', 'mercy_rule', 'match_length', 'game_mode', 'num_players']:
+            if field in data:
+                setattr(self, field, data[field])
 
 
 # stores data on an in game lobby for use with Slapshot Public API
@@ -910,20 +1039,63 @@ class Lobby(db.Model):
     lobby_id = db.Column(db.String(64), nullable=False)
     active = db.Column(db.Boolean, nullable=False, default=True)
     password = db.Column(db.String(64), nullable=False)
+    task_id = db.Column(db.String(64))
 
     match = db.relationship('Match', back_populates='lobbies')
-    match_data = db.relationship('MatchData', back_populates='lobby', lazy=True)
+    match_data = db.relationship('MatchData', back_populates='lobby', lazy='dynamic')
 
 
 # stores data on in game matches (periods of a match are separate entries)
 class MatchData(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     lobby_id = db.Column(db.Integer, db.ForeignKey('lobby.id'))
+    processed = db.Column(db.Boolean, nullable=False, default=False)
+    accepted = db.Column(db.Boolean, nullable=False, default=False)
     match_id = db.Column(db.String(64), nullable=False)
+    region = db.Column(db.String(16), nullable=False)
+    gamemode = db.Column(db.String(16), nullable=False)
+    created = db.Column(db.DateTime, nullable=False)
+    arena = db.Column(db.String(16), nullable=False)
+    home_score = db.Column(db.Integer, nullable=False)
+    away_score = db.Column(db.Integer, nullable=False)
+    winner = db.Column(db.String(10), nullable=False)
+    current_period = db.Column(db.Integer, nullable=False)
+    periods_enabled = db.Column(db.Boolean, nullable=False)
+    custom_mercy_rule = db.Column(db.String(16), nullable=False)
+    end_reason = db.Column(db.String(32), nullable=False)
+    source = db.Column(db.String(10))  # e.g. slap api, user, import
 
     lobby = db.relationship('Lobby', back_populates='match_data')
-    player_data_assoc = db.relationship('PlayerMatchData', back_populates='match')
+    player_data_assoc = db.relationship('PlayerMatchData', back_populates='match', lazy='dynamic')
     player_data = association_proxy('player_data_assoc', 'player')
+
+    def from_dict(self, data):
+        for field in ['lobby_id', 'processed', 'match_id', 'region', 'gamemode', 'created', 'arena', 'home_score',
+                      'away_score', 'winner', 'current_period', 'periods_enabled', 'custom_mercy_rule', 'end_reason', 'source']:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            'lobby_id': self.lobby_id,
+            'processed': self.processed,
+            'accepted': self.accepted,
+            'match_id': self.match_id,
+            'region': self.region,
+            'gamemode': self.gamemode,
+            'created': self.created,
+            'arena': self.arena,
+            'home_score': self.home_score,
+            'away_score': self.away_score,
+            'winner': self.winner,
+            'current_period': self.current_period,
+            'periods_enabled': self.periods_enabled,
+            'custom_mercy_rule': self.custom_mercy_rule,
+            'end_reason': self.end_reason,
+            'source': self.source
+        }
+        return data
 
 
 # stores match data of particular players (periods of a match are separate entries)
@@ -932,13 +1104,6 @@ class PlayerMatchData(db.Model):
     match_id = db.Column(db.Integer, db.ForeignKey('match_data.id'))
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'))
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
-    period = db.Column(db.Integer, default=0)
-    source = db.Column(db.String(10))  # e.g. slap api, user, import
-    reviewed_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    recorded_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow())
-    reviewed_date = db.Column(db.DateTime)
-    valid = db.Column(db.Boolean, default=True)
-    comments = db.Column(db.String(256))
     goals = db.Column(db.Integer, default=0)
     shots = db.Column(db.Integer, default=0)
     assists = db.Column(db.Integer, default=0)
@@ -949,7 +1114,7 @@ class PlayerMatchData(db.Model):
     blocks = db.Column(db.Integer, default=0)
     takeaways = db.Column(db.Integer, default=0)
     turnovers = db.Column(db.Integer, default=0)
-    possession_time = db.Column(db.Integer, default=0)
+    possession_time_sec = db.Column(db.Integer, default=0)
     game_winning_goals = db.Column(db.Integer, default=0)
     overtime_goals = db.Column(db.Integer, default=0)
     post_hits = db.Column(db.Integer, default=0)
@@ -960,7 +1125,41 @@ class PlayerMatchData(db.Model):
     match = db.relationship('MatchData', back_populates='player_data_assoc')
     player = db.relationship('Player', back_populates='match_data_assoc')
     team = db.relationship('Team', back_populates='player_match_data')
-    reviewed_by = db.relationship('User', back_populates='reviewed_matches')
+
+    def from_dict(self, data):
+        for field in ['match_id', 'player_id', 'team_id', 'goals', 'shots', 'assists', 'saves', 'primary_assists',
+                      'secondary_assists', 'passes', 'blocks', 'takeaways', 'turnovers', 'possession_time_sec',
+                      'game_winning_goals', 'post_hits', 'faceoffs_won', 'faceoffs_lost', 'score']:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def to_dict(self):
+        data = {
+            'id': self.match_id,
+            'player': self.player.player_name,
+            'team': self.team.name,
+            'goals': self.goals,
+            'shots': self.shots,
+            'assists': self.assists,
+            'saves': self.saves,
+            'primary_assists': self.primary_assists,
+            'secondary_assists': self.secondary_assists,
+            'passes': self.passes,
+            'blocks': self.blocks,
+            'takeaways': self.takeaways,
+            'turnovers': self.turnovers,
+            'possession_time_sec': self.possession_time_sec,
+            'game_winning_goals': self.game_winning_goals,
+            'post_hits': self.post_hits,
+            'faceoffs_won': self.faceoffs_won,
+            'faceoffs_lost': self.faceoffs_lost,
+            'score': self.score,
+            '_links': {
+                'player': url_for('api.players.get_player', player_id=self.player_id),
+                'team': url_for('api.teams.get_team', team_id=self.team_id)
+            }
+        }
+        return data
 
 
 class Final(db.Model):
@@ -1081,6 +1280,38 @@ class Event(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     module = db.Column(db.String(50), index=True)
     message = db.Column(db.String(200))
+
+
+class MatchReview(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    match_id = db.Column(db.Integer, db.ForeignKey('match.id'))
+    type = db.Column(db.String(16), nullable=False)
+    reason = db.Column(db.String(64), nullable=False)
+    raised_by = db.Column(db.String(32))
+    comments = db.Column(db.String(256))
+    resolved = db.Column(db.Boolean, nullable=False, default=False)
+    resolved_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    resolved_on = db.Column(db.Integer)
+
+    reviewer = db.relationship('User', backref='match_review')
+
+    def from_dict(self, data):
+        for field in ['match_id', 'type', 'raised_by', 'reason', 'comments', 'resolved', 'resolved_by', 'resolved_on']:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            'type': self.type,
+            'reason': self.reason,
+            'raised_by': self.raised_by,
+            'comments': self.comments,
+            'resolved': self.resolved,
+            'resolved_by': self.resolved_by,
+            'resolved_on': self.resolved_on
+        }
+        return data
 
 
 @login.user_loader

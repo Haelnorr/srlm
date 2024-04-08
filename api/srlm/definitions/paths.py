@@ -1,3 +1,4 @@
+"""Basically just for getting the ROOT_DIR path"""
 import os.path
 from pathlib import Path
 

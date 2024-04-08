@@ -1,3 +1,4 @@
+"""Functions for interfacing with the Events table"""
 from sqlalchemy import and_
 from api.srlm.app import db
 from api.srlm.app.models import Event, load_user

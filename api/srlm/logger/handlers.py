@@ -1,3 +1,4 @@
+"""Sets up the logging module"""
 import logging
 import sys
 from datetime import datetime
@@ -31,7 +32,7 @@ def get_mail_handler():
     mail_handler = SMTPHandler(
         mailhost=(mail_config.mail_server, mail_config.mail_port),
         fromaddr='no-reply@' + mail_config.mail_server,
-        toaddrs=mail_config.admins, subject='LDS Manager - Error',
+        toaddrs=mail_config.admins, subject='SRLM - Server Error',
         credentials=auth, secure=secure)
     mail_handler.setLevel(logging.ERROR)
     return mail_handler
