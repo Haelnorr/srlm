@@ -1,5 +1,5 @@
 """Endpoints Relating to SeasonDivisions"""
-from apifairy import authenticate, other_responses, response, body
+from apifairy import authenticate, other_responses, response, body, arguments
 
 from api.srlm.app import db
 from api.srlm.app.api import bp
@@ -9,7 +9,7 @@ from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import LinkSuccessSchema, SeasonDivisionSchema, SeasonDivisionTeams, \
-    SeasonDivisionFreeAgents, SeasonDivisionRookies, SeasonDivisionMatches
+    SeasonDivisionFreeAgents, SeasonDivisionRookies, SeasonDivisionMatches, FilterSchema
 from api.srlm.app.models import SeasonDivision, FreeAgent, Season, Division
 from api.srlm.app.api.auth.utils import app_auth
 
@@ -104,13 +104,14 @@ def get_free_agents_in_season_division(season_division_id):
 
 
 @season_division.route('/<int:season_division_id>/matches', methods=['GET'])
+@arguments(FilterSchema())
 @response(SeasonDivisionMatches())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
-def get_matches_in_season_division(season_division_id):
+def get_matches_in_season_division(search_filter, season_division_id):
     """Get a list of matches in a Season Division"""
     season_division_db = ensure_exists(SeasonDivision, id=season_division_id)
-    unplayed = request.args.get('unplayed', False, bool)  # TODO
+    unplayed = search_filter.get('unplayed', False, bool)
 
     matches = season_division_db.get_matches_dict(unplayed)
 

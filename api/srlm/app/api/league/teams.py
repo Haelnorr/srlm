@@ -107,7 +107,7 @@ def update_team(team_id):
 def get_team_players(search_filter, team_id):
     """Get a list of the teams players"""
     team = ensure_exists(Team, id=team_id)
-    current = search_filter.get('current')
+    current = search_filter.get('current', False, bool)
 
     team_players = PlayerTeam.get_players_dict(team.id, current)
 

@@ -12,7 +12,7 @@ from api.srlm.app.api.utils.errors import BadRequest, ResourceNotFound
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, PlayerSchema, PlayerCollection, LinkSuccessSchema, \
-    EditPlayerSchema, PlayerTeams, PlayerSeasons
+    EditPlayerSchema, PlayerTeams, PlayerSeasons, FilterSchema
 from api.srlm.app.models import Player, SeasonDivision, Team, PlayerTeam, FreeAgent
 from api.srlm.logger import get_logger
 log = get_logger(__name__)
@@ -100,13 +100,14 @@ def update_player(player_id):
 
 
 @players.route('/<int:player_id>/teams', methods=['GET'])
+@arguments(FilterSchema())
 @response(PlayerTeams())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
-def get_player_teams(player_id):
+def get_player_teams(search_filter, player_id):
     """Get a list of teams the player has played on"""
     player = ensure_exists(Player, id=player_id)
-    current = request.args.get('current', False, bool)  # TODO
+    current = search_filter.get('current', False, bool)
 
     player_teams = PlayerTeam.get_teams_dict(player.id, current)
 

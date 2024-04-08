@@ -42,6 +42,7 @@ class Collection(ma.Schema):
 class FilterSchema(ma.Schema):
     """Defines filter arg"""
     current = ma.Bool()
+    unplayed = ma.Bool()
 
 
 class BasicAuthSchema(ma.Schema):
@@ -799,8 +800,9 @@ class TeamLink(Links):
 class TeamPlayers(ma.Schema):
     """Defines the response for the list of players a team has"""
     class PlayerList(ma.Schema):
+        id = ma.Int()
         name = ma.Str()
-        dates = ma.Nested(StartEndDates())
+        dates = ma.List(ma.Nested(StartEndDates()))
         _links = ma.Nested(Links())
 
     team = ma.Str()
@@ -813,9 +815,9 @@ class TeamPlayers(ma.Schema):
 class TeamSeasonPlayers(ma.Schema):
     """Defines the response for the list of players in a team during a given season"""
     class CurrentPlayer(ma.Schema):
+        id = ma.Int()
         name = ma.Str()
-        start_date = ma.DateTime()
-        end_date = ma.DateTime()
+        dates = ma.List(ma.Nested(StartEndDates()))
         _links = ma.Nested(Links())
 
     season_division = ma.Str()

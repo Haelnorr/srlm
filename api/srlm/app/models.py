@@ -439,6 +439,7 @@ class PlayerTeam(db.Model):
 
     def player_to_dict(self):
         data = {
+            'id': self.player.id,
             'name': self.player.player_name,
             'dates': [
                 {
@@ -472,24 +473,26 @@ class PlayerTeam(db.Model):
     @staticmethod
     def get_players_dict(team_id, current=False):
         team = db.session.get(Team, team_id)
-        players = {}
+        players = []
         if current:
             for player_assoc in team.player_association:
                 now = datetime.now(timezone.utc)
                 if player_assoc.start_date.replace(tzinfo=timezone.utc) < now and (
                         player_assoc.end_date is None or player_assoc.end_date.replace(tzinfo=timezone.utc) > now):
-                    players[player_assoc.player.id] = player_assoc.player_to_dict()
+                    players.append(player_assoc.player_to_dict())
 
         else:
             for player_assoc in team.player_association:
-                if player_assoc.player.id not in players:
-                    players[player_assoc.player.id] = player_assoc.player_to_dict()
-                else:
+                index = next((i for i, player, in enumerate(players) if player['id'] == player_assoc.player.id), None)
+                if index:
                     dates = {
                         'start': player_assoc.start_date,
                         'end': player_assoc.end_date
                     }
-                    players[player_assoc.player.id]['dates'].append(dates)
+
+                    players[index]['dates'].append(dates)
+                else:
+                    players.append(player_assoc.player_to_dict())
 
         response = {
             'team': team.name,
