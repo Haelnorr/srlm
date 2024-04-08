@@ -10,8 +10,6 @@
    - ~~match data validation~~
    - ~~match review system~~
  - ~~integration with Slapshot Public API for lobby creation and retrieving match data~~
- - match_data stuff (including legacy)
- - import legacy match data
  - ~~api endpoints~~
    - ~~match review~~
    - ~~lobby creation and details~~
@@ -29,6 +27,8 @@
  - route cooldowns?
  - setup mysql in docker
  - web relay for discord bot notifications
+ - match_data stuff (including legacy)
+ - import legacy match data
 
 **Completed**
  - database models implemented
