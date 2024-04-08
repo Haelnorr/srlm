@@ -31,5 +31,5 @@ class Config:
         "result_backend": os.getenv('CELERY_BACKEND')
     }
     APIFAIRY_TITLE = 'Slapshot: Rebound - League Manager API'
-    APIFAIRY_VERSION = '0.5 - dev'
+    APIFAIRY_VERSION = '0.6 - dev'
 

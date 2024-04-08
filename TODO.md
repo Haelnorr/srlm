@@ -1,21 +1,6 @@
 # TODO
 
 **Before next PR**
- - ~~matches & lobbies~~
-   - ~~create and view matches~~
-   - ~~get match results~~
-   - ~~update match & match results~~
-   - ~~lobby creation and monitoring~~
-   - ~~match_stats retrieval~~
-   - ~~match data validation~~
-   - ~~match review system~~
- - ~~integration with Slapshot Public API for lobby creation and retrieving match data~~
- - ~~api endpoints~~
-   - ~~match review~~
-   - ~~lobby creation and details~~
-   - ~~reporting system~~
- - ~~get slapid and create/link player from steamID~~
- - ~~APIFairy~~
 
 **Future**
  - api endpoints (list incomplete)
@@ -42,6 +27,17 @@
  - permission and discord endpoints
  - twitch account database support and endpoints
  - document error codes and formats
+ - matches & lobbies
+ - create and view matches
+ - get match results
+ - update match & match results
+ - lobby creation and monitoring
+ - match_stats retrieval
+ - match data validation
+ - match review system
+ - integration with Slapshot Public API for lobby creation and retrieving match data
+ - get slapid and create/link player from steamID
+ - APIFairy
  - api endpoints
    - user
    - permission
@@ -53,3 +49,6 @@
    - team
    - player_team
    - free agent
+   - match review
+   - lobby creation and details
+   - reporting system
