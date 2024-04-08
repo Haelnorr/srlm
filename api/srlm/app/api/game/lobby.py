@@ -1,7 +1,7 @@
 """Provides routes for generating and cancelling in game lobbies"""
 from apifairy import body, response, authenticate, other_responses
-from flask import request
-from api.srlm.app.api.game import game_bp as game
+from flask import request, Blueprint
+from api.srlm.app.api import bp
 from api.srlm.app.api.auth.utils import req_app_token, user_auth
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import force_fields, ensure_exists
@@ -12,7 +12,11 @@ from api.srlm.app.spapi.lobby_manager import generate_lobby
 from api.srlm.app.task_manager.tasks import cancel_task
 
 
-@game.route('/lobby', methods=['POST'])
+lobby = Blueprint('lobby', __name__)
+bp.register_blueprint(lobby, url_prefix='/lobby')
+
+
+@lobby.route('/', methods=['POST'])
 @req_app_token
 @body(GenerateLobbySchema())
 @response(LinkSuccessSchema(), status_code=201)
@@ -27,10 +31,10 @@ def generate_lobby():
 
     generate_lobby(match)
 
-    return responses.create_success(f'Created lobby for {match.home_team.name} vs {match.away_team.name}.', 'api.game.get_match', match_id=match.id)
+    return responses.create_success(f'Created lobby for {match.home_team.name} vs {match.away_team.name}.', 'api.match.get_match', match_id=match.id)
 
 
-@game.route('/lobby/<int:lobby_id>', methods=['DELETE'])
+@lobby.route('/<int:lobby_id>', methods=['DELETE'])
 @req_app_token
 @response(BasicSuccessSchema())
 @authenticate(user_auth)
@@ -41,4 +45,4 @@ def abort_lobby(lobby_id):
 
     cancel_task(lobby.task_id)
 
-    return responses.request_success(f'Lobby {lobby.id} aborted', 'api.game.get_match', match_id=lobby.match.id)
+    return responses.request_success(f'Lobby {lobby.id} aborted', 'api.match.get_match', match_id=lobby.match.id)

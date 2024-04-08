@@ -1,8 +1,8 @@
 """Endpoints for managing Twitch linking"""
 from apifairy import response, authenticate, other_responses, body
-from flask import request
+from flask import request, Blueprint
 from api.srlm.app import db
-from api.srlm.app.api.users import users_bp as users
+from api.srlm.app.api.users import users_bp
 from api.srlm.app.api.auth.utils import req_app_token, user_auth, get_bearer_token
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.errors import ResourceNotFound, UserAuthError, BadRequest
@@ -12,7 +12,11 @@ from api.srlm.app.fairy.schemas import LinkSuccessSchema, TwitchSchema, UpdateTw
 from api.srlm.app.models import User, Twitch
 
 
-@users.route('/users/<int:user_id>/twitch', methods=['GET'])
+twitch = Blueprint('twitch', __name__)
+users_bp.register_blueprint(twitch)
+
+
+@twitch.route('/<int:user_id>/twitch', methods=['GET'])
 @req_app_token
 @response(TwitchSchema())
 @authenticate(user_auth)
@@ -32,7 +36,7 @@ def get_user_twitch(user_id):
     return user.twitch.to_dict(authenticated=authenticated)
 
 
-@users.route('/users/<int:user_id>/twitch', methods=['POST'])
+@twitch.route('/<int:user_id>/twitch', methods=['POST'])
 @req_app_token
 @user_auth.login_required
 @body(TwitchSchema())
@@ -66,10 +70,10 @@ def create_user_twitch(user_id):
     db.session.add(twitch)
     db.session.commit()
 
-    return responses.create_success('Twitch account linked', 'api.users.get_user_twitch', user_id=user_id)
+    return responses.create_success('Twitch account linked', 'api.users.twitch.get_user_twitch', user_id=user_id)
 
 
-@users.route('/users/<int:user_id>/twitch', methods=['PUT'])
+@twitch.route('/<int:user_id>/twitch', methods=['PUT'])
 @req_app_token
 @user_auth.login_required
 @body(UpdateTwitchSchema())
@@ -106,10 +110,10 @@ def update_user_twitch(user_id):
     user.twitch.from_dict(data)
     db.session.commit()
 
-    return responses.request_success('Twitch account updated', 'api.users.get_user_twitch', user_id=user_id)
+    return responses.request_success('Twitch account updated', 'api.users.twitch.get_user_twitch', user_id=user_id)
 
 
-@users.route('/users/<int:user_id>/twitch', methods=['DELETE'])
+@twitch.route('/<int:user_id>/twitch', methods=['DELETE'])
 @req_app_token
 @user_auth.login_required
 @response(LinkSuccessSchema())

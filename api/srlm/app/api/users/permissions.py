@@ -1,8 +1,8 @@
 """Endpoints for managing user permissions"""
 from apifairy import body, response, authenticate, other_responses
-from flask import url_for, request
+from flask import url_for, request, Blueprint
 from api.srlm.app import db
-from api.srlm.app.api.users import users_bp as users
+from api.srlm.app.api.users import users_bp
 from api.srlm.app.api.auth.utils import req_app_token, user_auth
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.errors import BadRequest, ResourceNotFound
@@ -13,7 +13,11 @@ from api.srlm.app.fairy.schemas import UserPermissionsCollection, UserPermission
 from api.srlm.app.models import User, Permission, UserPermissions
 
 
-@users.route('/users/<int:user_id>/permissions', methods=['GET'])
+permissions = Blueprint('permissions', __name__)
+users_bp.register_blueprint(permissions)
+
+
+@permissions.route('/<int:user_id>/permissions', methods=['GET'])
 @req_app_token
 @response(UserPermissionsCollection())
 @authenticate(user_auth)
@@ -30,14 +34,14 @@ def get_user_permissions(user_id):
         'username': user.username,
         'permissions': permissions,
         '_links': {
-            'self': url_for('api.users.get_user_permissions', user_id=user_id)
+            'self': url_for('api.users.permissions.get_user_permissions', user_id=user_id)
         }
     }
 
     return response_json
 
 
-@users.route('/users/<int:user_id>/permissions', methods=['POST'])
+@permissions.route('/<int:user_id>/permissions', methods=['POST'])
 @req_app_token
 @body(UserPermissionsSchema())
 @response(LinkSuccessSchema(), status_code=201)
@@ -65,10 +69,10 @@ def add_user_permissions(user_id):
     db.session.add(user_perm)
     db.session.commit()
 
-    return responses.create_success(f'Permission {user_perm.permssion.key} added to user {user_perm.user.username}', 'api.users.get_user_permissions', user_id=user_id)
+    return responses.create_success(f'Permission {user_perm.permssion.key} added to user {user_perm.user.username}', 'api.users.permissions.get_user_permissions', user_id=user_id)
 
 
-@users.route('/users/<int:user_id>/permissions', methods=['PUT'])
+@permissions.route('/<int:user_id>/permissions', methods=['PUT'])
 @req_app_token
 @body(UpdateUserPermissionsSchema())
 @response(LinkSuccessSchema())
@@ -93,10 +97,10 @@ def update_user_permissions(user_id):
     user_perm.additional_modifiers = modifiers
     db.session.commit()
 
-    return responses.request_success(f'Permission {user_perm.permssion.key} updated for user {user_perm.user.username}', 'api.users.get_user_permissions', user_id=user_id)
+    return responses.request_success(f'Permission {user_perm.permssion.key} updated for user {user_perm.user.username}', 'api.users.permissions.get_user_permissions', user_id=user_id)
 
 
-@users.route('/users/<int:user_id>/permissions/revoke', methods=['POST'])
+@permissions.route('/<int:user_id>/permissions/revoke', methods=['POST'])
 @req_app_token
 @body(RevokeUserPermission())
 @response(LinkSuccessSchema())
@@ -118,4 +122,4 @@ def revoke_user_permissions(user_id):
     db.session.query(UserPermissions).filter_by(user_id=user.id, permission_id=permission.id).delete()
     db.session.commit()
 
-    return responses.request_success(f'Permission {permission.key} revoked from user {user.username}', 'api.users.get_user_permissions', user_id=user_id)
+    return responses.request_success(f'Permission {permission.key} revoked from user {user.username}', 'api.users.permissions.get_user_permissions', user_id=user_id)

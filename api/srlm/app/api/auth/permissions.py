@@ -1,6 +1,6 @@
 """Auth endpoints relating to permissions"""
 from apifairy import response, authenticate, other_responses, body, arguments
-from flask import request, url_for
+from flask import request, url_for, Blueprint
 import sqlalchemy as sa
 from api.srlm.app import db
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
@@ -18,6 +18,10 @@ from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
 
+permissions = Blueprint('permissions', __name__)
+auth.register_blueprint(permissions, url_prefix='/permissions')
+
+
 # Checks if a permission with the given key exists in the database
 def check_key_exists(key):
     query = db.session.query(Permission).filter(Permission.key == key)
@@ -25,7 +29,7 @@ def check_key_exists(key):
     return exists
 
 
-@auth.route('/permissions/<perm_id_or_key>', methods=['GET'])
+@permissions.route('/<perm_id_or_key>', methods=['GET'])
 @req_app_token
 @response(PermissionSchema())
 @authenticate(user_auth)
@@ -36,7 +40,7 @@ def get_permission(perm_id_or_key):
     return permission.to_dict()
 
 
-@auth.route('/permissions', methods=['GET'])
+@permissions.route('/', methods=['GET'])
 @req_app_token
 @arguments(PaginationArgs())
 @response(PermissionCollection())
@@ -46,10 +50,10 @@ def get_permissions(pagination):
     """Get a collection of all permissions"""
     page = pagination['page']
     per_page = pagination['per_page']
-    return Permission.to_collection_dict(sa.select(Permission), page, per_page, 'api.auth.get_permissions')
+    return Permission.to_collection_dict(sa.select(Permission), page, per_page, 'api.auth.permissions.get_permissions')
 
 
-@auth.route('/permissions', methods=['POST'])
+@permissions.route('/', methods=['POST'])
 @req_app_token
 @body(PermissionSchema())
 @response(LinkSuccessSchema())
@@ -69,10 +73,10 @@ def new_permission():
     permission.from_dict(cleaned_data)
     db.session.add(permission)
     db.session.commit()
-    return responses.create_success(f"Permission {permission.key} created", 'api.auth.get_permission', perm_id_or_key=permission.id)
+    return responses.create_success(f"Permission {permission.key} created", 'api.auth.permissions.get_permission', perm_id_or_key=permission.id)
 
 
-@auth.route('/permissions/<perm_id_or_key>', methods=['PUT'])
+@permissions.route('/<perm_id_or_key>', methods=['PUT'])
 @req_app_token
 @body(UpdatePermissionSchema())
 @response(LinkSuccessSchema())
@@ -87,10 +91,10 @@ def update_permission(perm_id_or_key):
         raise BadRequest('Permission key is not unique')
     permission.from_dict(data)
     db.session.commit()
-    return responses.request_success(f"Permission {permission.key} updated", 'api.auth.get_permission', perm_id_or_key=permission.id)
+    return responses.request_success(f"Permission {permission.key} updated", 'api.auth.permissions.get_permission', perm_id_or_key=permission.id)
 
 
-@auth.route('/permissions/<perm_id_or_key>/users', methods=['GET'])
+@permissions.route('/<perm_id_or_key>/users', methods=['GET'])
 @req_app_token
 @response(PermUsersSchema())
 @authenticate(user_auth)
@@ -114,7 +118,7 @@ def list_users_with_permission(perm_id_or_key):
         'key': permission.key,
         'users': users,
         '_links': {
-            'self': url_for('api.users.list_users_with_permission', perm_id_or_key=permission.id)
+            'self': url_for('api.auth.permissions.list_users_with_permission', perm_id_or_key=permission.id)
         }
     }
 

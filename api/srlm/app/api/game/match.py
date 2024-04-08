@@ -1,19 +1,23 @@
 """Provides endpoints for creating matches and retrieving match data"""
 from apifairy import body, response, authenticate, other_responses
-from flask import request
+from flask import request, Blueprint
 import sqlalchemy as sa
+
 from api.srlm.app import db
-from api.srlm.app.api.game import game_bp as game
+from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.auth.utils import req_app_token, user_auth
 from api.srlm.app.api.utils.errors import BadRequest
 from api.srlm.app.api.utils.functions import force_fields, ensure_exists, clean_data
 from api.srlm.app.fairy.errors import unauthorized, bad_request, not_found
 from api.srlm.app.fairy.schemas import LinkSuccessSchema, NewMatchSchema, ViewMatchSchema, MatchReviewSchema
-from api.srlm.app.models import SeasonDivision, Team, Match, MatchSchedule, MatchReview, MatchData
+from api.srlm.app.models import SeasonDivision, Team, Match, MatchSchedule, MatchReview, MatchData, Matchtype
+
+match = Blueprint('match', __name__)
+bp.register_blueprint(match, url_prefix='/match')
 
 
-@game.route('/match', methods=['POST'])
+@match.route('/', methods=['POST'])
 @req_app_token
 @body(NewMatchSchema())
 @response(LinkSuccessSchema(), 201)
@@ -49,10 +53,10 @@ def create_match():
     db.session.add(match)
     db.session.commit()
 
-    return responses.create_success(f'Match between {match.home_team.name} and {match.away_team.name} created', 'api.game.get_match', match_id=match.id)
+    return responses.create_success(f'Match between {match.home_team.name} and {match.away_team.name} created', 'api.match.get_match', match_id=match.id)
 
 
-@game.route('/match/<int:match_id>', methods=['GET'])
+@match.route('/<int:match_id>', methods=['GET'])
 @req_app_token
 @response(ViewMatchSchema())
 @authenticate(user_auth)
@@ -64,7 +68,7 @@ def get_match(match_id):
     return response_json
 
 
-@game.route('/match/<int:match_id>/review', methods=['GET'])
+@match.route('/<int:match_id>/review', methods=['GET'])
 @req_app_token
 @response(MatchReviewSchema())
 @authenticate(user_auth)
@@ -111,4 +115,13 @@ def get_match_stats():
 
 
 def report_issue():
+    pass
+
+
+@match.route('/type/<int:match_type_id>', methods=['GET'])
+@req_app_token
+@authenticate(user_auth)
+@other_responses(unauthorized | not_found)
+def get_match_type(match_type_id):
+    match_type = ensure_exists(Matchtype, id=match_type_id)  # TODO
     pass

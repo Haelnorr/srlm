@@ -1,8 +1,8 @@
 """Endpoints for managing Discord linking"""
 from apifairy import body, response, authenticate, other_responses
-from flask import request
+from flask import request, Blueprint
 from api.srlm.app import db
-from api.srlm.app.api.users import users_bp as users
+from api.srlm.app.api.users import users_bp
 from api.srlm.app.api.auth.utils import req_app_token, user_auth, get_bearer_token
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.errors import ResourceNotFound, UserAuthError, BadRequest
@@ -12,7 +12,11 @@ from api.srlm.app.fairy.schemas import DiscordSchema, LinkSuccessSchema, UpdateD
 from api.srlm.app.models import User, Discord
 
 
-@users.route('/<int:user_id>/discord', methods=['GET'])
+discord = Blueprint('discord', __name__)
+users_bp.register_blueprint(discord)
+
+
+@discord.route('/<int:user_id>/discord', methods=['GET'])
 @req_app_token
 @response(DiscordSchema())
 @authenticate(user_auth)
@@ -32,7 +36,7 @@ def get_user_discord(user_id):
     return user.discord.to_dict(authenticated=authenticated)
 
 
-@users.route('/<int:user_id>/discord', methods=['POST'])
+@discord.route('/<int:user_id>/discord', methods=['POST'])
 @req_app_token
 @user_auth.login_required
 @body(DiscordSchema())
@@ -54,21 +58,21 @@ def create_user_discord(user_id):
     required_fields = ['discord_id', 'access_token', 'refresh_token', 'expires_in']
     force_fields(data, required_fields)
 
-    discord = db.session.query(Discord).filter(Discord.discord_id == data['discord_id']).first()
-    if discord is not None:
+    discord_db = db.session.query(Discord).filter(Discord.discord_id == data['discord_id']).first()
+    if discord_db is not None:
         raise BadRequest('Discord account is linked to another user')
 
-    discord = Discord()
-    discord.from_dict(data)
-    discord.user = user
+    discord_db = Discord()
+    discord_db.from_dict(data)
+    discord_db.user = user
 
-    db.session.add(discord)
+    db.session.add(discord_db)
     db.session.commit()
 
-    return responses.create_success('Discord account linked', 'api.users.get_user_discord', user_id=user_id)
+    return responses.create_success('Discord account linked', 'api.users.discord.get_user_discord', user_id=user_id)
 
 
-@users.route('/<int:user_id>/discord', methods=['PUT'])
+@discord.route('/<int:user_id>/discord', methods=['PUT'])
 @req_app_token
 @user_auth.login_required
 @body(UpdateDiscordSchema())
@@ -96,17 +100,17 @@ def update_user_discord(user_id):
         raise BadRequest("No valid fields provided - provide one of the following: discord_id, access_token, refresh_token, expires_in")
 
     if 'discord_id' in data:
-        discord = db.session.query(Discord).filter(Discord.discord_id == data['discord_id']).first()
-        if discord is not None:
+        discord_db = db.session.query(Discord).filter(Discord.discord_id == data['discord_id']).first()
+        if discord_db is not None:
             raise BadRequest('Discord account is linked to another user')
 
     user.discord.from_dict(data)
     db.session.commit()
 
-    return responses.request_success('Discord account updated', 'api.users.get_user_discord', user_id=user_id)
+    return responses.request_success('Discord account updated', 'api.users.discord.get_user_discord', user_id=user_id)
 
 
-@users.route('/<int:user_id>/discord', methods=['DELETE'])
+@discord.route('/<int:user_id>/discord', methods=['DELETE'])
 @req_app_token
 @user_auth.login_required
 @response(LinkSuccessSchema())

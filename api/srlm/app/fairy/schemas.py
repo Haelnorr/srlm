@@ -1,7 +1,7 @@
 """Provides marshmallow schemas for documentation support"""
 from api.srlm.app import ma
 from api.srlm.app.models import Permission, Match, Team, MatchResult, MatchReview, PlayerMatchData, MatchData, Discord, \
-    Twitch, UserPermissions, User
+    Twitch, UserPermissions, User, Division, League, Season, SeasonDivision, Player, FreeAgent
 
 
 class Links(ma.Schema):
@@ -31,6 +31,12 @@ class PaginationLinks(Links):
     """Defines pagination links"""
     next = ma.URL()
     prev = ma.URL()
+
+
+class Collection(ma.Schema):
+    """Defines the meta structure of collections"""
+    _meta = ma.Nested(PaginationArgs())
+    _links = ma.Nested(PaginationLinks())
 
 
 class FilterSchema(ma.Schema):
@@ -81,11 +87,9 @@ class PermissionSchema(ma.SQLAlchemySchema):
     _links = ma.Nested(Links(), dump_only=True)
 
 
-class PermissionCollection(ma.Schema):
+class PermissionCollection(Collection):
     """Defines the structure of the permissions collection"""
     items = ma.List(ma.Nested(PermissionSchema()))
-    _meta = ma.Nested(PaginationArgs())
-    _links = ma.Nested(PaginationLinks())
 
 
 class UserPermissionsSchema(ma.SQLAlchemySchema):
@@ -153,13 +157,19 @@ class TeamSchema(ma.SQLAlchemySchema):
     id = ma.auto_field(dump_only=True)
     name = ma.auto_field(required=True)
     acronym = ma.auto_field(required=True)
-    founded_date = ma.auto_field(dump_only=True)
+    founded_date = ma.auto_field()
     color = ma.auto_field()
     logo = ma.auto_field()
     active_players = ma.Int(dump_only=True)
     seasons_played = ma.Int(dump_only=True)
     awards = ma.Int(dump_only=True)
-    _links = ma.Nested(TeamLinks())
+    _links = ma.Nested(TeamLinks(), dump_only=True)
+
+
+class EditTeamSchema(TeamSchema):
+    """Overrides the team schema to make name and acronym optional"""
+    name = ma.auto_field()
+    acronym = ma.auto_field()
 
 
 class SimpleTeamSchema(ma.SQLAlchemySchema):
@@ -172,6 +182,11 @@ class SimpleTeamSchema(ma.SQLAlchemySchema):
     acronym = ma.auto_field(required=True)
     color = ma.auto_field()
     _links = ma.Nested(Links())
+
+
+class TeamCollection(Collection):
+    """Defines the collection of teams"""
+    items = ma.List(ma.Nested(TeamSchema()))
 
 
 class MatchResultSchema(ma.SQLAlchemySchema):
@@ -448,5 +463,351 @@ class UpdateUserSchema(ma.SQLAlchemySchema):
 class UserCollection(ma.Schema):
     """Defines the structure of the users collection"""
     items = ma.List(ma.Nested(UserSchema()))
-    _meta = ma.Nested(PaginationArgs())
-    _links = ma.Nested(PaginationLinks())
+
+
+class LeagueLink(Links):
+    """Extends Links class to provide league link"""
+    league = ma.URL()
+
+
+class LeagueSchema(ma.SQLAlchemySchema):
+    """Defines the structure for League requests"""
+    class Meta:
+        model = League
+        ordered = True
+
+    class LeagueLinks(Links):
+        seasons = ma.URL()
+        divisions = ma.URL()
+
+    id = ma.auto_field(dump_only=True)
+    name = ma.auto_field(required=True)
+    acronym = ma.auto_field(required=True)
+    seasons_count = ma.Int(dump_only=True)
+    divisions_count = ma.Int(dump_only=True)
+    _links = ma.Nested(LeagueLinks, dump_only=True)
+
+
+class EditLeagueSchema(LeagueSchema):
+    """Overrides the LeagueSchema to make name and acronym optional"""
+    name = ma.auto_field()
+    acronym = ma.auto_field()
+
+
+class LeagueCollection(Collection):
+    """Defines the collection of Leagues"""
+    items = ma.List(ma.Nested(LeagueSchema))
+
+
+class SeasonSchema(ma.SQLAlchemySchema):
+    """Defines the structure for Season requests"""
+    class Meta:
+        model = Season
+        ordered = True
+
+    class SeasonLinks(Links):
+        league = ma.URL()
+        match_type = ma.URL()
+        divisions = ma.URL()
+
+    id = ma.auto_field(dump_only=True)
+    name = ma.auto_field(required=True)
+    acronym = ma.auto_field(required=True)
+    league = ma.Str(required=True)
+    start_date = ma.auto_field()
+    end_date = ma.auto_field()
+    finals_start = ma.auto_field()
+    finals_end = ma.auto_field()
+    match_type = ma.Str(required=True)
+    divisions_count = ma.Int(dump_only=True)
+    _links = ma.Nested(SeasonLinks())
+
+
+class EditSeasonSchema(SeasonSchema):
+    """Overrides the SeasonSchema to make league and match_type dump_only"""
+    league = ma.Str(dump_only=True)
+    match_type = ma.Str(dump_only=True)
+
+
+class SeasonCollection(Collection):
+    """Defines the structure for the collection of Seasons"""
+    items = ma.List(ma.Nested(SeasonSchema))
+
+
+class DivisionSchema(ma.SQLAlchemySchema):
+    """Defines the structure for Division requests"""
+    class Meta:
+        model = Division
+        ordered = True
+
+    class DivisionLinks(Links):
+        league = ma.URL()
+        seasons = ma.URL()
+
+    id = ma.auto_field(dump_only=True)
+    name = ma.auto_field(required=True)
+    acronym = ma.auto_field(required=True)
+    league = ma.Str(required=True)
+    description = ma.auto_field()
+    seasons_count = ma.Int(dump_only=True)
+    _links = ma.Nested(DivisionLinks(), dump_only=True)
+
+
+class UpdateDivisionSchema(ma.SQLAlchemySchema):
+    """Defines the structure for updating Divisions"""
+    class Meta:
+        model = Division
+        ordered = True
+
+    name = ma.auto_field()
+    acronym = ma.auto_field()
+    description = ma.auto_field()
+
+
+class DivisionCollection(Collection):
+    """Defines the structure for Divisions collection"""
+    items = ma.List(ma.Nested(DivisionSchema()))
+
+
+class SeasonsOfDivision(ma.Schema):
+    """Defines the response structure when requesting a list of seasons the division is in"""
+    class SeasonOfDivision(ma.Schema):
+        id = ma.Int()
+        name = ma.Str()
+        acronym = ma.Str()
+        _links = ma.Nested(Links())
+
+    division = ma.Str()
+    acronym = ma.Str()
+    league = ma.Str()
+    seasons = ma.List(ma.Nested(SeasonOfDivision))
+    _links = ma.Nested(LeagueLink())
+
+
+class SeasonsInLeague(ma.Schema):
+    """Defines the response for the list of seasons in a league"""
+    league = ma.Str()
+    acronym = ma.Str()
+    seasons = ma.Nested(SeasonCollection())
+
+
+class DivisionsInLeague(ma.Schema):
+    """Defines the response for the list of divisions in a league"""
+    league = ma.Str()
+    acronym = ma.Str()
+    divisions = ma.Nested(DivisionCollection())
+
+
+class DivisionsInSeason(ma.Schema):
+    """Defines the response for the list of divisions in a season"""
+    season = ma.Str()
+    acronym = ma.Str()
+    divisions = ma.Nested(DivisionCollection())
+
+
+class SeasonDivisionSchema(ma.SQLAlchemySchema):
+    """Defines the structure for SeasonDivision requests"""
+    class Meta:
+        model = SeasonDivision
+        ordered = True
+
+    class SeasonDivisionLinks(LeagueLink):
+        season = ma.URL()
+        division = ma.URL()
+        teams = ma.URL()
+        free_agents = ma.URL()
+        rookies = ma.URL()
+        matches = ma.URL()
+        finals = ma.URL()
+
+    season_id = ma.auto_field(required=True, load_only=True)
+    division_id = ma.auto_field(required=True, load_only=True)
+    id = ma.auto_field(dump_only=True)
+    season = ma.Str(dump_only=True)
+    division = ma.Str(dump_only=True)
+    league = ma.Str(dump_only=True)
+    teams_count = ma.Int(dump_only=True)
+    free_agents_count = ma.Int(dump_only=True)
+    rookies_count = ma.Int(dump_only=True)
+    matches_count = ma.Int(dump_only=True)
+    finals_count = ma.Int(dump_only=True)
+    _links = ma.Nested(SeasonDivisionLinks(), dump_only=True)
+
+
+class PlayerSchema(ma.SQLAlchemySchema):
+    """Defines the structure for Player requests"""
+    class Meta:
+        model = Player
+        ordered = True
+
+    class PlayerLinks(Links):
+        user = ma.URL()
+        first_season = ma.URL()
+        current_team = ma.URL()
+        teams = ma.URL()
+        free_agent_seasons = ma.URL()
+        awards = ma.URL()
+
+    id = ma.auto_field(dump_only=True)
+    player_name = ma.auto_field(required=True)
+    user = ma.Str(dump_only=True)
+    slap_id = ma.auto_field()
+    rookie = ma.auto_field()
+    first_season = ma.Str(dump_only=True)
+    first_season_id = ma.auto_field(load_only=True)
+    next_name_change = ma.auto_field(dump_only=True)
+    current_team = ma.Str(dump_only=True)
+    teams = ma.Int(dump_only=True)
+    free_agent_seasons = ma.Int(dump_only=True)
+    awards = ma.Int(dump_only=True)
+    _links = ma.Nested(PlayerLinks(), dump_only=True)
+
+
+class EditPlayerSchema(PlayerSchema):
+    """Overrides PlayerSchema making player_name optional"""
+    player_name = ma.auto_field()
+
+
+class PlayerCollection(Collection):
+    """Defines the collection of Players"""
+    items = ma.List(ma.Nested(PlayerSchema()))
+
+
+class SimplePlayerSchema(ma.SQLAlchemySchema):
+    """Defines a simplified version of the PlayerSchema"""
+    class Meta:
+        model = Player
+        ordered = True
+
+    class SimplePlayerLinks(Links):
+        user = ma.URL()
+        current_team = ma.URL()
+
+    player_name = ma.auto_field(required=True)
+    user = ma.Str(dump_only=True)
+    slap_id = ma.auto_field(dump_only=True)
+    current_team = ma.Str(dump_only=True)
+    _links = ma.Nested(SimplePlayerLinks(), dump_only=True)
+
+
+class PlayerLink(ma.Schema):
+    player = ma.URL()
+
+
+class FreeAgentSchema(ma.SQLAlchemySchema):
+    """Defines the structure for free agent requests"""
+    class Meta:
+        model = FreeAgent
+        ordered = True
+
+    player = ma.Str()
+    player_id = ma.auto_field(load_only=True, required=True)
+    season_division_id = ma.auto_field(load_only=True, required=True)
+    start_date = ma.auto_field()
+    end_date = ma.auto_field()
+    _links = ma.Nested(PlayerLink())
+
+
+class SeasonDivisionLink(Links):
+    """Extends the base Links class adding season_division"""
+    season_division = ma.URL()
+    league = ma.URL()
+
+
+class SimpleSeasonDivision(ma.Schema):
+    """Base class for other season division requests"""
+    id = ma.Int(dump_only=True)
+    season = ma.Str(dump_only=True)
+    division = ma.Str(dump_only=True)
+    league = ma.Str(dump_only=True)
+    _links = ma.Nested(SeasonDivisionLink())
+
+
+class SeasonDivisionTeams(SimpleSeasonDivision):
+    """Defines the response for the list of teams in a SeasonDivision"""
+    teams = ma.List(ma.Nested(SimpleTeamSchema()))
+
+
+class SeasonDivisionRookies(SimpleSeasonDivision):
+    """Defines the response for the list of rookies in a SeasonDivision"""
+    rookies = ma.List(ma.Nested(SimplePlayerSchema()))
+
+
+class SeasonDivisionFreeAgents(SimpleSeasonDivision):
+    """Defines the response for the list of free agents in a SeasonDivision"""
+    free_agents = ma.List(ma.Nested(FreeAgentSchema()))
+
+
+class SeasonDivisionMatches(SimpleSeasonDivision):
+    """Defines the response for the list of matches in a SeasonDivision"""
+    matches = ma.List(ma.Nested(SimpleMatchSchema()))
+
+
+class StartEndDates(ma.Schema):
+    start = ma.DateTime()
+    end = ma.DateTime()
+
+
+class PlayerTeams(ma.Schema):
+    """Defines the response for the list of teams a player has been on"""
+    class TeamList(ma.Schema):
+        name = ma.Str()
+        acronym = ma.Str()
+        color = ma.Str()
+        dates = ma.Nested(StartEndDates())
+        _links = ma.Nested(Links())
+
+    player = ma.Str(dump_only=True)
+    teams = ma.List(ma.Nested(TeamList()), dump_only=True)
+    _links = ma.Nested(PlayerLink(), dump_only=True)
+    team = ma.Str(required=True, load_only=True)
+
+
+class TeamLink(Links):
+    team = ma.URL()
+
+
+class TeamPlayers(ma.Schema):
+    """Defines the response for the list of players a team has"""
+    class PlayerList(ma.Schema):
+        name = ma.Str()
+        dates = ma.Nested(StartEndDates())
+        _links = ma.Nested(Links())
+
+    team = ma.Str()
+    acronym = ma.Str()
+    color = ma.Str()
+    players = ma.List(ma.Nested(PlayerList()))
+    _links = ma.Nested(TeamLink())
+
+
+class TeamSeasonPlayers(ma.Schema):
+    """Defines the response for the list of players in a team during a given season"""
+    class CurrentPlayer(ma.Schema):
+        name = ma.Str()
+        start_date = ma.DateTime()
+        end_date = ma.DateTime()
+        _links = ma.Nested(Links())
+
+    season_division = ma.Str()
+    team = ma.Str()
+    acronym = ma.Str()
+    color = ma.Str()
+    players = ma.List(ma.Nested(CurrentPlayer()))
+    _links = ma.Nested(TeamLink())
+
+
+class TeamSeasons(SimpleTeamSchema):
+    """Defines the response for the list of seasons a team has played in"""
+    season_divisions = ma.List(ma.Nested(SimpleSeasonDivision()), dump_only=True)
+    _links = ma.Nested(TeamLink(), dump_only=True)
+    season_division_id = ma.Int(required=True, load_only=True)
+
+
+class PlayerSeasons(ma.Schema):
+    """Defines the response for the list of seasons a player has been a free agent in"""
+    player = ma.Str(dump_only=True)
+    free_agent_seasons = ma.List(ma.Nested(SimpleSeasonDivision()), dump_only=True)
+    _links = ma.Nested(Links() and PlayerLink(), dump_only=True)
+    season_division_id = ma.Int(load_only=True, required=True)
+

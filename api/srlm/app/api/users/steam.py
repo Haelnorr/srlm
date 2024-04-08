@@ -1,9 +1,9 @@
 """Endpoint for linking a users steam account"""
 from apifairy import body, response, authenticate, other_responses
-from flask import request
+from flask import request, Blueprint
 from api.srlm.app import db
 from api.srlm.app.api.auth.utils import req_app_token, user_auth
-from api.srlm.app.api.users import users_bp as users
+from api.srlm.app.api.users import users_bp
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
@@ -12,7 +12,11 @@ from api.srlm.app.models import User, Player
 from api.srlm.app.spapi.slapid import get_slap_id
 
 
-@users.route('/<int:user_id>/steam', methods=['POST'])
+steam = Blueprint('steam', __name__)
+users_bp.register_blueprint(steam)
+
+
+@steam.route('/<int:user_id>/steam', methods=['POST'])
 @req_app_token
 @body(LinkSteamSchema())
 @response(LinkSuccessSchema())
@@ -44,7 +48,7 @@ def link_user_steam(user_id):
         user.player = player
         db.session.commit()
 
-        return responses.request_success(f'Player {player.player_name} succesfully linked to user {user.username}', 'api.users.get_player', player_id=player.id)
+        return responses.request_success(f'Player {player.player_name} succesfully linked to user {user.username}', 'api.players.get_player', player_id=player.id)
 
     else:
         return responses.request_success(f'Slap ID not found for the given steam ID. Steam ID linked to user {user.username}', 'api.users.get_user', user_id=user.id)

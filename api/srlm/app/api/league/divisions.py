@@ -1,11 +1,16 @@
 """Endpoints relating to Divisions"""
+from apifairy import arguments, body, response, authenticate, other_responses
+
 from api.srlm.app import db
-from api.srlm.app.api.league import league_bp as league
-from flask import request, url_for
+from api.srlm.app.api import bp
+from flask import request, url_for, Blueprint
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import force_fields, clean_data, ensure_exists, force_unique
+from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
+from api.srlm.app.fairy.schemas import PaginationArgs, DivisionCollection, DivisionSchema, LinkSuccessSchema, \
+    UpdateDivisionSchema, SeasonsOfDivision
 from api.srlm.app.models import Division, League
-from api.srlm.app.api.auth.utils import req_app_token
+from api.srlm.app.api.auth.utils import req_app_token, user_auth
 import sqlalchemy as sa
 
 # create a new logger for this module
@@ -13,25 +18,43 @@ from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
 
-@league.route('/divisions', methods=['GET'])
-@req_app_token
-def get_divisions():
-    page = request.args.get('page', 1, type=int)
-    per_page = min(request.args.get('per_page', 10, type=int), 100)
-    return Division.to_collection_dict(sa.select(Division), page, per_page, 'api.league.get_divisions')
+divisions = Blueprint('divisions', __name__)
+bp.register_blueprint(divisions, url_prefix='/divisions')
 
 
-@league.route('/divisions/<int:division_id>', methods=['GET'])
+@divisions.route('/', methods=['GET'])
 @req_app_token
+@arguments(PaginationArgs())
+@response(DivisionCollection())
+@authenticate(user_auth)
+@other_responses(unauthorized)
+def get_divisions(pagination):
+    """Get the collection of all divisions"""
+    page = pagination['page']
+    per_page = pagination['per_page']
+    return Division.to_collection_dict(sa.select(Division), page, per_page, 'api.divisions.get_divisions')
+
+
+@divisions.route('/<int:division_id>', methods=['GET'])
+@req_app_token
+@response(DivisionSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized | not_found)
 def get_division(division_id):
+    """Get details of a division"""
     division = ensure_exists(Division, id=division_id)
     if division:
         return division.to_dict()
 
 
-@league.route('/divisions', methods=['POST'])
+@divisions.route('/', methods=['POST'])
 @req_app_token
+@body(DivisionSchema())
+@response(LinkSuccessSchema(), status_code=201)
+@authenticate(user_auth)
+@other_responses(unauthorized | bad_request)
 def add_division():
+    """Create a new division"""
     data = request.get_json()
 
     required_fields = ['name', 'acronym', 'league']
@@ -39,10 +62,10 @@ def add_division():
     unique_fields = ['name', 'acronym']
 
     force_fields(data, required_fields)
-    league = ensure_exists(League, join_method='or', id=data['league'], acronym=data['league'])
-    data['league_id'] = league.id
+    league_db = ensure_exists(League, join_method='or', id=data['league'], acronym=data['league'])
+    data['league_id'] = league_db.id
 
-    force_unique(Division, data, unique_fields, restrict_query={'league_id': league.id})
+    force_unique(Division, data, unique_fields, restrict_query={'league_id': league_db.id})
 
     cleaned_data = clean_data(data, valid_fields)
 
@@ -52,12 +75,17 @@ def add_division():
     db.session.add(division)
     db.session.commit()
 
-    return responses.create_success(f'{league.acronym} {division.name} added', 'api.league.get_division', division_id=division.id)
+    return responses.create_success(f'{league_db.acronym} {division.name} added', 'api.divisions.get_division', division_id=division.id)
 
 
-@league.route('/divisions/<int:division_id>', methods=['PUT'])
+@divisions.route('/<int:division_id>', methods=['PUT'])
 @req_app_token
+@body(UpdateDivisionSchema())
+@response(LinkSuccessSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized | not_found | bad_request)
 def update_division(division_id):
+    """Update an existing division"""
     data = request.get_json()
 
     division = ensure_exists(Division, id=division_id)
@@ -71,12 +99,16 @@ def update_division(division_id):
 
     db.session.commit()
 
-    return responses.request_success(f'Division {division.name} updated', 'api.league.get_division', division_id=division.id)
+    return responses.request_success(f'Division {division.name} updated', 'api.divisions.get_division', division_id=division.id)
 
 
-@league.route('/divisions/<int:division_id>/seasons', methods=['GET'])
+@divisions.route('/<int:division_id>/seasons', methods=['GET'])
 @req_app_token
+@response(SeasonsOfDivision())
+@authenticate(user_auth)
+@other_responses(unauthorized | not_found)
 def get_seasons_of_division(division_id):
+    """Get a list of seasons the division has been part of"""
 
     division = ensure_exists(Division, id=division_id)
 
@@ -87,20 +119,20 @@ def get_seasons_of_division(division_id):
             'name': season.name,
             'acronym': season.acronym,
             '_links': {
-                'self': url_for('api.league.get_season', season_id=season.id)
+                'self': url_for('api.seasons.get_season', season_id=season.id)
             }
         }
         seasons.append(data)
 
-    response = {
+    response_json = {
         'division': division.name,
         'acronym': division.acronym,
         'league': division.league.acronym,
         'seasons': seasons,
         '_links': {
-            'self': url_for('api.league.get_seasons_of_division', division_id=division_id),
-            'league': url_for('api.league.get_league', league_id_or_acronym=division.league.id)
+            'self': url_for('api.divisions.get_seasons_of_division', division_id=division_id),
+            'league': url_for('api.leagues.get_league', league_id_or_acronym=division.league.id)
         }
     }
 
-    return response
+    return response_json

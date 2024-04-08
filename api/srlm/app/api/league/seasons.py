@@ -1,12 +1,17 @@
 """Endpoints relating to Seasons"""
+from apifairy import arguments, body, response, authenticate, other_responses
+
 from api.srlm.app import db
-from api.srlm.app.api.league import league_bp as league
+from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
-from flask import request
+from flask import request, Blueprint
 from api.srlm.app.api.utils.functions import force_fields, clean_data, force_unique, ensure_exists, \
     force_date_format
+from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
+from api.srlm.app.fairy.schemas import PaginationArgs, SeasonSchema, LinkSuccessSchema, SeasonCollection, \
+    DivisionsInSeason
 from api.srlm.app.models import Season, League, SeasonDivision, Matchtype
-from api.srlm.app.api.auth.utils import req_app_token
+from api.srlm.app.api.auth.utils import req_app_token, user_auth
 import sqlalchemy as sa
 
 # create a new logger for this module
@@ -14,25 +19,43 @@ from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
 
-@league.route('/seasons', methods=['GET'])
-@req_app_token
-def get_seasons():
-    page = request.args.get('page', 1, type=int)
-    per_page = min(request.args.get('per_page', 10, type=int), 100)
-    return Season.to_collection_dict(sa.select(Season), page, per_page, 'api.league.get_seasons')
+seasons = Blueprint('seasons', __name__)
+bp.register_blueprint(seasons, url_prefix='/seasons')
 
 
-@league.route('/seasons/<int:season_id>', methods=['GET'])
+@seasons.route('/', methods=['GET'])
 @req_app_token
+@arguments(PaginationArgs())
+@response(SeasonCollection())
+@authenticate(user_auth)
+@other_responses(unauthorized)
+def get_seasons(pagination):
+    """Get the collection of all seasons"""
+    page = pagination['page']
+    per_page = pagination['per_page']
+    return Season.to_collection_dict(sa.select(Season), page, per_page, 'api.seasons.get_seasons')
+
+
+@seasons.route('/<int:season_id>', methods=['GET'])
+@req_app_token
+@response(SeasonSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized | not_found)
 def get_season(season_id):
+    """Get details on a season"""
     season = ensure_exists(Season, id=season_id)
     if season:
         return season.to_dict()
 
 
-@league.route('/seasons', methods=['POST'])
+@seasons.route('/', methods=['POST'])
 @req_app_token
+@body(SeasonSchema())
+@response(LinkSuccessSchema(), status_code=201)
+@authenticate(user_auth)
+@other_responses(unauthorized | bad_request)
 def add_season():
+    """Create a new season"""
     data = request.get_json()
 
     unique_fields = ['name', 'acronym']
@@ -40,15 +63,15 @@ def add_season():
     valid_fields = ['name', 'acronym', 'league_id', 'start_date', 'end_date', 'finals_start', 'finals_end', 'match_type_id']
 
     force_fields(data, required_fields)
-    league = ensure_exists(League, join_method='or', id=data['league'], acronym=data['league'])
+    league_db = ensure_exists(League, join_method='or', id=data['league'], acronym=data['league'])
     match_type = ensure_exists(Matchtype, join_method='or', id=data['match_type'], name=data['match_type'])
-    data['league_id'] = league.id
+    data['league_id'] = league_db.id
     data['match_type_id'] = match_type.id
 
-    force_unique(Season, data, unique_fields, restrict_query={'league_id': league.id})
+    force_unique(Season, data, unique_fields, restrict_query={'league_id': league_db.id})
 
     date_fields = ['start_date', 'end_date', 'finals_start', 'finals_end']
-    force_date_format(data, date_fields)
+    force_date_format(data, date_fields)  # TODO
 
     cleaned_data = clean_data(data, valid_fields)
 
@@ -58,12 +81,17 @@ def add_season():
     db.session.add(season)
     db.session.commit()
 
-    return responses.create_success(f'{season.league.acronym} {season.name} added', 'api.league.get_season', season_id=season.id)
+    return responses.create_success(f'{season.league.acronym} {season.name} added', 'api.seasons.get_season', season_id=season.id)
 
 
-@league.route('/seasons/<int:season_id>', methods=['PUT'])
+@seasons.route('/<int:season_id>', methods=['PUT'])
 @req_app_token
+@body(SeasonSchema())
+@response(LinkSuccessSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized | not_found | bad_request)
 def update_season(season_id):
+    """Update an existing season"""
     data = request.get_json()
 
     season = ensure_exists(Season, id=season_id)
@@ -81,24 +109,29 @@ def update_season(season_id):
 
     db.session.commit()
 
-    return responses.request_success(f'Season {season.name} updated', 'api.league.get_season', season_id=season.id)
+    return responses.request_success(f'Season {season.name} updated', 'api.seasons.get_season', season_id=season.id)
 
 
-@league.route('/seasons/<int:season_id>/divisions', methods=['GET'])
+@seasons.route('/<int:season_id>/divisions', methods=['GET'])
 @req_app_token
-def get_divisions_in_season(season_id):
-    page = request.args.get('page', 1, type=int)
-    per_page = min(request.args.get('per_page', 10, type=int), 100)
+@arguments(PaginationArgs())
+@response(DivisionsInSeason())
+@authenticate(user_auth)
+@other_responses(unauthorized | not_found)
+def get_divisions_in_season(pagination, season_id):
+    """Get a list of divisions in a season"""
+    page = pagination['page']
+    per_page = pagination['per_page']
 
     season = ensure_exists(Season, id=season_id)
 
-    divisions = SeasonDivision.to_collection_dict(season.division_association, page, per_page, 'api.league.get_divisions_in_season', season_id=season_id)
+    divisions = SeasonDivision.to_collection_dict(season.division_association, page, per_page, 'api.seasons.get_divisions_in_season', season_id=season_id)
 
-    response = {
+    response_json = {
         'season': season.name,
         'acronym': season.acronym,
         'league': season.league.acronym
     }
-    response.update(divisions)
+    response_json.update(divisions)
 
-    return response
+    return response_json
