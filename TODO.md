@@ -1,16 +1,16 @@
 # TODO
 
 **Before next PR**
+ - caching support
+ - route cooldowns?
+ - setup mysql in docker
 
 **Future**
- - api endpoints (list incomplete)
+ - api endpoints
    - final + final_result
    - scheduling + view fixtures
    - awards
  - confirm user email
- - caching support
- - route cooldowns?
- - setup mysql in docker
  - web relay for discord bot notifications
  - match_data stuff (including legacy)
  - import legacy match data
