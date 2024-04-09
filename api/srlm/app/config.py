@@ -8,15 +8,22 @@ config = configparser.ConfigParser()
 config.read(os.path.join(ROOT_DIR, 'config', 'mail.config'))
 mailing_list = config['MAIL']['MailingList'].split(', ')
 
-league_manager_db_uri = os.getenv('DATABASE_URL', '').replace('"', '') + os.getenv('LEAGUE_MANAGER_DB', '')
-api_access_db_uri = os.getenv('DATABASE_URL', '').replace('"', '') + os.getenv('API_ACCESS_DB', '')
+#league_manager_db_uri = os.getenv('DATABASE_URL', '').replace('"', '') + os.getenv('LEAGUE_MANAGER_DB', '')
+#api_access_db_uri = os.getenv('DATABASE_URL', '').replace('"', '') + os.getenv('API_ACCESS_DB', '')
+mysql_user = os.getenv('MYSQL_USER')
+mysql_pass = os.getenv('MYSQL_PASS')
+mysql_host = os.getenv('MYSQL_HOST')
+mysql_port = int(os.getenv('MYSQL_PORT'))
 
+base_db_url = f"mysql+pymysql://{mysql_user}:{mysql_pass}@{mysql_host}:{mysql_port}/"
+league_manager_db_uri = base_db_url + 'league_manager'
+api_access_db_uri = base_db_url + 'api_access'
 
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY')
-    SQLALCHEMY_DATABASE_URI = league_manager_db_uri # if league_manager_db_uri is not '' else 'sqlite:///' + os.path.join(ROOT_DIR, 'db', 'league_manager.db')
+    SQLALCHEMY_DATABASE_URI = league_manager_db_uri
     SQLALCHEMY_BINDS = {
-        'api_access': api_access_db_uri # if api_access_db_uri is not '' else 'sqlite:///' + os.path.join(ROOT_DIR, 'db', 'api_access.db')
+        'api_access': api_access_db_uri
     }
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'localhost')

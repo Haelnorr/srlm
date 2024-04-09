@@ -7,12 +7,13 @@
 # You can add other services your application may depend on here, such as a
 # database or a cache. For examples, see the Awesome Compose repository:
 # https://github.com/docker/awesome-compose
+version: '0.7'
+
 services:
   api:
     build:
       context: .
       dockerfile: ./compose/local/flask/Dockerfile
-    image: slapshot_league_manager_api
     command: /start
     ports:
       - 8000:8000
@@ -22,6 +23,9 @@ services:
       - FLASK_APP=api\srlm\run.py
     depends_on:
       - redis
+      - db
+    volumes:
+      - ./api:/api-docker/api
 
   redis:
     image: redis:latest
@@ -30,7 +34,6 @@ services:
     build:
       context: .
       dockerfile: ./compose/local/flask/Dockerfile
-    image: slapshot_lm_celery_worker
     command: /start-celeryworker
     env_file:
       - .envfiles/.dev-env
@@ -38,12 +41,14 @@ services:
       - FLASK_APP=api\srlm\run.py
     depends_on:
       - redis
+      - db
+    volumes:
+      - ./api:/api-docker/api
 
   celery_beat:
     build:
       context: .
       dockerfile: ./compose/local/flask/Dockerfile
-    image: slapshot_lm_celery_beat
     command: /start-celerybeat
     env_file:
       - .envfiles/.dev-env
@@ -51,12 +56,14 @@ services:
       - FLASK_APP=api\srlm\run.py
     depends_on:
       - redis
+      - db
+    volumes:
+      - ./api:/api-docker/api
 
   flower:
     build:
       context: .
       dockerfile: ./compose/local/flask/Dockerfile
-    image: slapshot_lm_celery_flower
     command: /start-flower
     env_file:
       - .envfiles/.dev-env
@@ -66,6 +73,20 @@ services:
       - 5557:5557
     depends_on:
       - redis
+      - db
+    volumes:
+      - ./api:/api-docker/api
+
+  db:
+    image: mysql:latest
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: 1643i8q6d2br3q8ind7354
+    volumes:
+      - ./compose/local/db/init:/docker-entrypoint-initdb.d
+
+
 
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to

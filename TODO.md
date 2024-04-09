@@ -3,7 +3,7 @@
 **Before next PR**
  - caching support
  - route cooldowns?
- - setup mysql in docker
+ - ~~setup mysql in docker~~
 
 **Future**
  - api endpoints
