@@ -25,7 +25,7 @@ bp.register_blueprint(leagues, url_prefix='/leagues')
 
 
 @leagues.route('', methods=['GET'])
-@cache.cached(unless=force_refresh)
+@cache.cached(unless=force_refresh, query_string=True)
 @arguments(PaginationArgs())
 @response(LeagueCollection())
 @authenticate(app_auth)
@@ -95,7 +95,7 @@ def update_leagues(league_id_or_acronym):
 
 
 @leagues.route('/<league_id_or_acronym>/seasons', methods=['GET'])
-@cache.cached(unless=force_refresh)
+@cache.cached(unless=force_refresh, query_string=True)
 @arguments(PaginationArgs())
 @response(SeasonsInLeague())
 @authenticate(app_auth)
@@ -113,15 +113,15 @@ def get_league_seasons(pagination, league_id_or_acronym):
 
     response_json = {
         'league': league_db.name,
-        'acronym': league_db.acronym
+        'acronym': league_db.acronym,
+        'seasons': seasons
     }
-    response_json.update(seasons)
 
     return response_json
 
 
 @leagues.route('/<league_id_or_acronym>/divisions', methods=['GET'])
-@cache.cached(unless=force_refresh)
+@cache.cached(unless=force_refresh, query_string=True)
 @arguments(PaginationArgs())
 @response(DivisionsInLeague())
 @authenticate(app_auth)
@@ -137,8 +137,8 @@ def get_league_divisions(pagination, league_id_or_acronym):
 
     response_json = {
         'league': league_db.name,
-        'acronym': league_db.acronym
+        'acronym': league_db.acronym,
+        'divisions': divisions
     }
-    response_json.update(divisions)
 
     return response_json

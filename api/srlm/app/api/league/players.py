@@ -38,7 +38,7 @@ def get_player(player_id):
 
 
 @players.route('', methods=['GET'])
-@cache.cached(unless=force_refresh)
+@cache.cached(unless=force_refresh, query_string=True)
 @arguments(PaginationArgs())
 @response(PlayerCollection())
 @authenticate(app_auth)
@@ -106,7 +106,7 @@ def update_player(player_id):
 
 
 @players.route('/<int:player_id>/teams', methods=['GET'])
-@cache.cached(unless=force_refresh)
+@cache.cached(unless=force_refresh, query_string=True)
 @arguments(CurrentFilterSchema())
 @response(PlayerTeams())
 @authenticate(app_auth)
@@ -125,7 +125,7 @@ def get_player_teams(search_filter, player_id):
 
 
 @players.route('/<int:player_id>/stats', methods=['GET'])
-@cache.cached(unless=force_refresh)
+@cache.cached(unless=force_refresh, query_string=True)
 @arguments(StatsFilterSchema())
 @response(PlayerStatsSchema())
 @authenticate(app_auth)

@@ -28,7 +28,7 @@ bp.register_blueprint(teams, url_prefix='/teams')
 
 
 @teams.route('', methods=['GET'])
-@cache.cached(unless=force_refresh)
+@cache.cached(unless=force_refresh, query_string=True)
 @arguments(PaginationArgs())
 @response(TeamCollection())
 @authenticate(app_auth)
@@ -104,7 +104,7 @@ def update_team(team_id):
 
 
 @teams.route('/<int:team_id>/players', methods=['GET'])
-@cache.cached(unless=force_refresh)
+@cache.cached(unless=force_refresh, query_string=True)
 @arguments(CurrentFilterSchema())
 @response(TeamPlayers())
 @authenticate(app_auth)

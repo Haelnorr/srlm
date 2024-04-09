@@ -110,7 +110,7 @@ def get_free_agents_in_season_division(season_division_id):
 
 
 @season_division.route('/<int:season_division_id>/matches', methods=['GET'])
-@cache.cached(unless=force_refresh)
+@cache.cached(unless=force_refresh, query_string=True)
 @arguments(UnplayedFilterSchema())
 @response(SeasonDivisionMatches())
 @authenticate(app_auth)

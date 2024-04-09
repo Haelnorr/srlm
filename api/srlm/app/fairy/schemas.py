@@ -27,6 +27,20 @@ class PaginationArgs(ma.Schema):
     total_items = ma.Int(dump_only=True)
 
 
+class DateFilters(PaginationArgs):
+    """Defines filters for dates"""
+    start_date = ma.Date()
+    end_date = ma.Date()
+
+
+class SeasonFilters(DateFilters):
+    """Filters for season lookup"""
+    league = ma.Str()
+    current = ma.Bool()
+    last = ma.Bool()
+    next = ma.Bool()
+
+
 class PaginationLinks(Links):
     """Defines pagination links"""
     next = ma.URL()

@@ -1,4 +1,6 @@
 """Endpoints relating to Seasons"""
+from datetime import datetime, timezone
+
 from apifairy import arguments, body, response, authenticate, other_responses
 
 from api.srlm.app import db, cache
@@ -11,7 +13,7 @@ from api.srlm.app.api.utils.functions import force_fields, clean_data, force_uni
     force_date_format
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, SeasonSchema, LinkSuccessSchema, SeasonCollection, \
-    DivisionsInSeason
+    DivisionsInSeason, SeasonFilters
 from api.srlm.app.models import Season, League, SeasonDivision, Matchtype
 from api.srlm.app.api.auth.utils import app_auth
 import sqlalchemy as sa
@@ -26,16 +28,67 @@ bp.register_blueprint(seasons, url_prefix='/seasons')
 
 
 @seasons.route('', methods=['GET'])
-@cache.cached(unless=force_refresh)
-@arguments(PaginationArgs())
+@cache.cached(unless=force_refresh, query_string=True)
+@arguments(SeasonFilters())
 @response(SeasonCollection())
 @authenticate(app_auth)
 @other_responses(unauthorized)
-def get_seasons(pagination):
-    """Get the collection of all seasons"""
-    page = pagination['page']
-    per_page = pagination['per_page']
-    return Season.to_collection_dict(sa.select(Season), page, per_page, 'api.seasons.get_seasons')
+def get_seasons(search_filters):
+    """Get a collection of seasons
+    Specifying either `current`, `last` or `next` will return a paginated list with 1 per page. If multiple results for
+    the query, will be ordered by relevant (i.e. `last` will be ordered by most-recent first). These search params are
+    mutually exclusive, and also negate any specified start or end dates.
+
+    Specifying `start_date` or `end_date` will set the start/end window for the query (finals included). Must be
+    in format "yyyy-mm-dd".
+
+    `league` can be a leagues ID or acronym.
+    """
+    league_filter = search_filters.get('league', None)
+    current_season = search_filters.get('current', None)
+    last_season = search_filters.get('last', None)
+    next_season = search_filters.get('next', None)
+    start_date = search_filters.get('start_date', None)
+    end_date = search_filters.get('end_date', None)
+    page = search_filters['page']
+    per_page = search_filters['per_page']
+
+    query = db.session.query(Season)
+
+    now = datetime.now(timezone.utc)
+
+    if current_season:
+        query = query.filter(
+            Season.start_date <= now,
+            Season.finals_end >= now
+        )
+
+    elif last_season:
+        query = query.filter(
+            Season.finals_end < now
+        ).order_by(sa.desc(Season.finals_end))
+        per_page = 1
+
+    elif next_season:
+        query = query.filter(
+            Season.start_date > now
+        ).order_by(sa.asc(Season.start_date))
+        per_page = 1
+    else:
+        if start_date:
+            query = query.filter(
+                Season.start_date >= start_date
+            )
+        if end_date:
+            query = query.filter(
+                Season.finals_end <= end_date
+            )
+
+    if league_filter:
+        league = ensure_exists(League, return_none=True, join_method='or', id=league_filter, acronym=league_filter)
+        query = query.filter(Season.league_id == league.id)
+
+    return Season.to_collection_dict(query, page, per_page, 'api.seasons.get_seasons')
 
 
 @seasons.route('/<int:season_id>', methods=['GET'])
@@ -113,7 +166,7 @@ def update_season(season_id):
 
 
 @seasons.route('/<int:season_id>/divisions', methods=['GET'])
-@cache.cached(unless=force_refresh)
+@cache.cached(unless=force_refresh, query_string=True)
 @arguments(PaginationArgs())
 @response(DivisionsInSeason())
 @authenticate(app_auth)

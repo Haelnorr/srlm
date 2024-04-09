@@ -24,7 +24,7 @@ bp.register_blueprint(divisions, url_prefix='/divisions')
 
 
 @divisions.route('', methods=['GET'])
-@cache.cached(unless=force_refresh)
+@cache.cached(unless=force_refresh, query_string=True)
 @arguments(PaginationArgs())
 @response(DivisionCollection())
 @authenticate(app_auth)

@@ -38,7 +38,7 @@ def get_user(user_id):
 
 
 @users.route('', methods=['GET'])
-@cache.cached(unless=force_refresh)
+@cache.cached(unless=force_refresh, query_string=True)
 @arguments(PaginationArgs())
 @response(UserCollection())
 @authenticate(app_auth)
