@@ -1,10 +1,12 @@
 """Endpoints Relating to SeasonDivisions"""
 from apifairy import authenticate, other_responses, response, body, arguments
 
-from api.srlm.app import db
+from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
 from flask import request, Blueprint
+
+from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
@@ -23,16 +25,17 @@ bp.register_blueprint(season_division, url_prefix='/season_division')
 
 
 @season_division.route('/<int:season_division_id>', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(SeasonDivisionSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_season_division(season_division_id):
     """Get details of a SeasonDivision"""
-    season_division = ensure_exists(SeasonDivision, id=season_division_id)
-    return season_division.to_dict()
+    season_division_db = ensure_exists(SeasonDivision, id=season_division_id)
+    return season_division_db.to_dict()
 
 
-@season_division.route('/', methods=['POST'])
+@season_division.route('', methods=['POST'])
 @body(SeasonDivisionSchema())
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
@@ -62,6 +65,7 @@ def add_season_division():
 
 
 @season_division.route('/<int:season_division_id>/teams', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(SeasonDivisionTeams())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -76,6 +80,7 @@ def get_teams_in_season_division(season_division_id):
 
 
 @season_division.route('/<int:season_division_id>/rookies', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(SeasonDivisionRookies())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -88,6 +93,7 @@ def get_rookies_in_season_division(season_division_id):
 
 
 @season_division.route('/<int:season_division_id>/free_agents', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(SeasonDivisionFreeAgents())
 @authenticate(app_auth)
 @other_responses(unauthorized)
@@ -104,6 +110,7 @@ def get_free_agents_in_season_division(season_division_id):
 
 
 @season_division.route('/<int:season_division_id>/matches', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @arguments(UnplayedFilterSchema())
 @response(SeasonDivisionMatches())
 @authenticate(app_auth)
@@ -119,5 +126,6 @@ def get_matches_in_season_division(search_filter, season_division_id):
 
 
 @season_division.route('/<int:season_division_id>/finals', methods=['GET'])
+@cache.cached(unless=force_refresh)
 def get_finals_in_season_division(season_division_id):
     pass

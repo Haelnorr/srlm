@@ -51,7 +51,7 @@ def get_permissions(pagination):
     return Permission.to_collection_dict(sa.select(Permission), page, per_page, 'api.auth.permissions.get_permissions')
 
 
-@permissions.route('/', methods=['POST'])
+@permissions.route('', methods=['POST'])
 @body(PermissionSchema())
 @response(LinkSuccessSchema())
 @authenticate(app_auth)

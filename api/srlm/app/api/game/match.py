@@ -5,9 +5,10 @@ from apifairy import body, response, authenticate, other_responses
 from flask import request, Blueprint
 import sqlalchemy as sa
 
+from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.spapi.lobby import get_lobby_matches
 from api.srlm.app.task_manager.tasks import cancel_task
-from api.srlm.app import db
+from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.auth.utils import get_bearer_token, app_auth, dual_auth
@@ -18,13 +19,13 @@ from api.srlm.app.fairy.schemas import LinkSuccessSchema, NewMatchSchema, ViewMa
     MatchtypeSchema, MatchStatsSchema, NewMatchFlag
 from api.srlm.app.models import SeasonDivision, Team, Match, MatchSchedule, MatchReview, MatchData, Matchtype, User, \
     PlayerMatchData
-from api.srlm.app.spapi.lobby_manager import generate_lobby
+from api.srlm.app.spapi.lobby_manager import generate_lobby, validate_stats
 
 match = Blueprint('match', __name__)
 bp.register_blueprint(match, url_prefix='/match')
 
 
-@match.route('/', methods=['POST'])
+@match.route('', methods=['POST'])
 @body(NewMatchSchema())
 @response(LinkSuccessSchema(), 201)
 @authenticate(app_auth)
@@ -63,6 +64,7 @@ def create_match():
 
 
 @match.route('/<int:match_id>', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(ViewMatchSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -118,6 +120,9 @@ def get_match_review(match_id):
 def update_match_review(match_id):
     """Updates a match review. Requires user token"""
     match_db = ensure_exists(Match, id=match_id)
+    if match_db.results:
+        raise BadRequest('Match results already confirmed. Unable to submit review')
+
     user_token = get_bearer_token(request.headers)['user']
     user = User.check_token(user_token)
 
@@ -156,10 +161,19 @@ def update_match_review(match_id):
 
     db.session.commit()
 
+    match_db = db.session.get(Match, match_db.id)
+    lobby_ids = [lb.id for lb in match_db.lobbies]
+    accepted_periods = db.session.query(MatchData).filter(MatchData.lobby_id.in_(lobby_ids)).count()
+    flags = db.session.query(MatchReview).filter_by(match_id=match_db.id, resolved=False).count()
+
+    if accepted_periods == (1 + (match_db.season_division.season.match_type.periods * 2)) and flags == 0:
+        validate_stats.delay(match_db.id)
+
     return responses.request_success(f'Updated review of match {match_db.id}', 'api.match.get_match', match_id=match_id)
 
 
 @match.route('/<int:match_id>/stats', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(MatchStatsSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -253,6 +267,7 @@ def report_issue(match_id):
 
 
 @match.route('/type/<int:match_type_id>', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(MatchtypeSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)

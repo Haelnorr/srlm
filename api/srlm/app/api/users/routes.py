@@ -2,9 +2,10 @@
 import sqlalchemy as sa
 from apifairy import arguments, response, authenticate, other_responses, body
 from flask import request, url_for
-from api.srlm.app import db
+from api.srlm.app import db, cache
 from api.srlm.app.api.users import users_bp as users
 from api.srlm.app.api.utils import responses
+from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.functions import force_fields, force_unique, clean_data, ensure_exists
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, TokenSchema, PasswordResetSchema, ChangePasswordSchema, \
@@ -36,7 +37,8 @@ def get_user(user_id):
     return user.to_dict(include_email=include_email)
 
 
-@users.route('/', methods=['GET'])
+@users.route('', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @arguments(PaginationArgs())
 @response(UserCollection())
 @authenticate(app_auth)
@@ -48,7 +50,7 @@ def get_users(pagination):
     return User.to_collection_dict(sa.select(User), page, per_page, 'api.users.get_users')
 
 
-@users.route('/', methods=['POST'])
+@users.route('', methods=['POST'])
 @body(UserSchema())
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)

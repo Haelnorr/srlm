@@ -2,18 +2,17 @@
 
 **Before next PR**
 
+
 **Future**
- - api endpoints (list incomplete)
+ - api endpoints
    - final + final_result
    - scheduling + view fixtures
    - awards
  - confirm user email
- - caching support
- - route cooldowns?
- - setup mysql in docker
  - web relay for discord bot notifications
  - match_data stuff (including legacy)
  - import legacy match data
+ - manage and issue authorized app tokens
 
 **Completed**
  - database models implemented
@@ -38,6 +37,9 @@
  - integration with Slapshot Public API for lobby creation and retrieving match data
  - get slapid and create/link player from steamID
  - APIFairy
+ - caching support
+ - rate limiting
+ - setup mysql in docker
  - api endpoints
    - user
    - permission

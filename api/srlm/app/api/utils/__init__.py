@@ -1,2 +1,2 @@
 """Utilities module"""
-from api.srlm.app.api.utils import errors, functions, responses
+from api.srlm.app.api.utils import errors, functions, responses, cache

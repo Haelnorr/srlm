@@ -3,11 +3,13 @@ from datetime import datetime, timezone
 
 from apifairy import arguments, response, authenticate, other_responses, body
 
-from api.srlm.app import db
+from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
 from flask import request, url_for, Blueprint
 import sqlalchemy as sa
+
+from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
@@ -25,7 +27,8 @@ teams = Blueprint('teams', __name__)
 bp.register_blueprint(teams, url_prefix='/teams')
 
 
-@teams.route('/', methods=['GET'])
+@teams.route('', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @arguments(PaginationArgs())
 @response(TeamCollection())
 @authenticate(app_auth)
@@ -38,6 +41,7 @@ def get_teams(pagination):
 
 
 @teams.route('/<int:team_id>', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(TeamSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -47,7 +51,7 @@ def get_team(team_id):
     return team.to_dict()
 
 
-@teams.route('/', methods=['POST'])
+@teams.route('', methods=['POST'])
 @body(TeamSchema())
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
@@ -100,6 +104,7 @@ def update_team(team_id):
 
 
 @teams.route('/<int:team_id>/players', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @arguments(CurrentFilterSchema())
 @response(TeamPlayers())
 @authenticate(app_auth)
@@ -115,6 +120,7 @@ def get_team_players(search_filter, team_id):
 
 
 @teams.route('/<int:team_id>/players/season/<int:season_division_id>', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(TeamSeasonPlayers())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -160,6 +166,7 @@ def get_team_players_in_season(team_id, season_division_id):
 
 
 @teams.route('/<int:team_id>/seasons', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(TeamSeasons())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -231,10 +238,12 @@ def deregister_team_season(team_id, season_division_id):
 
 
 @teams.route('/<int:team_id>/awards', methods=['GET'])
+@cache.cached(unless=force_refresh)
 def get_team_awards(team_id):  # TODO
     pass
 
 
 @teams.route('/<int:team_id>/awards', methods=['POST'])
+@cache.cached(unless=force_refresh)
 def give_team_award(team_id):  # TODO
     pass

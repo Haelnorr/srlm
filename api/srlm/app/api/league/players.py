@@ -6,10 +6,11 @@ from flask import request, Blueprint, url_for
 import sqlalchemy as sa
 from sqlalchemy import func
 
-from api.srlm.app import db
+from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.auth.utils import app_auth
+from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.errors import BadRequest, ResourceNotFound
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
@@ -26,6 +27,7 @@ bp.register_blueprint(players, url_prefix='/players')
 
 
 @players.route('/<int:player_id>', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(PlayerSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -35,7 +37,8 @@ def get_player(player_id):
     return player.to_dict()
 
 
-@players.route('/', methods=['GET'])
+@players.route('', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @arguments(PaginationArgs())
 @response(PlayerCollection())
 @authenticate(app_auth)
@@ -47,7 +50,7 @@ def get_players(pagination):
     return Player.to_collection_dict(sa.select(Player), page, per_page, 'api.players.get_players')
 
 
-@players.route('/', methods=['POST'])
+@players.route('', methods=['POST'])
 @body(PlayerSchema())
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
@@ -103,6 +106,7 @@ def update_player(player_id):
 
 
 @players.route('/<int:player_id>/teams', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @arguments(CurrentFilterSchema())
 @response(PlayerTeams())
 @authenticate(app_auth)
@@ -121,6 +125,7 @@ def get_player_teams(search_filter, player_id):
 
 
 @players.route('/<int:player_id>/stats', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @arguments(StatsFilterSchema())
 @response(PlayerStatsSchema())
 @authenticate(app_auth)
@@ -285,6 +290,7 @@ def deregister_player_team(player_id):
 
 
 @players.route('/<int:player_id>/free_agent', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(PlayerSeasons())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -341,6 +347,7 @@ def register_player_free_agent(player_id):
 
 
 @players.route('/<int:player_id>/awards', methods=['GET'])
+@cache.cached(unless=force_refresh)
 def get_player_awards(player_id):  # TODO
     pass
 

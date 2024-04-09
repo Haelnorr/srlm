@@ -1,10 +1,12 @@
 """Endpoints relating to Leagues"""
 from apifairy import arguments, body, response, authenticate, other_responses
 
-from api.srlm.app import db
+from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
 from flask import request, Blueprint
+
+from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.functions import force_fields, clean_data, force_unique, ensure_exists
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, LeagueCollection, LeagueSchema, LinkSuccessSchema, \
@@ -22,7 +24,8 @@ leagues = Blueprint('leagues', __name__)
 bp.register_blueprint(leagues, url_prefix='/leagues')
 
 
-@leagues.route('/', methods=['GET'])
+@leagues.route('', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @arguments(PaginationArgs())
 @response(LeagueCollection())
 @authenticate(app_auth)
@@ -35,6 +38,7 @@ def get_leagues(pagination):
 
 
 @leagues.route('/<league_id_or_acronym>', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(LeagueSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -45,7 +49,7 @@ def get_league(league_id_or_acronym):
         return league_db.to_dict()
 
 
-@leagues.route('/', methods=['POST'])
+@leagues.route('', methods=['POST'])
 @body(LeagueSchema())
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
@@ -91,6 +95,7 @@ def update_leagues(league_id_or_acronym):
 
 
 @leagues.route('/<league_id_or_acronym>/seasons', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @arguments(PaginationArgs())
 @response(SeasonsInLeague())
 @authenticate(app_auth)
@@ -116,6 +121,7 @@ def get_league_seasons(pagination, league_id_or_acronym):
 
 
 @leagues.route('/<league_id_or_acronym>/divisions', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @arguments(PaginationArgs())
 @response(DivisionsInLeague())
 @authenticate(app_auth)

@@ -12,23 +12,15 @@ python << END
 import sys
 
 import pymysql
-import urllib.parse as urlparse
 import os
-
-url = urlparse.urlparse(os.environ['DATABASE_URL'])
-dbname = os.environ['LEAGUE_MANAGER_DB']
-user = url.username
-password = url.password
-host = url.hostname
-port = url.port
 
 try:
     pymysql.connect(
-        database=dbname,
-        user=user,
-        password=password,
-        host=host,
-        port=port
+        database='league_manager',
+        user=os.getenv('MYSQL_USER'),
+        password=os.getenv('MYSQL_PASS'),
+        host=os.getenv('MYSQL_HOST'),
+        port=int(os.getenv('MYSQL_PORT'))
     )
 except pymysql.OperationalError:
     sys.exit(-1)
