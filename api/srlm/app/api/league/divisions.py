@@ -1,10 +1,11 @@
 """Endpoints relating to Divisions"""
 from apifairy import arguments, body, response, authenticate, other_responses
 
-from api.srlm.app import db
+from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from flask import request, url_for, Blueprint
 from api.srlm.app.api.utils import responses
+from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.functions import force_fields, clean_data, ensure_exists, force_unique
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, DivisionCollection, DivisionSchema, LinkSuccessSchema, \
@@ -22,7 +23,8 @@ divisions = Blueprint('divisions', __name__)
 bp.register_blueprint(divisions, url_prefix='/divisions')
 
 
-@divisions.route('/', methods=['GET'])
+@divisions.route('', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @arguments(PaginationArgs())
 @response(DivisionCollection())
 @authenticate(app_auth)
@@ -35,6 +37,7 @@ def get_divisions(pagination):
 
 
 @divisions.route('/<int:division_id>', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(DivisionSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -45,7 +48,7 @@ def get_division(division_id):
         return division.to_dict()
 
 
-@divisions.route('/', methods=['POST'])
+@divisions.route('', methods=['POST'])
 @body(DivisionSchema())
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
@@ -99,6 +102,7 @@ def update_division(division_id):
 
 
 @divisions.route('/<int:division_id>/seasons', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(SeasonsOfDivision())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)

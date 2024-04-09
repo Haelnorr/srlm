@@ -16,7 +16,7 @@ lobby = Blueprint('lobby', __name__)
 bp.register_blueprint(lobby, url_prefix='/lobby')
 
 
-@lobby.route('/', methods=['POST'])
+@lobby.route('', methods=['POST'])
 @body(GenerateLobbySchema())
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)

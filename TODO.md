@@ -1,7 +1,7 @@
 # TODO
 
 **Before next PR**
- - caching support
+ - ~~caching support~~
  - route cooldowns?
  - ~~setup mysql in docker~~
 

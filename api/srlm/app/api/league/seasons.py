@@ -1,10 +1,12 @@
 """Endpoints relating to Seasons"""
 from apifairy import arguments, body, response, authenticate, other_responses
 
-from api.srlm.app import db
+from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
 from flask import request, Blueprint
+
+from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.functions import force_fields, clean_data, force_unique, ensure_exists, \
     force_date_format
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
@@ -23,7 +25,8 @@ seasons = Blueprint('seasons', __name__)
 bp.register_blueprint(seasons, url_prefix='/seasons')
 
 
-@seasons.route('/', methods=['GET'])
+@seasons.route('', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @arguments(PaginationArgs())
 @response(SeasonCollection())
 @authenticate(app_auth)
@@ -36,6 +39,7 @@ def get_seasons(pagination):
 
 
 @seasons.route('/<int:season_id>', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(SeasonSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -46,7 +50,7 @@ def get_season(season_id):
         return season.to_dict()
 
 
-@seasons.route('/', methods=['POST'])
+@seasons.route('', methods=['POST'])
 @body(SeasonSchema())
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
@@ -109,6 +113,7 @@ def update_season(season_id):
 
 
 @seasons.route('/<int:season_id>/divisions', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @arguments(PaginationArgs())
 @response(DivisionsInSeason())
 @authenticate(app_auth)

@@ -5,9 +5,10 @@ from apifairy import body, response, authenticate, other_responses
 from flask import request, Blueprint
 import sqlalchemy as sa
 
+from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.spapi.lobby import get_lobby_matches
 from api.srlm.app.task_manager.tasks import cancel_task
-from api.srlm.app import db
+from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.auth.utils import get_bearer_token, app_auth, dual_auth
@@ -24,7 +25,7 @@ match = Blueprint('match', __name__)
 bp.register_blueprint(match, url_prefix='/match')
 
 
-@match.route('/', methods=['POST'])
+@match.route('', methods=['POST'])
 @body(NewMatchSchema())
 @response(LinkSuccessSchema(), 201)
 @authenticate(app_auth)
@@ -63,6 +64,7 @@ def create_match():
 
 
 @match.route('/<int:match_id>', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(ViewMatchSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -160,6 +162,7 @@ def update_match_review(match_id):
 
 
 @match.route('/<int:match_id>/stats', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(MatchStatsSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -253,6 +256,7 @@ def report_issue(match_id):
 
 
 @match.route('/type/<int:match_type_id>', methods=['GET'])
+@cache.cached(unless=force_refresh)
 @response(MatchtypeSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
