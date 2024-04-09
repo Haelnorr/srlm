@@ -19,7 +19,7 @@ from api.srlm.app.fairy.schemas import LinkSuccessSchema, NewMatchSchema, ViewMa
     MatchtypeSchema, MatchStatsSchema, NewMatchFlag
 from api.srlm.app.models import SeasonDivision, Team, Match, MatchSchedule, MatchReview, MatchData, Matchtype, User, \
     PlayerMatchData
-from api.srlm.app.spapi.lobby_manager import generate_lobby
+from api.srlm.app.spapi.lobby_manager import generate_lobby, validate_stats
 
 match = Blueprint('match', __name__)
 bp.register_blueprint(match, url_prefix='/match')
@@ -120,6 +120,9 @@ def get_match_review(match_id):
 def update_match_review(match_id):
     """Updates a match review. Requires user token"""
     match_db = ensure_exists(Match, id=match_id)
+    if match_db.results:
+        raise BadRequest('Match results already confirmed. Unable to submit review')
+
     user_token = get_bearer_token(request.headers)['user']
     user = User.check_token(user_token)
 
@@ -157,6 +160,14 @@ def update_match_review(match_id):
                     player_match_data.from_dict(player_data)
 
     db.session.commit()
+
+    match_db = db.session.get(Match, match_db.id)
+    lobby_ids = [lb.id for lb in match_db.lobbies]
+    accepted_periods = db.session.query(MatchData).filter(MatchData.lobby_id.in_(lobby_ids)).count()
+    flags = db.session.query(MatchReview).filter_by(match_id=match_db.id, resolved=False).count()
+
+    if accepted_periods == (1 + (match_db.season_division.season.match_type.periods * 2)) and flags == 0:
+        validate_stats.delay(match_db.id)
 
     return responses.request_success(f'Updated review of match {match_db.id}', 'api.match.get_match', match_id=match_id)
 

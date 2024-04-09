@@ -9,6 +9,4 @@ def force_refresh(*args, **kwargs):
     if cached == 'false' or cached == 'False' or cached == 'No' or cached == 'no':
         override = True
 
-    print(override)
-
     return override

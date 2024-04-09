@@ -14,5 +14,5 @@ done
 >&2 echo 'Celery workers are available'
 
 celery -A api.celery  \
-    --broker="${CELERY_BROKER}" \
+    --broker="redis://${REDIS_HOST}:${REDIS_PORT}/0" \
     flower

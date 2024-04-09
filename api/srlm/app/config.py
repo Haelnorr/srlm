@@ -19,9 +19,12 @@ api_access_db_uri = base_db_url + 'api_access'
 
 redis_host = os.getenv('REDIS_HOST')
 redis_port = int(os.getenv('REDIS_PORT'))
-celery_broker = f"redis://{redis_host}:{redis_port}/celery"
+
+celery_broker = f"redis://{redis_host}:{redis_port}/0"
 celery_backend = "db+" + base_db_url + "celery"
-cache_backend = f"redis://{redis_host}:{redis_port}/cache"
+
+cache_backend = f"redis://{redis_host}:{redis_port}/1"
+limiter_backend = f"redis://{redis_host}:{redis_port}/2"
 
 
 class Config:
@@ -39,12 +42,18 @@ class Config:
     DOMAIN = os.getenv('DOMAIN')
     ADMINS = mailing_list
     CELERY = {
-        "broker_url": celery_broker,
-        "result_backend": celery_backend
+        'broker_url': celery_broker,
+        'result_backend': celery_backend
     }
     APIFAIRY_TITLE = 'Slapshot: Rebound - League Manager API'
     APIFAIRY_VERSION = '0.7 - dev'
-    CACHE_TYPE = "RedisCache"
+    CACHE_TYPE = 'RedisCache'
     CACHE_DEFAULT_TIMEOUT = 300
+    CACHE_REDIS_URL = cache_backend
+    CACHE_SOURCE_CHECK = True
+    RATELIMIT_APPLICATION = '50 per minute'
+    RATELIMIT_STORAGE_URI = limiter_backend
+    RATELIMIT_STRATEGY = 'fixed-window'
+    RATELIMIT_HEADERS_ENABLED = True
 
 

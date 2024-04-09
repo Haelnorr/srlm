@@ -43,9 +43,15 @@ conversion on the client side.
 Most GET requests have response caching of 5 minutes to prevent overloading. To force a refresh, include query
 `cached=False` in your request (i.e. /api/players?cached=False).
 Values `false`, `No` and `no` also work for this override.
+
+## Rate Limits
+
+The API has a global rate limit of 50 requests per minute. Request Headers carry information on the rate limiting.
 """
 
 from flask import Flask
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from flask_login import LoginManager
 from flask_marshmallow import Marshmallow
 from flask_sqlalchemy import SQLAlchemy
@@ -70,6 +76,9 @@ ma = Marshmallow()
 cache = Cache()
 
 
+limiter = Limiter(get_remote_address)
+
+
 def create_app(config_class=Config):
     """This is where the main web-app is defined and made available to the runtime environment"""
     # Starting web app and loading config
@@ -90,6 +99,7 @@ def create_app(config_class=Config):
     fairy.init_app(app)
     ma.init_app(app)
     cache.init_app(app)
+    limiter.init_app(app)
 
     celery_app = make_celery(app)
     celery_app.set_default()

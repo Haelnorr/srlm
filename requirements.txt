@@ -21,6 +21,7 @@ click-repl==0.3.0
 colorama==0.4.6
 cryptography==42.0.5
 defusedxml==0.7.1
+Deprecated==1.2.14
 dnspython==2.3.0
 email-validator==2.0.0.post1
 eventlet==0.36.1
@@ -29,6 +30,7 @@ Flask==2.2.3
 Flask-Caching==2.1.0
 Flask-CeleryExt==0.5.0
 Flask-HTTPAuth==4.8.0
+Flask-Limiter==3.5.1
 Flask-Login==0.6.2
 Flask-Mail==0.9.1
 flask-marshmallow==1.2.1
@@ -47,9 +49,11 @@ Hypercorn==0.16.0
 hyperframe==6.0.1
 idna==3.4
 importlib-metadata==6.4.1
+importlib_resources==6.4.0
 itsdangerous==2.1.2
 Jinja2==3.1.2
 kombu==5.3.6
+limits==3.10.1
 ma==1.0.2
 ma.mongo==1.0.2
 Mako==1.2.4
@@ -59,6 +63,7 @@ marshmallow==3.21.1
 marshmallow-sqlalchemy==1.0.0
 mdurl==0.1.2
 multidict==6.0.5
+ordered-set==4.1.0
 packaging==24.0
 priority==2.0.0
 prometheus_client==0.20.0
@@ -87,6 +92,7 @@ vine==5.1.0
 wcwidth==0.2.13
 webargs==8.4.0
 Werkzeug==2.2.3
+wrapt==1.16.0
 wsproto==1.2.0
 WTForms==3.0.1
 zipp==3.15.0
