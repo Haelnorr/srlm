@@ -1,17 +1,15 @@
 # TODO
 
 **Before next PR**
-
-
-**Future**
  - api endpoints
    - final + final_result
    - scheduling + view fixtures
    - awards
+ - import legacy match data
+
+**Future**
  - confirm user email
  - web relay for discord bot notifications
- - match_data stuff (including legacy)
- - import legacy match data
  - manage and issue authorized app tokens
 
 **Completed**
