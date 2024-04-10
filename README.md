@@ -55,6 +55,6 @@ REDIS_PORT=6379
 The docker image is setup to avoid rebuilds on source code changes (except where changes to the docker environment have occurred).  
 Unless explicitly specified, updating just requires pulling from the repo and restarting the docker image.
 
-# Endpoints
-
-For endpoint documentation access the /docs path in your browser
+# Usage / Endpoints
+API will go live on port 8000.
+For endpoint documentation access the [/docs](http://localhost:8000/docs) path in your browser 
