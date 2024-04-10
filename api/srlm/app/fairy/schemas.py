@@ -81,6 +81,13 @@ class BasicAuthSchema(ma.Schema):
     password = ma.Str(required=True)
 
 
+class DiscordAuthSchema(ma.Schema):
+    """Defines the scheme for auth via discord"""
+    access_token = ma.Str(required=True)
+    refresh_token = ma.Str(required=True)
+    token_expiration = ma.Date()
+
+
 class TokenSchema(ma.Schema):
     """Defines Token responses"""
     token = ma.Str()

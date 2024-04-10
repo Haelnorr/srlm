@@ -1,4 +1,5 @@
 """Utilities for the authentication system"""
+import requests
 import sqlalchemy as sa
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth
 from api.srlm.api_access.models import AuthorizedApp
@@ -56,6 +57,12 @@ def verify_dual_token(token):
         return User.check_token(user_token)
     else:
         return None
+
+
+def get_discord_info(token):
+    api = 'https://discord.com/api/v9/users/@me'
+    headers = {"Authorization": f"Bearer {token}"}
+    return requests.get(api, headers=headers)
 
 
 @dual_auth.error_handler

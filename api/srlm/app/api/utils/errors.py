@@ -31,12 +31,12 @@ def bad_request(e):
 
 
 class UserAuthError(HTTPException):
-    code = 403
+    code = 401
 
 
 @bp.errorhandler(UserAuthError)
 def handle_user_auth_error(e):
-    return error_response(e.code, 'User is not authenticated or does not have access to this resource')
+    return error_response(e.code, 'User is not authenticated')
 
 
 class AppAuthError(HTTPException):

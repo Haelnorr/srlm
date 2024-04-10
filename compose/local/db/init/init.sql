@@ -3285,7 +3285,7 @@ DROP TABLE IF EXISTS `user`;
 CREATE TABLE `user` (
   `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(64) NOT NULL,
-  `email` varchar(120) NOT NULL,
+  `email` varchar(120) DEFAULT NULL,
   `password_hash` varchar(128) DEFAULT NULL,
   `reset_pass` tinyint(1) NOT NULL,
   `token` varchar(32) DEFAULT NULL,
