@@ -35,9 +35,8 @@ bp.register_blueprint(seasons, url_prefix='/seasons')
 @other_responses(unauthorized)
 def get_seasons(search_filters):
     """Get a collection of seasons
-    Specifying either `current`, `last` or `next` will return a paginated list with 1 per page. If multiple results for
-    the query, will be ordered by relevant (i.e. `last` will be ordered by most-recent first). These search params are
-    mutually exclusive, and also negate any specified start or end dates.
+    Specifying either `last` or `next` will return a paginated list with 1 per page. If multiple results for
+    the query, will be ordered by relevant (i.e. `last` will be ordered by most-recent first).
 
     Specifying `start_date` or `end_date` will set the start/end window for the query (finals included). Must be
     in format "yyyy-mm-dd".
@@ -50,10 +49,17 @@ def get_seasons(search_filters):
     next_season = search_filters.get('next', None)
     start_date = search_filters.get('start_date', None)
     end_date = search_filters.get('end_date', None)
+    order = search_filters['order']
+    order_by = search_filters['order_by']
     page = search_filters['page']
     per_page = search_filters['per_page']
 
     query = db.session.query(Season)
+
+    query = query.order_by(
+        getattr(sa, order)(
+            getattr(Season, order_by)
+        ))
 
     now = datetime.now(timezone.utc)
 

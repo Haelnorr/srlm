@@ -1,4 +1,6 @@
 """Provides marshmallow schemas for documentation support"""
+from marshmallow.validate import OneOf
+
 from api.srlm.app import ma
 from api.srlm.app.models import Permission, Match, Team, MatchResult, MatchReview, PlayerMatchData, MatchData, Discord, \
     Twitch, UserPermissions, User, Division, League, Season, SeasonDivision, Player, FreeAgent, Matchtype
@@ -39,6 +41,9 @@ class SeasonFilters(DateFilters):
     current = ma.Bool()
     last = ma.Bool()
     next = ma.Bool()
+    order = ma.Str(missing="desc", validate=OneOf(['asc', 'desc']))
+    order_by = ma.Str(missing="start_date", validate=OneOf(
+        ['start_date', 'end_date', 'finals_start', 'finals_end', 'name', 'league']))
 
 
 class PaginationLinks(Links):
