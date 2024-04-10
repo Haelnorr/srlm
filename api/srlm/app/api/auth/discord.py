@@ -20,7 +20,8 @@ auth_bp.register_blueprint(discord, url_prefix='/discord')
 @authenticate(app_auth)
 @other_responses(unauthorized)
 def auth_by_discord(data):
-    """Authenticates a user by their discord access token. If no user exists matching the discord account"""
+    """Authenticates a user by their discord access token.
+    If no user exists matching the discord account provided, a new user will be created."""
     access_token = data['access_token']
     refresh_token = data['refresh_token']
     token_expiration = data.get('token_expiration', None)
