@@ -30,9 +30,8 @@ bp.register_blueprint(match, url_prefix='/match')
 @response(LinkSuccessSchema(), 201)
 @authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
-def create_match():
+def create_match(data):
     """Create a new match"""
-    data = request.get_json()
 
     required_fields = ['season_division_id', 'home_team_id', 'away_team_id']
     force_fields(data, required_fields)
@@ -203,12 +202,11 @@ def get_match_stats(match_id):
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(dual_auth)
 @other_responses(unauthorized | not_found | bad_request)
-def report_issue(match_id):
+def report_issue(data, match_id):
     """Reports an issue with a match. Requires user token
     Valid values for `type` are: "Technical", "Forfeit", "Report"
     """
     match_db = ensure_exists(Match, id=match_id)
-    data = request.get_json()
     user_token = get_bearer_token(request.headers)['user']
     user = User.check_token(user_token)
 
@@ -282,9 +280,8 @@ def get_match_type(match_type_id):
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
-def add_match_type():
+def add_match_type(data):
     """Create a new match type"""
-    data = request.json()
     required_fields = valid_fields = ['name', 'description', 'periods', 'arena', 'mercy_rule',
                                       'match_length', 'game_mode', 'num_players']
     unique_fields = ['name']

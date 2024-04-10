@@ -114,9 +114,8 @@ def get_season(season_id):
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
-def add_season():
+def add_season(data):
     """Create a new season"""
-    data = request.get_json()
 
     unique_fields = ['name', 'acronym']
     required_fields = ['name', 'acronym', 'league', 'match_type']

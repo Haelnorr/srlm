@@ -21,9 +21,8 @@ bp.register_blueprint(lobby, url_prefix='/lobby')
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
 @other_responses(unauthorized | bad_request | not_found)
-def generate_lobby():
+def generate_lobby(data):
     """Generate a new in-game lobby"""
-    data = request.get_json()
 
     force_fields(data, ['match_id'])
     match = ensure_exists(Match, id=data['match_id'])

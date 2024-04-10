@@ -40,7 +40,7 @@ def get_user_twitch(user_id):
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(dual_auth)
 @other_responses(unauthorized | not_found | bad_request)
-def create_user_twitch(user_id):
+def create_user_twitch(data, user_id):
     """Link a users Twitch account. Requires user token"""
     user = ensure_exists(User, id=user_id)
 
@@ -50,7 +50,6 @@ def create_user_twitch(user_id):
     if user.twitch:
         raise BadRequest('User already has a linked Twitch account')
 
-    data = request.get_json()
 
     required_fields = valid_fields = ['twitch_id', 'access_token', 'refresh_token', 'expires_in']
 

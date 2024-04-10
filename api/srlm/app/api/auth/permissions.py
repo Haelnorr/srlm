@@ -56,9 +56,8 @@ def get_permissions(pagination):
 @response(LinkSuccessSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
-def new_permission():
+def new_permission(data):
     """Create a new permission"""
-    data = request.get_json()
 
     required_fields = valid_fields = ['key', 'description']
 

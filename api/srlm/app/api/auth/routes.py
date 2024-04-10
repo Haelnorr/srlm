@@ -14,7 +14,6 @@ from api.srlm.app.models import User
 
 @auth.route('/user', methods=['POST'])
 @authenticate(basic_auth)
-@body(BasicAuthSchema())
 @response(TokenSchema())
 @other_responses(unauthorized)
 def get_user_token():
@@ -40,7 +39,9 @@ def revoke_user_token():
 @response(UserVerifySchema())
 @authenticate(dual_auth)
 @other_responses(unauthorized)
-def validate_user_token():
+def validate_user_token(
+
+):
     """Check if the user token provided is valid"""
     user_token = get_bearer_token(request.headers)['user']
     user = User.check_token(user_token)

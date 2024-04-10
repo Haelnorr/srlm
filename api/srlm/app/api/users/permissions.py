@@ -45,11 +45,10 @@ def get_user_permissions(user_id):
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
-def add_user_permissions(user_id):
+def add_user_permissions(data, user_id):
     """Grant a permission to a user"""
     user = ensure_exists(User, id=user_id)
 
-    data = request.get_json()
     if 'key' not in data:
         raise BadRequest("Permission 'key' field missing")
     permission = db.session.query(Permission).filter(Permission.key == data['key']).first()
@@ -102,10 +101,9 @@ def update_user_permissions(user_id):
 @response(LinkSuccessSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
-def revoke_user_permissions(user_id):
+def revoke_user_permissions(data, user_id):
     """Revoke a permission from a user"""
     user = ensure_exists(User, id=user_id)
-    data = request.get_json()
 
     force_fields(data, ['key'])
 

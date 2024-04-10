@@ -54,9 +54,8 @@ def get_league(league_id_or_acronym):
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
-def add_leagues():
+def add_leagues(data):
     """Create a new league"""
-    data = request.get_json()
 
     required_fields = unique_fields = valid_fields = ['name', 'acronym']
     force_fields(data, required_fields)

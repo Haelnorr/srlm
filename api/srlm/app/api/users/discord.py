@@ -40,7 +40,7 @@ def get_user_discord(user_id):
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(dual_auth)
 @other_responses(unauthorized | not_found | bad_request)
-def create_user_discord(user_id):
+def create_user_discord(data, user_id):
     """Link a users Discord account. Requires user token"""
     user = ensure_exists(User, id=user_id)
 

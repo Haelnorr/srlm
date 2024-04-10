@@ -56,9 +56,8 @@ def get_team(team_id):
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
-def add_team():
+def add_team(data):
     """Create a new team"""
-    data = request.get_json()
 
     required_fields = unique_fields = ['name', 'acronym']
     valid_fields = ['name', 'acronym', 'color', 'logo', 'founded_date']
@@ -188,13 +187,12 @@ def get_team_seasons(team_id):
 @response(LinkSuccessSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
-def register_team_season(team_id):
+def register_team_season(data, team_id):
     """Register a team to a season"""
     # ensure team exists
     team = ensure_exists(Team, id=team_id)
 
     # validate input
-    data = request.get_json()
     force_fields(data, ['season_division_id'])
 
     # ensure season exists

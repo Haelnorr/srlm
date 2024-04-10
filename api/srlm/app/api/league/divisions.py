@@ -53,9 +53,8 @@ def get_division(division_id):
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
-def add_division():
+def add_division(data):
     """Create a new division"""
-    data = request.get_json()
 
     required_fields = ['name', 'acronym', 'league']
     valid_fields = ['name', 'acronym', 'league_id', 'description']

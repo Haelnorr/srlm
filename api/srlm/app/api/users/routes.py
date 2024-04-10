@@ -55,9 +55,8 @@ def get_users(pagination):
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
-def add_user():
+def add_user(data):
     """Create a new user"""
-    data = request.get_json()
 
     required_fields = valid_fields = ['username', 'email', 'password']
     unique_fields = ['username', 'email']

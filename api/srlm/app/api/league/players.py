@@ -55,9 +55,8 @@ def get_players(pagination):
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
-def new_player():
+def new_player(data):
     """Create a new player"""
-    data = request.get_json()
 
     required_fields = ['player_name']
     unique_fields = ['slap_id', 'player_name']
@@ -236,7 +235,7 @@ def get_player_stats(search_filters, player_id):
 @response(LinkSuccessSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
-def register_player_team(player_id):
+def register_player_team(data, player_id):
     """Register a player to a team"""
     # get the player
     player = ensure_exists(Player, id=player_id)
@@ -247,7 +246,6 @@ def register_player_team(player_id):
         raise BadRequest(f'Player already registered to {current_team.team.name} - cannot be registered to multiple teams at once.')
 
     # validate the data
-    data = request.get_json()
     force_fields(data, ['team'])
 
     # get the team
@@ -311,11 +309,10 @@ def get_player_free_agent(player_id):
 @response(LinkSuccessSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
-def register_player_free_agent(player_id):
+def register_player_free_agent(data, player_id):
     """Register a player to a season as a free agent"""
     player = ensure_exists(Player, id=player_id)
 
-    data = request.get_json()
     force_fields(data, ['season_division_id'])
 
     season_division = ensure_exists(SeasonDivision, id=data['season_division_id'])

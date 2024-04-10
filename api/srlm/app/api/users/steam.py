@@ -21,7 +21,7 @@ users_bp.register_blueprint(steam)
 @response(LinkSuccessSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
-def link_user_steam(user_id):
+def link_user_steam(data, user_id):
     """Link a users steam account. Will connect the user to player data using their SlapID"""
     user = ensure_exists(User, id=user_id)
 

@@ -40,9 +40,8 @@ def get_season_division(season_division_id):
 @response(LinkSuccessSchema(), status_code=201)
 @authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
-def add_season_division():
+def add_season_division(data):
     """Create a new SeasonDivision"""
-    data = request.get_json()
     required_fields = ['season_id', 'division_id']
     force_fields(data, required_fields)
 
