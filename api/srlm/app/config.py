@@ -51,7 +51,7 @@ class Config:
     CACHE_DEFAULT_TIMEOUT = 10  # TODO set to 300 for prod
     CACHE_REDIS_URL = cache_backend
     CACHE_SOURCE_CHECK = True
-    RATELIMIT_APPLICATION = '50 per minute'
+    RATELIMIT_APPLICATION = '200 per minute'  # TODO 50
     RATELIMIT_STORAGE_URI = limiter_backend
     RATELIMIT_STRATEGY = 'fixed-window'
     RATELIMIT_HEADERS_ENABLED = True
