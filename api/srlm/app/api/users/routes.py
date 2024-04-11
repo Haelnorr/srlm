@@ -58,7 +58,8 @@ def get_users(pagination):
 def add_user(data):
     """Create a new user"""
 
-    required_fields = valid_fields = ['username', 'email', 'password']
+    required_fields = ['username', 'password']
+    valid_fields = ['username', 'password', 'email']
     unique_fields = ['username', 'email']
 
     force_fields(data, required_fields)
