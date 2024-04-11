@@ -13,7 +13,7 @@ from api.srlm.app.api.utils.functions import force_fields, clean_data, force_uni
     force_date_format
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, SeasonSchema, LinkSuccessSchema, SeasonCollection, \
-    DivisionsInSeason, SeasonFilters
+    DivisionsInSeason, SeasonFilters, SeasonLookup
 from api.srlm.app.models import Season, League, SeasonDivision, Matchtype
 from api.srlm.app.api.auth.utils import app_auth
 import sqlalchemy as sa
@@ -97,16 +97,30 @@ def get_seasons(search_filters):
     return Season.to_collection_dict(query, page, per_page, 'api.seasons.get_seasons')
 
 
-@seasons.route('/<int:season_id>', methods=['GET'])
+@seasons.route('/<season_id>', methods=['GET'])
 @cache.cached(unless=force_refresh)
+@arguments(SeasonLookup())
 @response(SeasonSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
-def get_season(season_id):
-    """Get details on a season"""
-    season = ensure_exists(Season, id=season_id)
-    if season:
-        return season.to_dict()
+def get_season(search, season_id):
+    """Get details on a season.
+    Can search by ID or acronym. If searching by acronym, league query is required."""
+    league_filt = search.get('league', None)
+
+    if not league_filt:
+        season = ensure_exists(Season, id=season_id)
+    else:
+        league = ensure_exists(League, join_method='or', id=league_filt, acronym=league_filt)
+        season = db.session.query(Season).filter(sa.and_(
+            sa.or_(
+                Season.id == season_id,
+                Season.acronym == season_id
+            ),
+            Season.league == league
+        )).first()
+
+    return season.to_dict()
 
 
 @seasons.route('', methods=['POST'])
@@ -188,8 +202,8 @@ def get_divisions_in_season(pagination, season_id):
     response_json = {
         'season': season.name,
         'acronym': season.acronym,
-        'league': season.league.acronym
+        'league': season.league.acronym,
+        'divisions': divisions
     }
-    response_json.update(divisions)
 
     return response_json

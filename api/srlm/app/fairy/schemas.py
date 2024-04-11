@@ -577,6 +577,10 @@ class SeasonSchema(ma.SQLAlchemySchema):
         match_type = ma.URL()
         divisions = ma.URL()
 
+    class DivisionLink(ma.Schema):
+        name = ma.Str()
+        _link = ma.URL()
+
     id = ma.auto_field(dump_only=True)
     name = ma.auto_field(required=True)
     acronym = ma.auto_field(required=True)
@@ -586,7 +590,7 @@ class SeasonSchema(ma.SQLAlchemySchema):
     finals_start = ma.auto_field()
     finals_end = ma.auto_field()
     match_type = ma.Str(required=True)
-    divisions_count = ma.Int(dump_only=True)
+    divisions = ma.List(ma.Nested(DivisionLink()))
     _links = ma.Nested(SeasonLinks())
 
 
@@ -665,13 +669,6 @@ class DivisionsInLeague(ma.Schema):
     divisions = ma.Nested(DivisionCollection())
 
 
-class DivisionsInSeason(ma.Schema):
-    """Defines the response for the list of divisions in a season"""
-    season = ma.Str()
-    acronym = ma.Str()
-    divisions = ma.Nested(DivisionCollection())
-
-
 class SeasonDivisionSchema(ma.SQLAlchemySchema):
     """Defines the structure for SeasonDivision requests"""
     class Meta:
@@ -690,8 +687,8 @@ class SeasonDivisionSchema(ma.SQLAlchemySchema):
     season_id = ma.auto_field(required=True, load_only=True)
     division_id = ma.auto_field(required=True, load_only=True)
     id = ma.auto_field(dump_only=True)
-    season = ma.Str(dump_only=True)
-    division = ma.Str(dump_only=True)
+    season = ma.Nested(SeasonSchema(), dump_only=True)
+    division = ma.Nested(DivisionSchema(), dump_only=True)
     league = ma.Str(dump_only=True)
     teams_count = ma.Int(dump_only=True)
     free_agents_count = ma.Int(dump_only=True)
@@ -937,4 +934,24 @@ class PlayerStatsSchema(ma.Schema):
     _links = ma.Nested(PlayerStatsLinks())
 
 
+class SeasonDivisionCollection(Collection):
+    """Defines the collection of season divisions"""
+    items = ma.List(ma.Nested(SeasonDivisionSchema()))
 
+
+class DivisionsInSeason(ma.Schema):
+    """Defines the response for the list of divisions in a season"""
+    season = ma.Str()
+    acronym = ma.Str()
+    divisions = ma.Nested(SeasonDivisionCollection())
+
+
+class SeasonDivisionLookup(ma.Schema):
+    """Defines filters for the season division lookup"""
+    season = ma.Str(required=True)
+    division = ma.String(required=True)
+    league = ma.String(required=True)
+
+
+class SeasonLookup(ma.Schema):
+    league = ma.Str()

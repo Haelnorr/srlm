@@ -1,5 +1,6 @@
-### Current Version - 0.8.2
+### Current Version - 0.8.3
 History:
+ - 0.8.3 - Added better search functionality for Seasons and SeasonDivisions
  - 0.8.2 - Added support for Discord Auth (requires docker rebuild)
  - 0.8.1 - Updates to seasons endpoints
 

@@ -1,18 +1,18 @@
 """Endpoints Relating to SeasonDivisions"""
-from apifairy import authenticate, other_responses, response, body, arguments
+from apifairy import authenticate, other_responses, response, arguments, body
 
 from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
-from flask import request, Blueprint
-
+from flask import Blueprint
+import sqlalchemy as sa
 from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
-from api.srlm.app.fairy.schemas import LinkSuccessSchema, SeasonDivisionSchema, SeasonDivisionTeams, \
-    SeasonDivisionFreeAgents, SeasonDivisionRookies, SeasonDivisionMatches, UnplayedFilterSchema
-from api.srlm.app.models import SeasonDivision, FreeAgent, Season, Division
+from api.srlm.app.fairy.schemas import SeasonDivisionSchema, SeasonDivisionLookup, LinkSuccessSchema, \
+    SeasonDivisionTeams, SeasonDivisionRookies, SeasonDivisionFreeAgents, UnplayedFilterSchema, SeasonDivisionMatches
+from api.srlm.app.models import SeasonDivision, FreeAgent, Season, Division, League
 from api.srlm.app.api.auth.utils import app_auth
 
 # create a new logger for this module
@@ -32,6 +32,51 @@ bp.register_blueprint(season_division, url_prefix='/season_division')
 def get_season_division(season_division_id):
     """Get details of a SeasonDivision"""
     season_division_db = ensure_exists(SeasonDivision, id=season_division_id)
+    return season_division_db.to_dict()
+
+
+@season_division.route('', methods=['GET'])
+@arguments(SeasonDivisionLookup())
+#@cache.cached(unless=force_refresh)
+#@response(SeasonDivisionSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def season_division_lookup(filters):
+    """Get details of a SeasonDivision"""
+    league_filt = filters['league']
+    season_filt = filters['season']
+    division_filt = filters['division']
+
+    league = ensure_exists(League, join_method='or', id=league_filt, acronym=league_filt)
+
+    season = db.session.query(Season).filter(sa.and_(
+        sa.or_(
+            Season.acronym == season_filt,
+            Season.id == season_filt
+        ),
+        Season.league == league
+    )).first()
+
+    if not season:
+        raise ResourceNotFound(f'No season matching {season_filt} in league {league.acronym}')
+
+    division = db.session.query(Division).filter(
+        sa.or_(
+            Division.name.contains(division_filt),
+            Division.acronym == division_filt
+        ),
+        Division.league == league
+    ).first()
+
+    if not division:
+        raise ResourceNotFound(f'No division matching {division_filt} in league {league.name}')
+
+    season_division_db = db.session.query(SeasonDivision).filter(
+        SeasonDivision.season == season,
+        SeasonDivision.division == division
+    ).first()
+    if not season_division_db:
+        raise ResourceNotFound('No SeasonDivision found')
     return season_division_db.to_dict()
 
 

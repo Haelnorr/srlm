@@ -687,6 +687,20 @@ class Season(PaginatedAPIMixin, db.Model):
     def __repr__(self):
         return f'<Season {self.name} | {self.league.acronym}>'
 
+    def get_divisions(self):
+        divisions = []
+        for division in self.divisions:
+            season_division = db.session.query(SeasonDivision).filter_by(
+                season_id=self.id,
+                division_id=division.id
+            ).first()
+            data = {
+                'name': division.name,
+                '_link': url_for('api.season_division.get_season_division', season_division_id=season_division.id)
+            }
+            divisions.append(data)
+        return divisions
+
     def to_dict(self):
         data = {
             'id': self.id,
@@ -698,7 +712,7 @@ class Season(PaginatedAPIMixin, db.Model):
             'finals_start': self.finals_start,
             'finals_end': self.finals_end,
             'match_type': self.match_type.name,
-            'divisions_count': self.division_association.count(),
+            'divisions': self.get_divisions(),
             '_links': {
                 'self': url_for('api.seasons.get_season', season_id=self.id),
                 'league': url_for('api.leagues.get_league', league_id_or_acronym=self.league_id),
@@ -779,8 +793,8 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
     def to_dict(self):
         data = {
             'id': self.id,
-            'season': self.season.name,
-            'division': self.division.name,
+            'season': self.season.to_dict(),
+            'division': self.division.to_dict(),
             'league': self.season.league.acronym,
             'teams_count': len(self.teams),
             'free_agents_count': len(self.free_agents),
