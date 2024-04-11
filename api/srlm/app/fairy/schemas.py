@@ -508,7 +508,7 @@ class UserSchema(ma.SQLAlchemySchema):
 
     id = ma.auto_field()
     username = ma.auto_field(required=True)
-    email = ma.auto_field(required=True)
+    email = ma.auto_field()
     password = ma.Str(load_only=True, required=True)
     player = ma.Int(dump_only=True)
     discord = ma.Int(dump_only=True)
