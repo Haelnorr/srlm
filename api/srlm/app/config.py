@@ -46,7 +46,7 @@ class Config:
         'result_backend': celery_backend
     }
     APIFAIRY_TITLE = 'Slapshot: Rebound - League Manager API'
-    APIFAIRY_VERSION = '0.8.3 - dev'
+    APIFAIRY_VERSION = '0.8.4 - dev'
     CACHE_TYPE = 'RedisCache'
     CACHE_DEFAULT_TIMEOUT = 10  # TODO set to 300 for prod
     CACHE_REDIS_URL = cache_backend

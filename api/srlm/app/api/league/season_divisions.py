@@ -37,8 +37,8 @@ def get_season_division(season_division_id):
 
 @season_division.route('', methods=['GET'])
 @arguments(SeasonDivisionLookup())
-#@cache.cached(unless=force_refresh)
-#@response(SeasonDivisionSchema())
+@cache.cached(unless=force_refresh)
+@response(SeasonDivisionSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def season_division_lookup(filters):
@@ -114,7 +114,9 @@ def add_season_division(data):
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_teams_in_season_division(season_division_id):
-    """Get a list of teams in a SeasonDivision"""
+    """Get a list of teams in a SeasonDivision
+    Includes a list of players on each team that season
+    """
     # check season_division exists
     season_division_db = ensure_exists(SeasonDivision, id=season_division_id)
     # get list of teams

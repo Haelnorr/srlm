@@ -133,9 +133,9 @@ def get_team_players_in_season(team_id, season_division_id):
     # query the teams playerlist for players active during the season
     # uses (player_start_date is earlier than season_end) and (player_end_date is later than season_start)
     season_start = datetime.combine(season_division.season.start_date, datetime.min.time()).replace(tzinfo=timezone.utc)
-    season_end = datetime.combine(season_division.season.end_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+    season_end = datetime.combine(season_division.season.finals_end, datetime.min.time()).replace(tzinfo=timezone.utc)
 
-    players = {}
+    players = []
     for player_assoc in team.player_association:
         player_start_date = player_assoc.start_date.replace(tzinfo=timezone.utc)
         player_end_date = player_assoc.end_date.replace(tzinfo=timezone.utc) if player_assoc.end_date is not None else None
@@ -148,7 +148,7 @@ def get_team_players_in_season(team_id, season_division_id):
                     'self': url_for('api.players.get_player', player_id=player_assoc.player.id)
                 }
             }
-            players[player_assoc.player.id] = player
+            players.append(player)
 
     response_json = {
         'season_division': f'{season_division.get_readable_name()} ({season_division.season.league.acronym})',

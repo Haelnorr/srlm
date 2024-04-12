@@ -2,12 +2,8 @@
 --
 -- Host: 192.168.0.6    Database: celery
 -- ------------------------------------------------------
--- Server version	8.0.36
+-- Server version	8.0.3
 
-
-CREATE USER 'app'@'%' IDENTIFIED BY '631a7yXL6<km';
-GRANT ALL PRIVILEGES ON *.* TO 'app'@'%';
-FLUSH PRIVILEGES;
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;

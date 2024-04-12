@@ -1,5 +1,6 @@
-### Current Version - 0.8.3
+### Current Version - 0.8.4
 History:
+ - 0.8.4 - Added list of players to season_division/teams lookup
  - 0.8.3 - Added better search functionality for Seasons and SeasonDivisions
  - 0.8.2 - Added support for Discord Auth (requires docker rebuild)
  - 0.8.1 - Updates to seasons endpoints
@@ -24,10 +25,10 @@ Currently, the list of features is:
 - Automatic stat validation
 - User registration
 - Match review system
+- Link user account to players
 
 Planned features:
 - Manage finals fixtures
-- Link user account to players
 - Awards
 - Match scheduling
 - Web relay for discord notification/news bots
@@ -52,11 +53,14 @@ REDIS_HOST=redis
 REDIS_PORT=6379
 </pre>
 
+Run the command `docker compose up --build` to start the image. 
+
 ### Updating
 
 The docker image is setup to avoid rebuilds on source code changes (except where changes to the docker environment have occurred).  
-Unless explicitly specified, updating just requires pulling from the repo and restarting the docker image.
+Unless explicitly specified, updating just requires pulling from the repo and restarting the docker image.  
+Note: where an image rebuild is needed, you may have to run `docker compose down` and re-run `docker compose up`, otherwise the MySQL DB may persist and cause issues.
 
 # Usage / Endpoints
-API will go live on port 8000.
+API will go live on port 8000. (http://localhost:8000)  
 For endpoint documentation access the [/docs](http://localhost:8000/docs) path in your browser 

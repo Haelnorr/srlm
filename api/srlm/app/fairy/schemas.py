@@ -216,6 +216,7 @@ class SimpleTeamSchema(ma.SQLAlchemySchema):
         model = Team
         ordered = True
 
+    id = ma.auto_field()
     name = ma.auto_field()
     acronym = ma.auto_field(required=True)
     color = ma.auto_field()
@@ -579,6 +580,7 @@ class SeasonSchema(ma.SQLAlchemySchema):
 
     class DivisionLink(ma.Schema):
         name = ma.Str()
+        acronym = ma.Str()
         _link = ma.URL()
 
     id = ma.auto_field(dump_only=True)
@@ -787,9 +789,22 @@ class SimpleSeasonDivision(ma.Schema):
     _links = ma.Nested(SeasonDivisionLink())
 
 
+class StartEndDates(ma.Schema):
+    start = ma.DateTime()
+    end = ma.DateTime()
+
+
 class SeasonDivisionTeams(SimpleSeasonDivision):
     """Defines the response for the list of teams in a SeasonDivision"""
-    teams = ma.List(ma.Nested(SimpleTeamSchema()))
+    class SeasonTeamSchema(SimpleTeamSchema):
+        class CurrentPlayers(ma.Schema):
+            id = ma.Int()
+            name = ma.Str()
+            start_date = ma.Date()
+            end_date = ma.Date()
+            _links = ma.Nested(Links())
+        players = ma.List(ma.Nested(CurrentPlayers()))
+    teams = ma.List(ma.Nested(SeasonTeamSchema()))
 
 
 class SeasonDivisionRookies(SimpleSeasonDivision):
@@ -805,11 +820,6 @@ class SeasonDivisionFreeAgents(SimpleSeasonDivision):
 class SeasonDivisionMatches(SimpleSeasonDivision):
     """Defines the response for the list of matches in a SeasonDivision"""
     matches = ma.List(ma.Nested(SimpleMatchSchema()))
-
-
-class StartEndDates(ma.Schema):
-    start = ma.DateTime()
-    end = ma.DateTime()
 
 
 class PlayerTeams(ma.Schema):

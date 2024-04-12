@@ -408,6 +408,7 @@ class Team(PaginatedAPIMixin, db.Model):
 
     def to_simple_dict(self):
         data = {
+            'id': self.id,
             'name': self.name,
             'acronym': self.acronym,
             'color': self.color,
@@ -696,6 +697,7 @@ class Season(PaginatedAPIMixin, db.Model):
             ).first()
             data = {
                 'name': division.name,
+                'acronym': division.acronym,
                 '_link': url_for('api.season_division.get_season_division', season_division_id=season_division.id)
             }
             divisions.append(data)
@@ -834,8 +836,30 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
     def get_teams_dict(season_division_id):
         season_division = db.session.get(SeasonDivision, season_division_id)
         teams = []
+
         for team in season_division.teams:
-            teams.append(team.to_simple_dict())
+            team_data = team.to_simple_dict()
+
+            if season_division.season.start_date and season_division.season.finals_end:
+                season_start = datetime.combine(season_division.season.start_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+                season_end = datetime.combine(season_division.season.finals_end, datetime.min.time()).replace(tzinfo=timezone.utc)
+                players = []
+                for player_assoc in team.player_association:
+                    player_start_date = player_assoc.start_date.replace(tzinfo=timezone.utc)
+                    player_end_date = player_assoc.end_date.replace(tzinfo=timezone.utc) if player_assoc.end_date is not None else None
+                    if player_start_date < season_end and (player_end_date is None or player_end_date > season_start):
+                        player = {
+                            'id': player_assoc.player.id,
+                            'name': player_assoc.player.player_name,
+                            'start_date': player_assoc.start_date,
+                            'end_date': player_assoc.end_date,
+                            '_links': {
+                                'self': url_for('api.players.get_player', player_id=player_assoc.player.id)
+                            }
+                        }
+                        players.append(player)
+                team_data['players'] = players
+            teams.append(team_data)
         response = season_division.to_simple_dict()
         response['teams'] = teams
         links = {
