@@ -118,9 +118,9 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         else:
             return False
 
-    def get_token(self, expires_in=1209600):
+    def get_token(self, expires_in=604800):
         now = datetime.now(timezone.utc)
-        if self.token and self.token_expiration.replace(tzinfo=timezone.utc) > now + timedelta(seconds=86400):
+        if self.token and self.token_expiration.replace(tzinfo=timezone.utc) > now + timedelta(seconds=43200):
             return self.token
         self.token = secrets.token_hex(16)
         self.token_expiration = now + timedelta(seconds=expires_in)

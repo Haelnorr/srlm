@@ -1,5 +1,6 @@
-### Current Version - 0.8.4
+### Current Version - 0.8.5
 History:
+ - 0.8.5 - Modified discord auth to work with frontend
  - 0.8.4 - Added list of players to season_division/teams lookup
  - 0.8.3 - Added better search functionality for Seasons and SeasonDivisions
  - 0.8.2 - Added support for Discord Auth (requires docker rebuild)

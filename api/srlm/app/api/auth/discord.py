@@ -1,3 +1,5 @@
+from datetime import datetime, timezone, timedelta
+
 from apifairy import body, authenticate, response, other_responses
 from flask import Blueprint
 
@@ -24,7 +26,7 @@ def auth_by_discord(data):
     If no user exists matching the discord account provided, a new user will be created."""
     access_token = data['access_token']
     refresh_token = data['refresh_token']
-    token_expiration = data.get('token_expiration', None)
+    expires_in = data['expires_in']
 
     discord_request = get_discord_info(access_token)
 
@@ -32,14 +34,22 @@ def auth_by_discord(data):
         data = discord_request.json()
         discord_db = ensure_exists(Discord, return_none=True, discord_id=data['id'])
         if not discord_db:
+            now = datetime.now(timezone.utc)
             discord_db = Discord()
             discord_db.access_token = access_token
             discord_db.refresh_token = refresh_token
-            discord_db.token_expiration = token_expiration
+            discord_db.token_expiration = now + timedelta(seconds=expires_in)
             discord_db.discord_id = data['id']
 
             user = User()
-            user.username = data['global_name']
+            user_name = data['global_name']
+            existing = ensure_exists(User, return_none=True, username=user_name)
+            i = 1
+            while existing:
+                user_name = existing.username + str(1)
+                existing = ensure_exists(User, return_none=True, username=user_name)
+
+            user.username = user_name
             user.discord = discord_db
             user.get_token()
             db.session.add(user)
