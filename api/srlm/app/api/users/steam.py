@@ -23,7 +23,7 @@ users_bp.register_blueprint(steam)
 @other_responses(unauthorized | not_found | bad_request)
 def link_user_steam(data, user_id):
     """Link a users steam account. Will connect the user to player data using their SlapID"""
-    user = ensure_exists(User, id=user_id)
+    user = ensure_exists(User, id=user_id) # TODO fix duplicate username
 
     data = request.get_json()
     force_fields(data, ['steam_id'])

@@ -113,14 +113,14 @@ def update_player(player_id):
 def get_player_teams(search_filter, player_id):
     """Get a list of teams the player has played on"""
     player = ensure_exists(Player, id=player_id)
-    current = search_filter.get('current', False, bool)
+    current = search_filter.get('current', False)
 
     player_teams = PlayerTeam.get_teams_dict(player.id, current)
 
     if player_teams is None:
         raise ResourceNotFound('Player does not have a current team')
 
-    return
+    return player_teams
 
 
 @players.route('/<int:player_id>/stats', methods=['GET'])

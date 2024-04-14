@@ -828,11 +828,12 @@ class PlayerTeams(ma.Schema):
         name = ma.Str()
         acronym = ma.Str()
         color = ma.Str()
-        dates = ma.Nested(StartEndDates())
+        dates = ma.List(ma.Nested(StartEndDates()))
         _links = ma.Nested(Links())
 
     player = ma.Str(dump_only=True)
     teams = ma.List(ma.Nested(TeamList()), dump_only=True)
+    current_team = ma.Nested(TeamList())
     _links = ma.Nested(PlayerLink(), dump_only=True)
     team = ma.Str(required=True, load_only=True)
 
