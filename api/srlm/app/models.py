@@ -294,7 +294,7 @@ class Player(PaginatedAPIMixin, db.Model):
 
     def to_dict(self):
         now = datetime.now(timezone.utc)
-        current_team_q = self.team_association.filter(sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))
+        current_team_q = self.team_association.filter(sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))  # noqa
         current_team = current_team_q.first()
         unique_teams = []
         for team in self.teams:
@@ -327,7 +327,7 @@ class Player(PaginatedAPIMixin, db.Model):
 
     def to_simple_dict(self):
         now = datetime.now(timezone.utc)
-        current_team_q = self.team_association.filter(sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))
+        current_team_q = self.team_association.filter(sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))  # noqa
         current_team = current_team_q.first()
         data = {
             'player_name': self.player_name,
@@ -355,12 +355,12 @@ class Player(PaginatedAPIMixin, db.Model):
             start_filter = season.finals_end > PlayerTeam.start_date
             end_filter = sa.or_(
                 season.start_date < PlayerTeam.end_date,
-                PlayerTeam.end_date == None
+                PlayerTeam.end_date == None  # noqa
             )
 
         else:
             start_filter = PlayerTeam.start_date < now
-            end_filter = PlayerTeam.end_date == None
+            end_filter = PlayerTeam.end_date == None  # noqa
 
         current_team_q = self.team_association.filter(sa.and_(
             start_filter,
@@ -399,7 +399,7 @@ class Team(PaginatedAPIMixin, db.Model):
     def to_dict(self):
         now = datetime.now(timezone.utc)
         active_players = self.player_association.filter(
-            sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))
+            sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))  # noqa
         data = {
             'id': self.id,
             'name': self.name,

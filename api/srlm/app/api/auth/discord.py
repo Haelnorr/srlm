@@ -46,8 +46,9 @@ def auth_by_discord(data):
             existing = ensure_exists(User, return_none=True, username=user_name)
             i = 1
             while existing:
-                user_name = existing.username + str(1)
+                user_name = existing.username + str(i)
                 existing = ensure_exists(User, return_none=True, username=user_name)
+                i += 1
 
             user.username = user_name
             user.discord = discord_db
@@ -64,4 +65,3 @@ def auth_by_discord(data):
     }
 
     return response_json
-

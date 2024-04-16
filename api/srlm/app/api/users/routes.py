@@ -125,12 +125,12 @@ def update_user_password(user_id):
 
 
 @users.route('/<int:user_id>/matches_streamed', methods=['GET'])
-def get_user_matches_streamed(user_id):
+def get_user_matches_streamed(user_id):  # noqa TODO
     pass
 
 
 @users.route('/<int:user_id>/matches_reviewed', methods=['GET'])
-def get_user_matches_reviewed(user_id):
+def get_user_matches_reviewed(user_id):  # noqa TODO
     pass
 
 

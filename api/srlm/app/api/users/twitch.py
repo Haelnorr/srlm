@@ -7,7 +7,7 @@ from api.srlm.app.api.auth.utils import get_bearer_token, dual_auth, app_auth
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.errors import ResourceNotFound, UserAuthError, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, clean_data
-from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request, forbidden
+from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import LinkSuccessSchema, TwitchSchema, UpdateTwitchSchema
 from api.srlm.app.models import User, Twitch
 
@@ -49,7 +49,6 @@ def create_user_twitch(data, user_id):
 
     if user.twitch:
         raise BadRequest('User already has a linked Twitch account')
-
 
     required_fields = valid_fields = ['twitch_id', 'access_token', 'refresh_token', 'expires_in']
 

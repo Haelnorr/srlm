@@ -43,33 +43,33 @@ def get_season_division(season_division_id):
 @other_responses(unauthorized | not_found)
 def season_division_lookup(filters):
     """Get details of a SeasonDivision"""
-    league_filt = filters['league']
-    season_filt = filters['season']
-    division_filt = filters['division']
+    league_filter = filters['league']
+    season_filter = filters['season']
+    division_filter = filters['division']
 
-    league = ensure_exists(League, join_method='or', id=league_filt, acronym=league_filt)
+    league = ensure_exists(League, join_method='or', id=league_filter, acronym=league_filter)
 
     season = db.session.query(Season).filter(sa.and_(
         sa.or_(
-            Season.acronym == season_filt,
-            Season.id == season_filt
+            Season.acronym == season_filter,
+            Season.id == season_filter
         ),
         Season.league == league
     )).first()
 
     if not season:
-        raise ResourceNotFound(f'No season matching {season_filt} in league {league.acronym}')
+        raise ResourceNotFound(f'No season matching {season_filter} in league {league.acronym}')
 
     division = db.session.query(Division).filter(
         sa.or_(
-            Division.name.contains(division_filt),
-            Division.acronym == division_filt
+            Division.name.contains(division_filter),
+            Division.acronym == division_filter
         ),
         Division.league == league
     ).first()
 
     if not division:
-        raise ResourceNotFound(f'No division matching {division_filt} in league {league.name}')
+        raise ResourceNotFound(f'No division matching {division_filter} in league {league.name}')
 
     season_division_db = db.session.query(SeasonDivision).filter(
         SeasonDivision.season == season,

@@ -120,4 +120,4 @@ def create_app(config_class=Config):
 
 
 from api.srlm.app import models, events
-from api.srlm.api_access import models
+from api.srlm.api_access import models  # noqa

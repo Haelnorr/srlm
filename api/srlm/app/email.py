@@ -22,7 +22,7 @@ def send(subject, sender, recipients, text_body, html_body):
     # Sending the mail request to a separate thread for asynchronous processing
     # Requires access to the protected member '_get_current_object()' as
     # current_app is a proxy and has no value outside of the context of the main thread
-    Thread(target=send_async, args=(current_app._get_current_object(), msg)).start()
+    Thread(target=send_async, args=(current_app._get_current_object(), msg)).start()  # noqa TODO
 
 
 def send_password_reset_email(user):  # TODO change

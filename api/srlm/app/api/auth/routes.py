@@ -1,13 +1,13 @@
 """Main auth endpoints"""
 from flask import request, url_for
-from apifairy import response, body, other_responses, authenticate
+from apifairy import response, other_responses, authenticate
 from api.srlm.api_access.models import AuthorizedApp
 from api.srlm.app import db
 from api.srlm.app.api.auth import auth_bp as auth
 from api.srlm.app.api.auth.utils import basic_auth, user_auth, dual_auth, app_auth
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.auth.utils import get_bearer_token
-from api.srlm.app.fairy.schemas import TokenSchema, BasicAuthSchema, BasicSuccessSchema, UserVerifySchema
+from api.srlm.app.fairy.schemas import TokenSchema, BasicSuccessSchema, UserVerifySchema
 from api.srlm.app.fairy.errors import unauthorized
 from api.srlm.app.models import User
 

@@ -106,12 +106,12 @@ def get_seasons(search_filters):
 def get_season(search, season_id):
     """Get details on a season.
     Can search by ID or acronym. If searching by acronym, league query is required."""
-    league_filt = search.get('league', None)
+    league_filter = search.get('league', None)
 
-    if not league_filt:
+    if not league_filter:
         season = ensure_exists(Season, id=season_id)
     else:
-        league = ensure_exists(League, join_method='or', id=league_filt, acronym=league_filt)
+        league = ensure_exists(League, join_method='or', id=league_filter, acronym=league_filter)
         season = db.session.query(Season).filter(sa.and_(
             sa.or_(
                 Season.id == season_id,

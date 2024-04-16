@@ -237,11 +237,11 @@ def deregister_team_season(team_id, season_division_id):
 
 @teams.route('/<int:team_id>/awards', methods=['GET'])
 @cache.cached(unless=force_refresh)
-def get_team_awards(team_id):  # TODO
+def get_team_awards(team_id):  # noqa TODO
     pass
 
 
 @teams.route('/<int:team_id>/awards', methods=['POST'])
 @cache.cached(unless=force_refresh)
-def give_team_award(team_id):  # TODO
+def give_team_award(team_id):  # noqa TODO
     pass

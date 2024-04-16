@@ -166,7 +166,7 @@ def get_player_stats(search_filters, player_id):
     lobbies = [lb.id for lb in lobby_query]
 
     match_data_query = db.session.query(MatchData).filter(
-        MatchData.accepted == True,
+        MatchData.accepted == True,  # noqa
         MatchData.lobby_id.in_(lobbies)
     )
     filtered_matches = [match.id for match in match_data_query]
@@ -317,7 +317,7 @@ def register_player_free_agent(data, player_id):
 
     season_division = ensure_exists(SeasonDivision, id=data['season_division_id'])
 
-    # check if player isnt already a free agent in that season
+    # check if player isn't already a free agent in that season
     already_registered = ensure_exists(FreeAgent, return_none=True, player_id=player.id, season_division_id=season_division.id)
     if already_registered:
         raise BadRequest('Player already registered as a free agent to that season')
@@ -345,10 +345,10 @@ def register_player_free_agent(data, player_id):
 
 @players.route('/<int:player_id>/awards', methods=['GET'])
 @cache.cached(unless=force_refresh)
-def get_player_awards(player_id):  # TODO
+def get_player_awards(player_id):  # noqa TODO
     pass
 
 
 @players.route('/<int:player_id>/awards', methods=['POST'])
-def give_player_award(player_id):  # TODO
+def give_player_award(player_id):  # noqa TODO
     pass

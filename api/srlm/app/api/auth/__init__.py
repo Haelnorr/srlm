@@ -8,7 +8,7 @@ The app key is require for all requests (except for authenticating user details 
 App keys are currently provided by the developer manually and expire after 3 months.
 A valid app key can be used to generate a new key, replacing the old one and resetting the expiry.
 
-The user key is used to authenticate a specific user, and can be retreived by using the API request below.
+The user key is used to authenticate a specific user, and can be retrieved by using the API request below.
 For requests requiring a user key, append it directly to the app key when making your request. Total key length
 should be 66 characters.
 """

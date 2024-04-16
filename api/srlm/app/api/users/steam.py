@@ -1,6 +1,6 @@
 """Endpoint for linking a users steam account"""
 from apifairy import body, response, authenticate, other_responses
-from flask import request, Blueprint
+from flask import Blueprint
 from api.srlm.app import db
 from api.srlm.app.api.auth.utils import app_auth
 from api.srlm.app.api.users import users_bp
@@ -23,9 +23,8 @@ users_bp.register_blueprint(steam)
 @other_responses(unauthorized | not_found | bad_request)
 def link_user_steam(data, user_id):
     """Link a users steam account. Will connect the user to player data using their SlapID"""
-    user = ensure_exists(User, id=user_id) # TODO fix duplicate username
+    user = ensure_exists(User, id=user_id)
 
-    data = request.get_json()
     force_fields(data, ['steam_id'])
 
     user.steam_id = data['steam_id']
@@ -47,7 +46,7 @@ def link_user_steam(data, user_id):
         user.player = player
         db.session.commit()
 
-        return responses.request_success(f'Player {player.player_name} succesfully linked to user {user.username}', 'api.players.get_player', player_id=player.id)
+        return responses.request_success(f'Player {player.player_name} successfully linked to user {user.username}', 'api.players.get_player', player_id=player.id)
 
     else:
         return responses.request_success(f'Slap ID not found for the given steam ID. Steam ID linked to user {user.username}', 'api.users.get_user', user_id=user.id)

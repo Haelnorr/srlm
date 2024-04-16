@@ -6,8 +6,6 @@ from api.srlm.api_access.models import AuthorizedApp
 from api.srlm.app import db
 from api.srlm.app.models import User
 from api.srlm.app.api.utils.errors import error_response, AppAuthError, UserAuthError, DualAuthError
-from functools import wraps
-from flask import request
 
 basic_auth = HTTPBasicAuth()
 user_auth = HTTPTokenAuth()
@@ -34,7 +32,7 @@ def verify_user_token(token):
 
 
 @user_auth.error_handler
-def token_auth_error(status):
+def token_auth_error():
     raise UserAuthError()
 
 
@@ -45,7 +43,7 @@ def verify_app_token(token):
 
 
 @app_auth.error_handler
-def app_auth_error(status):
+def app_auth_error():
     raise AppAuthError()
 
 
@@ -66,7 +64,7 @@ def get_discord_info(token):
 
 
 @dual_auth.error_handler
-def dual_auth_error(status):
+def dual_auth_error():
     raise DualAuthError()
 
 

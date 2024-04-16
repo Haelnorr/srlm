@@ -1,5 +1,6 @@
-### Current Version - 0.8.6
+### Current Version - 0.8.7
 History:
+ - 0.8.7 - Changed MySQL Version to 8.0.36
  - 0.8.6 - Added endpoint for uploading match data from logs
  - 0.8.5 - Modified discord auth to work with frontend
  - 0.8.4 - Added list of players to season_division/teams lookup

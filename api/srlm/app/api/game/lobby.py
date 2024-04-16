@@ -1,6 +1,6 @@
 """Provides routes for generating and cancelling in game lobbies"""
 from apifairy import body, response, authenticate, other_responses
-from flask import request, Blueprint
+from flask import Blueprint
 from api.srlm.app.api import bp
 from api.srlm.app.api.auth.utils import app_auth
 from api.srlm.app.api.utils import responses
@@ -38,8 +38,8 @@ def generate_lobby(data):
 @other_responses(unauthorized | not_found)
 def abort_lobby(lobby_id):
     """Delete an active in-game lobby"""
-    lobby = ensure_exists(Lobby, id=lobby_id)
+    lobby_db = ensure_exists(Lobby, id=lobby_id)
 
-    cancel_task(lobby.task_id)
+    cancel_task(lobby_db.task_id)
 
-    return responses.request_success(f'Lobby {lobby.id} aborted', 'api.match.get_match', match_id=lobby.match.id)
+    return responses.request_success(f'Lobby {lobby_db.id} aborted', 'api.match.get_match', match_id=lobby_db.match.id)

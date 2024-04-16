@@ -25,13 +25,13 @@ def get_user_permissions(user_id):
     """Get the users permissions"""
     user = ensure_exists(User, id=user_id)
 
-    permissions = []
+    permissions_list = []
     for user_permission in user.permission_assoc:
-        permissions.append(user_permission.to_dict())
+        permissions_list.append(user_permission.to_dict())
 
     response_json = {
         'username': user.username,
-        'permissions': permissions,
+        'permissions': permissions_list,
         '_links': {
             'self': url_for('api.users.permissions.get_user_permissions', user_id=user_id)
         }

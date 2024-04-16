@@ -931,7 +931,7 @@ class StatsSchema(ma.SQLAlchemySchema):
 
 
 class PlayerStatsSchema(ma.Schema):
-    """Defines response for retreiving player stats"""
+    """Defines response for retrieving player stats"""
     class PlayerStatsLinks(Links):
         player = ma.URL()
         season = ma.URL()

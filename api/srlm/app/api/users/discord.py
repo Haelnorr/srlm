@@ -50,8 +50,6 @@ def create_user_discord(data, user_id):
     if user.discord:
         raise BadRequest('User already has a linked Discord account')
 
-    data = request.get_json()
-
     required_fields = ['discord_id', 'access_token', 'refresh_token', 'expires_in']
     force_fields(data, required_fields)
 

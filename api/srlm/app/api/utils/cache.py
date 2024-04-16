@@ -1,7 +1,7 @@
 from flask import request
 
 
-def force_refresh(*args, **kwargs):
+def force_refresh(*args, **kwargs):  # noqa
     cached = request.args.get('cached', None)
 
     override = False

@@ -58,4 +58,3 @@ def make_shell_context():
         'PlayerMatchData': PlayerMatchData,
         'AuthorizedApp': AuthorizedApp
     }
-
