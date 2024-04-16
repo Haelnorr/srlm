@@ -1,4 +1,5 @@
 """Provides marshmallow schemas for documentation support"""
+from marshmallow import EXCLUDE
 from marshmallow.validate import OneOf
 
 from api.srlm.app import ma
@@ -965,4 +966,69 @@ class SeasonDivisionLookup(ma.Schema):
 
 
 class SeasonLookup(ma.Schema):
+    """Defines filter for league lookup"""
     league = ma.Str()
+
+
+class LogsUploadSchema(ma.Schema):
+    """Format for match data from log file uploads"""
+    class Period(ma.Schema):
+        class PeriodData(ma.Schema):
+            class LogPlayer(ma.Schema):
+                class Stats(ma.Schema):
+                    class Meta:
+                        unknown = EXCLUDE
+                    goals = ma.Float()
+                    shots = ma.Float()
+                    assists = ma.Float()
+                    saves = ma.Float()
+                    primary_assists = ma.Float()
+                    secondary_assists = ma.Float()
+                    passes = ma.Float()
+                    blocks = ma.Float()
+                    takeaways = ma.Float()
+                    turnovers = ma.Float()
+                    possession_time_sec = ma.Float()
+                    game_winning_goals = ma.Float()
+                    post_hits = ma.Float()
+                    faceoffs_won = ma.Float()
+                    faceoffs_lost = ma.Float()
+                    score = ma.Float()
+
+                game_user_id = ma.Str(required=True)
+                team = ma.Str(required=True)
+                username = ma.Str(required=True)
+                stats = ma.Nested(Stats(), required=True)
+
+            class Score(ma.Schema):
+                home = ma.Int(required=True)
+                away = ma.Int(required=True)
+
+            class Meta:
+                unknown = EXCLUDE
+
+            winner = ma.Str(required=True)
+            arena = ma.Str(required=True)
+            periods_enabled = ma.Str(required=True)
+            current_period = ma.Str(required=True)
+            custom_mercy_rule = ma.Str(required=True)
+            end_reason = ma.Str(required=True)
+            score = ma.Nested(Score(), required=True)
+            players = ma.List(ma.Nested(LogPlayer()), required=True)
+
+        log_json = ma.Nested(PeriodData(), required=True)
+        created = ma.DateTime(required=True)
+
+    periods = ma.List(ma.Nested(Period()), required=True)
+    match_id = ma.Int(required=True)
+    region = ma.Str(required=True)
+    gamemode = ma.Str(required=True)
+
+
+class GamemodeSchema(ma.Schema):
+    class Gamemode(ma.Schema):
+        value = ma.Str()
+        label = ma.Str()
+        info = ma.Str()
+
+    items = ma.List(ma.Nested(Gamemode()))

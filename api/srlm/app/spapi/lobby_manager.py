@@ -351,8 +351,9 @@ def validate_stats(match_id):
                     MatchReview(reason=f'Game settings for period {period.current_period} were incorrect.', **defaults))
 
             if period.player_data_assoc.count() != match_type.num_players:
-                db.session.add(
-                    MatchReview(reason=f'Period {period.current_period} had incorrect number of players.', **defaults))
+                pass # disabled currently TODO
+                #db.session.add(
+                #    MatchReview(reason=f'Period {period.current_period} had incorrect number of players.', **defaults))
 
         # check num periods
         if periods.count() != correct_periods:
@@ -362,19 +363,20 @@ def validate_stats(match_id):
         elif period_order != correct_period_order:
             db.session.add(MatchReview(reason='Periods were not played in correct order', **defaults))
 
-        # check player count
+        # check player count TODO
+        # currently disabled as spectators who have played a period get added (stats are accumulative)
         players_data = db.session.query(PlayerMatchData).filter(PlayerMatchData.match_id.in_(period_ids))
-        if round(players_data.count() / periods.count()) != match_type.num_players:
-            db.session.add(
-                MatchReview(reason=f'Invalid number of players. Had {round(players_data.count() / periods.count())}, '
-                                   f'should be {match_type.num_players}', **defaults))
+        # if round(players_data.count() / periods.count()) != match_type.num_players:
+        #    db.session.add(
+        #        MatchReview(reason=f'Invalid number of players. Had {round(players_data.count() / periods.count())}, '
+        #                           f'should be {match_type.num_players}', **defaults))
 
         # check players/teams
         players_wrong_team = []
         # check all players are registered to a team in the match or are free agents in the current season
         for player_data in players_data:
             # check player has a current team
-            player_current_team = player_data.player.current_team()
+            player_current_team = player_data.player.current_team(match.season_division.season)
             if not player_current_team:
                 # check if player is a free agent
                 player_free_agent = player_data.player.season_association.filter_by(
@@ -430,11 +432,12 @@ def validate_stats(match_id):
         else:
             # raise player on incorrect team flags
             for player_data in players_data:
-                if player_data.player.current_team().team.id != player_data.team_id:
-                    db.session.add(MatchReview(
-                        reason=f"Player {player_data.player.player_name} played period {player_data.match.current_period}"
-                               f" for the wrong team",
-                        **defaults))
+                if player_data.player.current_team():
+                    if player_data.player.current_team().team.id != player_data.team_id:
+                        db.session.add(MatchReview(
+                            reason=f"Player {player_data.player.player_name} played period {player_data.match.current_period}"
+                                   f" for the wrong team",
+                            **defaults))
         db.session.commit()
 
         # if good, mark periods as accepted

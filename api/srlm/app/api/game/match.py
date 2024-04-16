@@ -5,6 +5,7 @@ from apifairy import body, response, authenticate, other_responses
 from flask import request, Blueprint
 import sqlalchemy as sa
 
+from api.srlm.app.api.game.utils import period_from_log
 from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.spapi.lobby import get_lobby_matches
 from api.srlm.app.task_manager.tasks import cancel_task
@@ -16,9 +17,9 @@ from api.srlm.app.api.utils.errors import BadRequest
 from api.srlm.app.api.utils.functions import force_fields, ensure_exists, clean_data, force_unique
 from api.srlm.app.fairy.errors import unauthorized, bad_request, not_found
 from api.srlm.app.fairy.schemas import LinkSuccessSchema, NewMatchSchema, ViewMatchSchema, MatchReviewSchema, \
-    MatchtypeSchema, MatchStatsSchema, NewMatchFlag
+    MatchtypeSchema, MatchStatsSchema, NewMatchFlag, LogsUploadSchema, GamemodeSchema
 from api.srlm.app.models import SeasonDivision, Team, Match, MatchSchedule, MatchReview, MatchData, Matchtype, User, \
-    PlayerMatchData
+    PlayerMatchData, GameMode, Lobby
 from api.srlm.app.spapi.lobby_manager import generate_lobby, validate_stats
 
 match = Blueprint('match', __name__)
@@ -296,3 +297,46 @@ def add_match_type(data):
     db.session.commit()
 
     return responses.create_success(f'Match type {match_type.name} created.', 'api.match.get_match_type', match_type_id=match_type.id)
+
+
+@match.route('/logs', methods=['POST'])
+@body(LogsUploadSchema())
+@response(LinkSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | bad_request)
+def upload_from_logs(data):
+    """Upload match data from log files"""
+    match_db = ensure_exists(Match, id=data['match_id'])
+    region = data['region']
+    gamemode = data['gamemode']
+
+    lobby = Lobby()
+    lobby.match_id = match_db.id
+    lobby.lobby_id = 'Offline - no lobby ID'
+    lobby.active = False
+    lobby.password = ''
+    db.session.add(lobby)
+    db.session.commit()
+
+    for period in data['periods']:
+        uploaded = period_from_log(period['log_json'], match_db.id, region, period['created'], gamemode, lobby.id)
+        if not uploaded:
+            raise BadRequest('Upload failed')
+
+    validate_stats.delay(match_db.id)
+
+    return responses.request_success('Log data uploaded successfully', 'api.match.get_match_stats', match_id=match_db.id)
+
+
+@match.route('/gamemodes', methods=['GET'])
+@response(GamemodeSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized)
+def get_gamemodes():
+    query = db.session.query(GameMode)
+
+    gamemodes = []
+    for gamemode in query:
+        gamemodes.append(gamemode.to_dict())
+
+    return {'items': gamemodes}

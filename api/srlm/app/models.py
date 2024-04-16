@@ -273,7 +273,7 @@ class Player(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     slap_id = db.Column(db.Integer, unique=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    player_name = db.Column(db.String(64), nullable=False, unique=True)
+    player_name = db.Column(db.String(64), nullable=False)
     rookie = db.Column(db.Boolean, nullable=False, default=True)
     first_season_id = db.Column(db.Integer, db.ForeignKey('season_division.id'))
     next_name_change = db.Column(db.DateTime)
@@ -348,9 +348,24 @@ class Player(PaginatedAPIMixin, db.Model):
             if field in data:
                 setattr(self, field, data[field])
 
-    def current_team(self):
+    def current_team(self, season=None):
         now = datetime.now(timezone.utc)
-        current_team_q = self.team_association.filter(sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))
+
+        if season:
+            start_filter = season.finals_end > PlayerTeam.start_date
+            end_filter = sa.or_(
+                season.start_date < PlayerTeam.end_date,
+                PlayerTeam.end_date == None
+            )
+
+        else:
+            start_filter = PlayerTeam.start_date < now
+            end_filter = PlayerTeam.end_date == None
+
+        current_team_q = self.team_association.filter(sa.and_(
+            start_filter,
+            end_filter
+        ))
         return current_team_q.first()
 
 
@@ -1311,6 +1326,14 @@ class GameMode(db.Model):
     label = db.Column(db.String(32), unique=True, nullable=False)
     info = db.Column(db.String(64))
 
+    def to_dict(self):
+        data = {
+            'value': self.value,
+            'label': self.label,
+            'info': self.info
+        }
+        return data
+
 
 class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1324,7 +1347,7 @@ class MatchReview(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     match_id = db.Column(db.Integer, db.ForeignKey('match.id'))
     type = db.Column(db.String(16), nullable=False)
-    reason = db.Column(db.String(64), nullable=False)
+    reason = db.Column(db.String(256), nullable=False)
     raised_by = db.Column(db.String(32))
     comments = db.Column(db.String(256))
     resolved = db.Column(db.Boolean, nullable=False, default=False)
