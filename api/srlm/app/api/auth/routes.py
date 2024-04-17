@@ -1,4 +1,5 @@
 """Main auth endpoints"""
+import sqlalchemy as sa
 from flask import request, url_for
 from apifairy import response, other_responses, authenticate, body
 from api.srlm.api_access.models import AuthorizedApp
@@ -9,7 +10,7 @@ from api.srlm.app.api.utils import responses
 from api.srlm.app.api.auth.utils import get_bearer_token
 from api.srlm.app.fairy.schemas import TokenSchema, BasicSuccessSchema, UserVerifySchema
 from api.srlm.app.fairy.errors import unauthorized
-from api.srlm.app.models import User, Permission
+from api.srlm.app.models import User, UserPermissions
 
 
 @auth.route('/user', methods=['POST'])
@@ -59,7 +60,20 @@ def validate_user_token(data):
     if 'perms' in data:
         perms = []
         for perm in data['perms']:
-            perms.append((perm, user.has_permission(perm)))
+            if perm == 'team_manager':
+                perm_query = db.session.query(UserPermissions).filter(
+                    sa.and_(
+                        UserPermissions.user_id == user.id,
+                        UserPermissions.permission.has(key=perm)
+                    )
+                ).first()
+                if perm_query:
+                    data = (perm, perm_query.additional_modifiers)
+                else:
+                    data = (perm, False)
+            else:
+                data = (perm, user.has_permission(perm))
+            perms.append(data)
         response_json['has_perms'] = perms
 
     return response_json

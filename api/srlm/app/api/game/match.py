@@ -181,7 +181,16 @@ def get_match_stats(match_id):
     """Get the accepted match stats"""
     match_db = ensure_exists(Match, id=match_id)
 
-    period_query = db.session.query(MatchData).filter_by(accepted=True).order_by(sa.asc(MatchData.current_period))
+    lobby_ids = []
+    for lobby in match_db.lobbies:
+        lobby_ids.append(lobby.id)
+
+    period_query = db.session.query(MatchData).filter(
+        sa.and_(
+            MatchData.accepted == True,  # noqa
+            MatchData.lobby_id.in_(lobby_ids)
+        )
+    ).order_by(sa.asc(MatchData.current_period))
 
     period_ids = []
     for period in period_query:
