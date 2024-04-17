@@ -1174,6 +1174,7 @@ class PlayerMatchData(db.Model):
     faceoffs_won = db.Column(db.Integer, default=0)
     faceoffs_lost = db.Column(db.Integer, default=0)
     score = db.Column(db.Integer, default=0)
+    current_period = db.Column(db.Integer, nullable=False)
 
     match = db.relationship('MatchData', back_populates='player_data_assoc')
     player = db.relationship('Player', back_populates='match_data_assoc')
@@ -1182,7 +1183,7 @@ class PlayerMatchData(db.Model):
     def from_dict(self, data):
         for field in ['match_id', 'player_id', 'team_id', 'goals', 'shots', 'assists', 'saves', 'primary_assists',
                       'secondary_assists', 'passes', 'blocks', 'takeaways', 'turnovers', 'possession_time_sec',
-                      'game_winning_goals', 'post_hits', 'faceoffs_won', 'faceoffs_lost', 'score']:
+                      'game_winning_goals', 'post_hits', 'faceoffs_won', 'faceoffs_lost', 'score', 'current_period']:
             if field in data:
                 setattr(self, field, data[field])
 

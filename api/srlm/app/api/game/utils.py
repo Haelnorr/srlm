@@ -62,6 +62,7 @@ def period_from_log(log_json, match_id, region, created, gamemode, lobby_id):
         for stat in player['stats']:
             if stat in valid_stats:
                 setattr(player_data, stat, player['stats'][stat])
+        player_data.current_period = int(log_json['current_period'])
         db.session.add(player_data)
         db.session.commit()
 
@@ -157,6 +158,7 @@ def parse_match_stats(match, teams, lobby):
 
             player_match_data = PlayerMatchData()
             player_match_data.from_dict(data)
+            player_match_data.current_period = int(match['game_stats']['current_period'])
             db.session.add(player_match_data)
             db.session.commit()
 
@@ -212,7 +214,7 @@ def validate_stats(match_id):
         if num_lobbies == 0:
             return f'No lobbies found for match {match.id}'
         if num_lobbies > 1:
-            db.session.add(MatchReview(reason='Multiple lobbies created for match', **defaults))
+            db.session.add(MatchReview(reason=f'Multiple lobbies created for match: {lobby_ids}', **defaults))
 
         periods = db.session.query(MatchData).filter(MatchData.lobby_id.in_(lobby_ids)).order_by(
             sa.asc(MatchData.created))
@@ -238,25 +240,48 @@ def validate_stats(match_id):
 
             # check number of players in period
             if period.player_data_assoc.count() != match_type.num_players:
-                pass  # disabled currently TODO
-                # db.session.add(
-                #    MatchReview(reason=f'Period {period.current_period} had incorrect number of players.', **defaults))
+                for player in period.player_data_assoc:
+                    player_data = db.session.query(PlayerMatchData).filter(
+                        sa.and_(
+                            PlayerMatchData.match_id.in_(period_ids),
+                            PlayerMatchData.player_id == player.player_id
+                        )).order_by(sa.asc(PlayerMatchData.current_period))
+
+                    last_period = None
+                    for player_period in player_data:
+                        if last_period is None:
+                            last_period = player_period
+                        else:
+                            tests = ['goals', 'shots', 'assists', 'saves', 'primary_assists', 'secondary_assists',
+                                     'passes', 'blocks', 'takeaways', 'turnovers', 'game_winning_goals',
+                                     'overtime_goals', 'post_hits', 'faceoffs_won', 'faceoffs_lost',
+                                     'score', 'possession_time_sec']
+                            spectator = True
+                            for test in tests:
+                                if getattr(last_period, test) != getattr(player_period, test):
+                                    spectator = False
+                                    break
+                            if spectator:
+                                db.session.delete(player_period)
+                                db.session.commit()
+                            else:
+                                last_period = player_period
+
+                if period.player_data_assoc.count() != match_type.num_players:
+                    db.session.add(
+                        MatchReview(reason=f'Period {period.current_period} had incorrect number of '
+                                           f'players.', **defaults))
 
         # check num periods
         if periods.count() != correct_periods:
             db.session.add(
-                MatchReview(reason=f'{periods.count()} periods were recorded, should be {correct_periods}', **defaults))
+                MatchReview(reason=f'{periods.count()} periods were recorded,'
+                                   f' should be {correct_periods}', **defaults))
         # check periods played in order
         elif period_order != correct_period_order:
             db.session.add(MatchReview(reason='Periods were not played in correct order', **defaults))
 
-        # check player count TODO
-        # currently disabled as spectators who have played a period get added (stats are accumulative)
         players_data = db.session.query(PlayerMatchData).filter(PlayerMatchData.match_id.in_(period_ids))
-        # if round(players_data.count() / periods.count()) != match_type.num_players:
-        #    db.session.add(
-        #        MatchReview(reason=f'Invalid number of players. Had {round(players_data.count() / periods.count())}, '
-        #                           f'should be {match_type.num_players}', **defaults))
 
         # check players/teams
         players_wrong_team = []
@@ -311,7 +336,10 @@ def validate_stats(match_id):
 
             flip_team_label = {'away': 'home', 'home': 'away'}
             for period in periods:
-                period.winner = flip_team_label[period.winner]
+                try:
+                    period.winner = flip_team_label[period.winner]
+                except KeyError:
+                    pass
                 period.home_score, period.away_score = period.away_score, period.home_score
                 db.session.add(period)
 
