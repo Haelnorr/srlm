@@ -1,5 +1,6 @@
-### Current Version - 0.8.8
+### Current Version - 0.8.9
 History:
+ - 0.8.9 - Modified user validate route to check permissions
  - 0.8.8 - Changes to get_match_stats
  - 0.8.7 - Changed MySQL Version to 8.0.36
  - 0.8.6 - Added endpoint for uploading match data from logs

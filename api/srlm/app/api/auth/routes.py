@@ -1,6 +1,6 @@
 """Main auth endpoints"""
 from flask import request, url_for
-from apifairy import response, other_responses, authenticate
+from apifairy import response, other_responses, authenticate, body
 from api.srlm.api_access.models import AuthorizedApp
 from api.srlm.app import db
 from api.srlm.app.api.auth import auth_bp as auth
@@ -9,7 +9,7 @@ from api.srlm.app.api.utils import responses
 from api.srlm.app.api.auth.utils import get_bearer_token
 from api.srlm.app.fairy.schemas import TokenSchema, BasicSuccessSchema, UserVerifySchema
 from api.srlm.app.fairy.errors import unauthorized
-from api.srlm.app.models import User
+from api.srlm.app.models import User, Permission
 
 
 @auth.route('/user', methods=['POST'])
@@ -36,13 +36,15 @@ def revoke_user_token():
 
 
 @auth.route('/user/validate', methods=['POST'])
+@body(UserVerifySchema())
 @response(UserVerifySchema())
 @authenticate(dual_auth)
 @other_responses(unauthorized)
-def validate_user_token(
-
-):
-    """Check if the user token provided is valid"""
+def validate_user_token(data):
+    """Check if the user token provided is valid
+    If a list of permissions is provided, will return a dict with the list as keys, with their values
+     as whether the user has that permission, as a boolean.
+    """
     user_token = get_bearer_token(request.headers)['user']
     user = User.check_token(user_token)
 
@@ -53,6 +55,13 @@ def validate_user_token(
             'user': url_for('api.users.get_user', user_id=user.id)
         }
     }
+
+    if 'perms' in data:
+        perms = []
+        for perm in data['perms']:
+            perms.append((perm, user.has_permission(perm)))
+        response_json['has_perms'] = perms
+
     return response_json
 
 

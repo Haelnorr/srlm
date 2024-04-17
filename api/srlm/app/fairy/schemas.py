@@ -1,8 +1,8 @@
 """Provides marshmallow schemas for documentation support"""
-from marshmallow import EXCLUDE
+from marshmallow import EXCLUDE, INCLUDE
 from marshmallow.validate import OneOf
 
-from api.srlm.app import ma
+from api.srlm.app import ma, db
 from api.srlm.app.models import Permission, Match, Team, MatchResult, MatchReview, PlayerMatchData, MatchData, Discord, \
     Twitch, UserPermissions, User, Division, League, Season, SeasonDivision, Player, FreeAgent, Matchtype
 
@@ -108,9 +108,11 @@ class LinkSuccessSchema(BasicSuccessSchema):
 
 class UserVerifySchema(ma.Schema):
     """Defines the response for verifying a user token"""
-    user = ma.Int()
-    expires = ma.DateTime()
-    _links = ma.Nested(UserLinks())
+    perms = ma.List(ma.Str(), load_only=True)
+    user = ma.Int(dump_only=True)
+    expires = ma.DateTime(dump_only=True)
+    _links = ma.Nested(UserLinks(), dump_only=True)
+    has_perms = ma.List(ma.List(ma.String()), dump_only=True)
 
 
 class PermissionSchema(ma.SQLAlchemySchema):
