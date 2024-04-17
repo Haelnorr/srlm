@@ -428,16 +428,34 @@ class NewMatchFlag(MatchFlag):
     new_lobby = ma.Nested(NewLobby(), optional=True)
 
 
+class FinalPlayerMatchDataSchema(PlayerMatchDataSchema):
+    periods_played = ma.Int()
+
+
 class MatchPlayerDataSchema(MatchDataSchema):
     """Extends MatchDataSchema adding player data"""
-    player_data = ma.List(ma.Nested(PlayerMatchDataSchema()))
+    class TeamsPlayerDataSplit(ma.Schema):
+        home = ma.List(ma.Nested(PlayerMatchDataSchema()))
+        away = ma.List(ma.Nested(PlayerMatchDataSchema()))
+
+    player_data = ma.Nested(TeamsPlayerDataSplit())
 
 
 class MatchStatsSchema(ma.Schema):
     """Defines response when requesting match stats"""
+    class PeriodData(ma.Schema):
+        period1 = ma.Nested(MatchPlayerDataSchema())
+        period2 = ma.Nested(MatchPlayerDataSchema())
+        period3 = ma.Nested(MatchPlayerDataSchema())
+
+    class TeamsPlayerDataSplitFinal(ma.Schema):
+        home = ma.List(ma.Nested(FinalPlayerMatchDataSchema()))
+        away = ma.List(ma.Nested(FinalPlayerMatchDataSchema()))
+
     match_id = ma.Int(dump_only=True)
     match_details = ma.Nested(SimpleMatchSchema(), dump_only=True)
-    periods = ma.List(ma.Nested(MatchPlayerDataSchema()))
+    periods = ma.Nested(PeriodData())
+    stat_totals = ma.Nested(TeamsPlayerDataSplitFinal())
 
 
 class MatchReviewSchema(MatchStatsSchema):

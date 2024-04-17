@@ -182,18 +182,49 @@ def get_match_stats(match_id):
     match_db = ensure_exists(Match, id=match_id)
 
     period_query = db.session.query(MatchData).filter_by(accepted=True).order_by(sa.asc(MatchData.current_period))
-    periods = []
+
+    period_ids = []
+    for period in period_query:
+        period_ids.append(period.id)
+
+    teams = {
+        match_db.home_team_id: 'home',
+        match_db.away_team_id: 'away'
+    }
+    periods = {}
+    totals = {
+        'home': [],
+        'away': []
+    }
     for period in period_query:
         period_data = period.to_dict()
-        period_data['player_data'] = []
+        period_data['player_data'] = {
+            'home': [],
+            'away': []
+        }
         for player in period.player_data_assoc:
-            period_data['player_data'].append(player.to_dict())
-        periods.append(period_data)
+            period_data['player_data'][teams[player.team_id]].append(player.to_dict())
+        periods[f'period{period.current_period}'] = period_data
+
+        final_player_data = period.player_data_assoc.filter_by(stat_total=True)
+
+        for player in final_player_data:
+            final_player_data = player.to_dict()
+            periods_played = db.session.query(PlayerMatchData).filter(
+                sa.and_(
+                    PlayerMatchData.player_id == player.player_id,
+                    PlayerMatchData.match.has(accepted=True),
+                    PlayerMatchData.match_id.in_(period_ids)
+                )
+            ).count()
+            final_player_data['periods_played'] = periods_played
+            totals[teams[player.team_id]].append(final_player_data)
 
     response_json = {
         'match_id': match_db.id,
         'match_details': match_db.to_simple_dict(),
-        'periods': periods
+        'periods': periods,
+        'stat_totals': totals
     }
     return response_json
 
@@ -333,6 +364,7 @@ def upload_from_logs(data):
 @authenticate(app_auth)
 @other_responses(unauthorized)
 def get_gamemodes():
+    """Get a list of accepted gamemodes"""
     query = db.session.query(GameMode)
 
     gamemodes = []
