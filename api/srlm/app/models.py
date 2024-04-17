@@ -1175,6 +1175,7 @@ class PlayerMatchData(db.Model):
     faceoffs_lost = db.Column(db.Integer, default=0)
     score = db.Column(db.Integer, default=0)
     current_period = db.Column(db.Integer, nullable=False)
+    stat_total = db.Column(db.Boolean, nullable=False, default=False)
 
     match = db.relationship('MatchData', back_populates='player_data_assoc')
     player = db.relationship('Player', back_populates='match_data_assoc')

@@ -425,3 +425,24 @@ def process_match_result(match_id):
         match_result.match = match
         db.session.add(match_result)
         db.session.commit()
+
+        # for each player, get their last recorded period for the game and mark it as one used for stat lookups
+        period_ids = []
+        for period in accepted_periods:
+            period_ids.append(period.id)
+        players_data = db.session.query(PlayerMatchData).filter(
+            PlayerMatchData.match_id.in_(period_ids)
+        )
+        sorted_player_ids = []
+        for player_data in players_data:
+            if player_data.player_id not in sorted_player_ids:
+                player_last_period = players_data.filter(
+                    PlayerMatchData.player_id == player_data.player_id
+                ).order_by(sa.desc(PlayerMatchData.current_period)).first()
+                player_last_period.stat_total = True
+                db.session.add(player_last_period)
+                db.session.commit()
+                sorted_player_ids.append(player_data.player_id)
+
+
+

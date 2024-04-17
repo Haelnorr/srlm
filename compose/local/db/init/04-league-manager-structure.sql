@@ -560,6 +560,7 @@ CREATE TABLE `player_match_data` (
   `score` int DEFAULT NULL,
   `possession_time_sec` int DEFAULT NULL,
   `current_period` int NOT NULL,
+  `stat_total` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `match_id` (`match_id`),
   KEY `player_id` (`player_id`),
