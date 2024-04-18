@@ -4,11 +4,11 @@ from apifairy import authenticate, other_responses, response, arguments, body
 from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
-from flask import Blueprint
+from flask import Blueprint, url_for, request
 import sqlalchemy as sa
 from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
-from api.srlm.app.api.utils.functions import ensure_exists, force_fields
+from api.srlm.app.api.utils.functions import ensure_exists
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import SeasonDivisionSchema, SeasonDivisionLookup, LinkSuccessSchema, \
     SeasonDivisionTeams, SeasonDivisionRookies, SeasonDivisionFreeAgents, UnplayedFilterSchema, SeasonDivisionMatches
@@ -86,12 +86,22 @@ def season_division_lookup(filters):
 @authenticate(app_auth)
 @other_responses(unauthorized | bad_request)
 def add_season_division(data):
-    """Create a new SeasonDivision"""
-    required_fields = ['season_id', 'division_id']
-    force_fields(data, required_fields)
-
+    """Create a new SeasonDivision
+    Season must be specified by ID. Division can be specified by ID, or by combination of
+    league acronym and division acronym.
+    """
     season = ensure_exists(Season, id=data['season_id'])
-    division = ensure_exists(Division, id=data['division_id'])
+    if 'league' and 'division_acronym' in data:
+        division = db.session.query(Division).filter(
+            sa.and_(
+                Division.acronym == data['division_acronym'],
+                Division.league.has(acronym=data['league'])
+            )
+        ).first()
+    elif 'division_id' in data:
+        division = ensure_exists(Division, id=data['division_id'])
+    else:
+        raise BadRequest('Missing division identifier')
 
     season_division_exists = ensure_exists(SeasonDivision, return_none=True, season_id=season.id, division_id=division.id)
 
@@ -164,7 +174,7 @@ def get_free_agents_in_season_division(season_division_id):
 def get_matches_in_season_division(search_filter, season_division_id):
     """Get a list of matches in a Season Division"""
     season_division_db = ensure_exists(SeasonDivision, id=season_division_id)
-    unplayed = search_filter.get('unplayed', False, bool)
+    unplayed = search_filter.get('unplayed', False)
 
     matches = season_division_db.get_matches_dict(unplayed)
 
@@ -173,5 +183,5 @@ def get_matches_in_season_division(search_filter, season_division_id):
 
 @season_division.route('/<int:season_division_id>/finals', methods=['GET'])
 @cache.cached(unless=force_refresh)
-def get_finals_in_season_division(season_division_id):
+def get_finals_in_season_division(season_division_id):  # noqa TODO
     pass

@@ -1,8 +1,8 @@
 """Provides marshmallow schemas for documentation support"""
-from marshmallow import EXCLUDE, INCLUDE
+from marshmallow import EXCLUDE
 from marshmallow.validate import OneOf
 
-from api.srlm.app import ma, db
+from api.srlm.app import ma
 from api.srlm.app.models import Permission, Match, Team, MatchResult, MatchReview, PlayerMatchData, MatchData, Discord, \
     Twitch, UserPermissions, User, Division, League, Season, SeasonDivision, Player, FreeAgent, Matchtype
 
@@ -710,11 +710,12 @@ class SeasonDivisionSchema(ma.SQLAlchemySchema):
         finals = ma.URL()
 
     season_id = ma.auto_field(required=True, load_only=True)
-    division_id = ma.auto_field(required=True, load_only=True)
+    division_id = ma.auto_field(load_only=True)
+    division_acronym = ma.Str(load_only=True)
     id = ma.auto_field(dump_only=True)
     season = ma.Nested(SeasonSchema(), dump_only=True)
     division = ma.Nested(DivisionSchema(), dump_only=True)
-    league = ma.Str(dump_only=True)
+    league = ma.Str()
     teams_count = ma.Int(dump_only=True)
     free_agents_count = ma.Int(dump_only=True)
     rookies_count = ma.Int(dump_only=True)

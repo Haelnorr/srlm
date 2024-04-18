@@ -374,6 +374,11 @@ season_division_team = db.Table('season_division_team',
                                 db.Column('season_division_id', db.Integer, db.ForeignKey('season_division.id')),
                                 db.Column('team_id', db.Integer, db.ForeignKey('team.id'))
                                 )
+"""
+season_team_registration = db.Table('season_team_registration',
+                                    db.Column('season_id', db.Integer, db.ForeignKey('season.id')),
+                                    db.Column('team_id', db.Integer, db.ForeignKey('team.id'))
+                                    )"""
 
 
 class Team(PaginatedAPIMixin, db.Model):
@@ -664,13 +669,13 @@ class FreeAgent(db.Model):
         }
         return response
 
-
-class PlayerRegistrations():
+"""
+class PlayerTeamRegistrations(PlayerTeam):
     pass
 
 
-class TeamRegistrations():
-    pass
+class PlayerSeasonRegistrations(FreeAgent):
+    pass"""
 
 
 class League(PaginatedAPIMixin, db.Model):
