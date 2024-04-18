@@ -6,14 +6,15 @@ from apifairy import arguments, body, response, authenticate, other_responses
 from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
-from flask import request, Blueprint
+from flask import Blueprint
 
 from api.srlm.app.api.utils.cache import force_refresh
+from api.srlm.app.api.utils.errors import ResourceNotFound
 from api.srlm.app.api.utils.functions import force_fields, clean_data, force_unique, ensure_exists, \
     force_date_format
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, SeasonSchema, LinkSuccessSchema, SeasonCollection, \
-    DivisionsInSeason, SeasonFilters, SeasonLookup
+    DivisionsInSeason, SeasonFilters, SeasonLookup, EditSeasonSchema
 from api.srlm.app.models import Season, League, SeasonDivision, Matchtype
 from api.srlm.app.api.auth.utils import app_auth
 import sqlalchemy as sa
@@ -119,6 +120,8 @@ def get_season(search, season_id):
             ),
             Season.league == league
         )).first()
+        if not season:
+            raise ResourceNotFound(f'No season found with the identifier {season_id}')
 
     return season.to_dict()
 
@@ -158,22 +161,24 @@ def add_season(data):
 
 
 @seasons.route('/<int:season_id>', methods=['PUT'])
-@body(SeasonSchema())
+@body(EditSeasonSchema())
 @response(LinkSuccessSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
-def update_season(season_id):
+def update_season(data, season_id):
     """Update an existing season"""
-    data = request.get_json()
 
     season = ensure_exists(Season, id=season_id)
 
     unique_fields = ['name', 'acronym']
     valid_fields = ['name', 'acronym', 'start_date', 'end_date', 'finals_start', 'finals_end']
-    force_unique(Season, data, unique_fields, restrict_query={'league_id': season.league.id})
 
-    date_fields = ['start_date', 'end_date', 'finals_start', 'finals_end']
-    force_date_format(data, date_fields)
+    for field in unique_fields:
+        if field in data:
+            if data[field] == getattr(season, field):
+                del data[field]
+
+    force_unique(Season, data, unique_fields, restrict_query={'league_id': season.league.id})
 
     cleaned_data = clean_data(data, valid_fields)
 

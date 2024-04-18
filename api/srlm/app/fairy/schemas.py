@@ -613,12 +613,14 @@ class SeasonSchema(ma.SQLAlchemySchema):
     finals_start = ma.auto_field()
     finals_end = ma.auto_field()
     match_type = ma.Str(required=True)
-    divisions = ma.List(ma.Nested(DivisionLink()))
-    _links = ma.Nested(SeasonLinks())
+    divisions = ma.List(ma.Nested(DivisionLink()), dump_only=True)
+    _links = ma.Nested(SeasonLinks(), dump_only=True)
 
 
 class EditSeasonSchema(SeasonSchema):
     """Overrides the SeasonSchema to make league and match_type dump_only"""
+    name = ma.auto_field(required=False)
+    acronym = ma.auto_field(required=False)
     league = ma.Str(dump_only=True)
     match_type = ma.Str(dump_only=True)
 
@@ -849,6 +851,8 @@ class PlayerTeams(ma.Schema):
         name = ma.Str()
         acronym = ma.Str()
         color = ma.Str()
+        owner = ma.Str()
+        managers = ma.List(ma.Str())
         dates = ma.List(ma.Nested(StartEndDates()))
         _links = ma.Nested(Links())
 

@@ -306,7 +306,7 @@ class Player(PaginatedAPIMixin, db.Model):
             'user': self.user.username if self.user else None,
             'slap_id': self.slap_id,
             'rookie': self.rookie,
-            'first_season': self.first_season.get_readable_name(),
+            'first_season': self.first_season.get_readable_name() if self.first_season else None,
             'next_name_change': self.next_name_change,
             'current_team': current_team.team.name if current_team else None,
             'teams': len(unique_teams),
@@ -315,7 +315,7 @@ class Player(PaginatedAPIMixin, db.Model):
             '_links': {
                 'self': url_for('api.players.get_player', player_id=self.id),
                 'user': url_for('api.users.get_user', user_id=self.user_id) if self.user else None,
-                'first_season': url_for('api.season_division.get_season_division', season_division_id=self.first_season_id),
+                'first_season': url_for('api.season_division.get_season_division', season_division_id=self.first_season_id) if self.first_season else None,
                 'current_team': url_for('api.teams.get_team', team_id=current_team.team.id) if current_team else None,
                 'teams': url_for('api.players.get_player_teams', player_id=self.id),
                 'free_agent_seasons': url_for('api.players.get_player_free_agent', player_id=self.id),
@@ -470,10 +470,25 @@ class PlayerTeam(db.Model):
         return data
 
     def team_to_dict(self):
+        team_owner = db.session.query(UserPermissions).filter(
+            sa.and_(
+                UserPermissions.permission.has(key='team_owner'),
+                UserPermissions.additional_modifiers == str(self.team.id)
+            )
+        ).first()
+        team_managers_q = db.session.query(UserPermissions).filter(
+            sa.and_(
+                UserPermissions.permission.has(key='team_manager'),
+                UserPermissions.additional_modifiers == str(self.team.id)
+            )
+        )
+        team_managers = [tm.user.username for tm in team_managers_q]
         data = {
             'name': self.team.name,
             'acronym': self.team.acronym,
             'color': self.team.color,
+            'owner': team_owner.user.username if team_owner else None,
+            'managers': team_managers,
             'dates': [
                 {
                     'start': self.start_date,
@@ -650,6 +665,14 @@ class FreeAgent(db.Model):
         return response
 
 
+class PlayerRegistrations():
+    pass
+
+
+class TeamRegistrations():
+    pass
+
+
 class League(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True, unique=True, nullable=False)
@@ -725,7 +748,7 @@ class Season(PaginatedAPIMixin, db.Model):
             'acronym': self.acronym,
             'league': self.league.acronym,
             'start_date': self.start_date,
-            'end_date': self.start_date,
+            'end_date': self.end_date,
             'finals_start': self.finals_start,
             'finals_end': self.finals_end,
             'match_type': self.match_type.name,
