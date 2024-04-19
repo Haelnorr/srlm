@@ -1,22 +1,28 @@
-import marshmallow as ma
-from marshmallow import fields as fd
+from api.srlm.app import ma
 
 
 class BasicError(ma.Schema):
-    error = fd.Str()
-    message = fd.Str()
+    error = ma.Str()
+    message = ma.Str()
 
 
 class ErrorNotFound(ma.Schema):
-    error = fd.Str()
-    message = fd.Str()
-    resource = fd.Str()
+    error = ma.Str()
+    message = ma.Str()
+    resource = ma.Str()
+
+
+class BadFieldRequest(BasicError):
+    class Field(ma.Schema):
+        field = ma.Str()
+        error = ma.Str()
+    fields = ma.List(ma.Nested(Field()))
 
 
 bad_request = {
-    400: BasicError()
+    400: BasicError(),
+    409: BadFieldRequest()
 }
-
 
 unauthorized = {
     401: BasicError()

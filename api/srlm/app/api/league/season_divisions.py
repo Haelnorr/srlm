@@ -4,7 +4,7 @@ from apifairy import authenticate, other_responses, response, arguments, body
 from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
-from flask import Blueprint, url_for, request
+from flask import Blueprint
 import sqlalchemy as sa
 from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest

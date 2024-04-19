@@ -21,13 +21,31 @@ def handle_exception(e):
 class BadRequest(HTTPException):
     code = 400
 
-    def __init__(self, details):
-        self.details = details
+    def __init__(self, message):
+        self.message = message
+
+
+class FieldBadRequest(HTTPException):
+    code = 409
+
+    def __init__(self, message, field_errors):
+        self.message = message
+        self.field_errors = field_errors
 
 
 @bp.errorhandler(BadRequest)
 def bad_request(e):
-    return error_response(e.code, e.details)
+    return error_response(e.code, e.message)
+
+
+@bp.errorhandler(FieldBadRequest)
+def new_bad_request(e):
+    payload = {'error': HTTP_STATUS_CODES.get(e.code, 'Unknown error')}
+    if e.message:
+        payload['message'] = e.message
+    if e.field_errors:
+        payload['fields'] = e.field_errors
+    return payload, e.code
 
 
 class UserAuthError(HTTPException):

@@ -17,7 +17,7 @@ from api.srlm.app.api.utils.errors import BadRequest
 from api.srlm.app.api.utils.functions import force_fields, ensure_exists, clean_data, force_unique
 from api.srlm.app.fairy.errors import unauthorized, bad_request, not_found
 from api.srlm.app.fairy.schemas import LinkSuccessSchema, NewMatchSchema, ViewMatchSchema, MatchReviewSchema, \
-    MatchtypeSchema, MatchStatsSchema, NewMatchFlag, LogsUploadSchema, GamemodeSchema
+    MatchtypeSchema, MatchStatsSchema, NewMatchFlag, LogsUploadSchema, GamemodeSchema, MatchtypeList
 from api.srlm.app.models import SeasonDivision, Team, Match, MatchSchedule, MatchReview, MatchData, Matchtype, User, \
     PlayerMatchData, GameMode, Lobby
 from api.srlm.app.spapi.lobby_manager import generate_lobby, validate_stats
@@ -314,6 +314,18 @@ def get_match_type(match_type_id):
     """Get the details of a match type"""
     match_type = ensure_exists(Matchtype, id=match_type_id)
     return match_type.to_dict()
+
+
+@match.route('/type', methods=['GET'])
+@cache.cached(unless=force_refresh)
+@response(MatchtypeList())
+@authenticate(app_auth)
+@other_responses(unauthorized)
+def get_match_types():
+    """Get the list of match types"""
+    query = db.session.query(Matchtype)
+    match_types = [mt.to_dict() for mt in query]
+    return {'matchtypes': match_types}
 
 
 @match.route('/type', methods=['POST'])

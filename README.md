@@ -1,5 +1,6 @@
-### Current Version - 0.8.9
+### Current Version - 0.8.10
 History:
+ - 0.8.10 - Added better error messages for field validation
  - 0.8.9 - Modified user validate route to check permissions
  - 0.8.8 - Changes to get_match_stats
  - 0.8.7 - Changed MySQL Version to 8.0.36

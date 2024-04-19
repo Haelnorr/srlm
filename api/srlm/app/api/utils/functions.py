@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from api.srlm.app import db
-from api.srlm.app.api.utils.errors import BadRequest, ResourceNotFound
+from api.srlm.app.api.utils.errors import BadRequest, ResourceNotFound, FieldBadRequest
 
 
 def ensure_exists(model, return_none=False, join_method='and', **kwargs):
@@ -56,7 +56,14 @@ def force_unique(model, data, unique_fields, self_id=0, restrict_query=None):
             key = next(iter(restrict_query))
             value = restrict_query[key]
             message = message + f' (matches another record with {key}={value})'
-        raise BadRequest(message)
+        field_errors = []
+        for field in not_unique:
+            error = {
+                'field': field,
+                'error': 'Must be unique'
+            }
+            field_errors.append(error)
+        raise FieldBadRequest(message, field_errors)
 
 
 def force_date_format(data, valid_fields):

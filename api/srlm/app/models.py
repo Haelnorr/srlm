@@ -1093,6 +1093,7 @@ class Matchtype(db.Model):
 
     def to_dict(self):
         data = {
+            'id': self.id,
             'name': self.name,
             'description': self.description,
             'periods': self.periods,

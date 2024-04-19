@@ -920,6 +920,7 @@ class MatchtypeSchema(ma.SQLAlchemySchema):
         model = Matchtype
         ordered = True
 
+    id = ma.auto_field(dump_only=True)
     name = ma.auto_field(required=True)
     description = ma.auto_field(required=True)
     periods = ma.auto_field(required=True)
@@ -998,9 +999,9 @@ class SeasonLookup(ma.Schema):
 class LogsUploadSchema(ma.Schema):
     """Format for match data from log file uploads"""
     class Period(ma.Schema):
-        class PeriodData(ma.Schema):
+        class LogPeriodData(ma.Schema):
             class LogPlayer(ma.Schema):
-                class Stats(ma.Schema):
+                class LogStats(ma.Schema):
                     class Meta:
                         unknown = EXCLUDE
                     goals = ma.Float()
@@ -1023,7 +1024,7 @@ class LogsUploadSchema(ma.Schema):
                 game_user_id = ma.Str(required=True)
                 team = ma.Str(required=True)
                 username = ma.Str(required=True)
-                stats = ma.Nested(Stats(), required=True)
+                stats = ma.Nested(LogStats(), required=True)
 
             class Score(ma.Schema):
                 home = ma.Int(required=True)
@@ -1041,7 +1042,7 @@ class LogsUploadSchema(ma.Schema):
             score = ma.Nested(Score(), required=True)
             players = ma.List(ma.Nested(LogPlayer()), required=True)
 
-        log_json = ma.Nested(PeriodData(), required=True)
+        log_json = ma.Nested(LogPeriodData(), required=True)
         created = ma.DateTime(required=True)
 
     periods = ma.List(ma.Nested(Period()), required=True)
@@ -1057,3 +1058,7 @@ class GamemodeSchema(ma.Schema):
         info = ma.Str()
 
     items = ma.List(ma.Nested(Gamemode()))
+
+
+class MatchtypeList(ma.Schema):
+    matchtypes = ma.List(ma.Nested(MatchtypeSchema()))
