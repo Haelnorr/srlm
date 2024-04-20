@@ -1,5 +1,5 @@
 """Provides marshmallow schemas for documentation support"""
-from marshmallow import EXCLUDE
+from marshmallow import EXCLUDE, INCLUDE
 from marshmallow.validate import OneOf
 
 from api.srlm.app import ma
@@ -147,9 +147,17 @@ class UserPermissionsSchema(ma.SQLAlchemySchema):
     _links = ma.Nested(UserLinks())
 
 
-class UpdateUserPermissionsSchema(UserPermissionsSchema):
+class UpdateUserPermissionSchema(UserPermissionsSchema):
     """Extends UserPermissionsSchema for defining update requests"""
     additional_modifiers = ma.auto_field(required=True)
+
+
+class UpdateUserPermissionsSchema(ma.Schema):
+    class Meta:
+        unknown = INCLUDE
+
+    key = ma.Bool()
+    key_with_mods = ma.List(ma.Str())
 
 
 class RevokeUserPermission(ma.Schema):
@@ -157,10 +165,14 @@ class RevokeUserPermission(ma.Schema):
     key = ma.Str(required=True)
 
 
-class UserPermissionsCollection(ma.Schema):
-    """Defines the structure of UserPermissions collections"""
+class UserPermissionsList(ma.Schema):
+    """Defines the structure of UserPermissions list"""
+    class UserPermissionList(ma.Schema):
+        key = ma.Str()
+        mods = ma.Str()
+
     username = ma.Str(dump_only=True)
-    permissions = ma.List(ma.Nested(UserPermissionsSchema()))
+    permissions = ma.List(ma.Nested(UserPermissionList()))
     _links = ma.Nested(Links())
 
 
@@ -549,7 +561,7 @@ class UpdateUserSchema(ma.SQLAlchemySchema):
     email = ma.auto_field()
 
 
-class UserCollection(ma.Schema):
+class UserCollection(Collection):
     """Defines the structure of the users collection"""
     items = ma.List(ma.Nested(UserSchema()))
 
@@ -1062,3 +1074,13 @@ class GamemodeSchema(ma.Schema):
 
 class MatchtypeList(ma.Schema):
     matchtypes = ma.List(ma.Nested(MatchtypeSchema()))
+
+
+class TeamsListSchema(ma.Schema):
+    """Simple list of teams"""
+    class TeamSimpleList(ma.Schema):
+        id = ma.Int()
+        name = ma.Str()
+        acronym = ma.Str()
+
+    teams = ma.List(ma.Nested(TeamSimpleList()))

@@ -80,11 +80,10 @@ def add_user(data):
 @response(LinkSuccessSchema())
 @authenticate(dual_auth)
 @other_responses(unauthorized | bad_request | not_found)
-def update_user(user_id):
+def update_user(data, user_id):
     """Update a users details. Requires user token"""
     if dual_auth.current_user().id != user_id:
         raise UserAuthError()
-    data = request.get_json()
 
     user = ensure_exists(User, id=user_id)
 
@@ -102,12 +101,11 @@ def update_user(user_id):
 @response(TokenSchema())
 @authenticate(dual_auth)
 @other_responses(unauthorized | not_found | bad_request)
-def update_user_password(user_id):
+def update_user_password(data, user_id):
     """Update a users. Revokes and issues a new token. Requires user token"""
     if dual_auth.current_user().id != user_id:
         raise UserAuthError()
     user = ensure_exists(User, id=user_id)
-    data = request.get_json()
     if 'password' not in data:
         raise BadRequest('Password field missing')
 
@@ -139,9 +137,8 @@ def get_user_matches_reviewed(user_id):  # noqa TODO
 @response(PasswordResetSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
-def request_password_reset():
+def request_password_reset(data):
     """Request a password reset token"""
-    data = request.get_json()
 
     if 'username' not in data and 'email' not in data:
         raise BadRequest("No valid fields provided. Provide either 'username' or 'email'")

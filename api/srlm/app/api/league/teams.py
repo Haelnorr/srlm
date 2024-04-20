@@ -14,7 +14,7 @@ from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, TeamCollection, TeamSchema, LinkSuccessSchema, EditTeamSchema, \
-    TeamPlayers, TeamSeasonPlayers, TeamSeasons, CurrentFilterSchema
+    TeamPlayers, TeamSeasonPlayers, TeamSeasons, CurrentFilterSchema, TeamsListSchema
 from api.srlm.app.models import Team, SeasonDivision, PlayerTeam
 from api.srlm.app.api.auth.utils import app_auth
 
@@ -38,6 +38,25 @@ def get_teams(pagination):
     page = pagination['page']
     per_page = pagination['per_page']
     return Team.to_collection_dict(sa.select(Team), page, per_page, 'api.teams.get_teams')
+
+
+@teams.route('/list', methods=['GET'])
+@cache.cached(unless=force_refresh, query_string=True)
+@response(TeamsListSchema())  # yeah i didn't feel like making a new schema, sue me
+@authenticate(app_auth)
+@other_responses(unauthorized)
+def get_teams_list():
+    """Get a simple list of all teams"""
+    query = db.session.query(Team).order_by(Team.name)
+    teams_list = [
+        {
+            'id': team.id,
+            'name': team.name,
+            'acronym': team.acronym
+        }
+        for team in query
+    ]
+    return {'teams': teams_list}
 
 
 @teams.route('/<int:team_id>', methods=['GET'])
