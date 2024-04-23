@@ -11,7 +11,8 @@ from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import SeasonDivisionSchema, SeasonDivisionLookup, LinkSuccessSchema, \
-    SeasonDivisionTeams, SeasonDivisionRookies, SeasonDivisionFreeAgents, UnplayedFilterSchema, SeasonDivisionMatches
+    SeasonDivisionTeams, SeasonDivisionRookies, SeasonDivisionFreeAgents, UnplayedFilterSchema, SeasonDivisionMatches, \
+    LeaderboardSchema
 from api.srlm.app.models import SeasonDivision, FreeAgent, Season, Division, League
 from api.srlm.app.api.auth.utils import app_auth
 
@@ -33,6 +34,51 @@ def get_season_division(season_division_id):
     """Get details of a SeasonDivision"""
     season_division_db = ensure_exists(SeasonDivision, id=season_division_id)
     return season_division_db.to_dict()
+
+
+@season_division.route('/leaderboard', methods=['GET'])
+@arguments(SeasonDivisionLookup())
+@cache.cached(unless=force_refresh)
+@response(LeaderboardSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def get_leaderboard(filters):
+    """Get the leaderboard and stats of a SeasonDivision"""
+    league_filter = filters['league']
+    season_filter = filters['season']
+    division_filter = filters['division']
+
+    league = ensure_exists(League, join_method='or', id=league_filter, acronym=league_filter)
+
+    season = db.session.query(Season).filter(sa.and_(
+        sa.or_(
+            Season.acronym == season_filter,
+            Season.id == season_filter
+        ),
+        Season.league == league
+    )).first()
+
+    if not season:
+        raise ResourceNotFound(f'No season matching {season_filter} in league {league.acronym}')
+
+    division = db.session.query(Division).filter(
+        sa.or_(
+            Division.name.contains(division_filter),
+            Division.acronym == division_filter
+        ),
+        Division.league == league
+    ).first()
+
+    if not division:
+        raise ResourceNotFound(f'No division matching {division_filter} in league {league.name}')
+
+    season_division_db = db.session.query(SeasonDivision).filter(
+        SeasonDivision.season == season,
+        SeasonDivision.division == division
+    ).first()
+    if not season_division_db:
+        raise ResourceNotFound('No SeasonDivision found')
+    return season_division_db.leaderboard()
 
 
 @season_division.route('', methods=['GET'])

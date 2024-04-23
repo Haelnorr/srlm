@@ -1084,3 +1084,62 @@ class TeamsListSchema(ma.Schema):
         acronym = ma.Str()
 
     teams = ma.List(ma.Nested(TeamSimpleList()))
+
+
+class TeamStatsSchema(ma.Schema):
+    class PlayerStatSchema(ma.Schema):
+        id = ma.Int()
+        name = ma.Str()
+        periods = ma.Int()
+        goals = ma.Int()
+        shots = ma.Int()
+        assists = ma.Int()
+        saves = ma.Int()
+
+    id = ma.Int()
+    name = ma.Str()
+    acronym = ma.Str()
+    color = ma.Str()
+    matches = ma.Int()
+    wins = ma.Int()
+    ot_wins = ma.Int()
+    losses = ma.Int()
+    ot_losses = ma.Int()
+    points = ma.Int()
+    goals_for = ma.Int()
+    goals_against = ma.Int()
+    players = ma.List(ma.Nested(PlayerStatSchema()))
+
+
+class TopPlayerSchema(ma.Schema):
+    id = ma.Int()
+    name = ma.Str()
+    team_id = ma.Int()
+    team = ma.Str()
+    periods = ma.Int()
+
+
+class TopGoals(TopPlayerSchema):
+    goals = ma.Int()
+    shots = ma.Int()
+
+
+class TopAssists(TopPlayerSchema):
+    assists = ma.Int()
+    primary_assists = ma.Int()
+
+
+class TopSaves(TopPlayerSchema):
+    saves = ma.Int()
+    blocks = ma.Int()
+
+
+class LeaderboardSchema(ma.Schema):
+    """Structure of the leaderboard request data"""
+    id = ma.Int()
+    season = ma.Nested(SeasonSchema())
+    division = ma.Nested(DivisionSchema())
+    teams = ma.List(ma.Nested(TeamStatsSchema()))
+    most_goals = ma.List(ma.Nested(TopGoals()))
+    most_assists = ma.List(ma.Nested(TopAssists()))
+    most_saves = ma.List(ma.Nested(TopSaves()))

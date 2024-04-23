@@ -102,7 +102,8 @@ def update_user(data, user_id):
 @authenticate(dual_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def update_user_password(data, user_id):
-    """Update a users. Revokes and issues a new token. Requires user token"""
+    """Update a users password.
+    Revokes and issues a new token. Requires user token"""
     if dual_auth.current_user().id != user_id:
         raise UserAuthError()
     user = ensure_exists(User, id=user_id)

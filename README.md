@@ -1,5 +1,6 @@
-### Current Version - 0.8.11
+### Current Version - 0.8.12
 History:
+ - 0.8.12 - Added leaderboard for season_division
  - 0.8.11 - Added some routes for easier permission management
  - 0.8.10 - Added better error messages for field validation
  - 0.8.9 - Modified user validate route to check permissions

@@ -94,8 +94,10 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
             'reset_pass': self.reset_pass,
             '_links': {
                 'self': url_for('api.users.get_user', user_id=self.id),
-                'player': url_for('api.players.get_player', player_id=self.player.id) if self.player is not None else None,
-                'discord': url_for('api.users.discord.get_user_discord', user_id=self.id) if self.discord is not None else None,
+                'player': url_for('api.players.get_player',
+                                  player_id=self.player.id) if self.player is not None else None,
+                'discord': url_for('api.users.discord.get_user_discord',
+                                   user_id=self.id) if self.discord is not None else None,
                 'permissions': url_for('api.users.permissions.get_user_permissions', user_id=self.id),
                 'matches_streamed': url_for('api.users.get_user_matches_streamed', user_id=self.id),
             }
@@ -294,7 +296,8 @@ class Player(PaginatedAPIMixin, db.Model):
 
     def to_dict(self):
         now = datetime.now(timezone.utc)
-        current_team_q = self.team_association.filter(sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))  # noqa
+        current_team_q = self.team_association.filter(
+            sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))  # noqa
         current_team = current_team_q.first()
         unique_teams = []
         for team in self.teams:
@@ -315,7 +318,8 @@ class Player(PaginatedAPIMixin, db.Model):
             '_links': {
                 'self': url_for('api.players.get_player', player_id=self.id),
                 'user': url_for('api.users.get_user', user_id=self.user_id) if self.user else None,
-                'first_season': url_for('api.season_division.get_season_division', season_division_id=self.first_season_id) if self.first_season else None,
+                'first_season': url_for('api.season_division.get_season_division',
+                                        season_division_id=self.first_season_id) if self.first_season else None,
                 'current_team': url_for('api.teams.get_team', team_id=current_team.team.id) if current_team else None,
                 'teams': url_for('api.players.get_player_teams', player_id=self.id),
                 'free_agent_seasons': url_for('api.players.get_player_free_agent', player_id=self.id),
@@ -327,7 +331,8 @@ class Player(PaginatedAPIMixin, db.Model):
 
     def to_simple_dict(self):
         now = datetime.now(timezone.utc)
-        current_team_q = self.team_association.filter(sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))  # noqa
+        current_team_q = self.team_association.filter(
+            sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))  # noqa
         current_team = current_team_q.first()
         data = {
             'player_name': self.player_name,
@@ -413,7 +418,7 @@ class Team(PaginatedAPIMixin, db.Model):
             'color': self.color,
             'logo': True if self.logo else False,
             'active_players': active_players.count(),
-            'seasons_played': len(self.season_divisions),
+            'seasons_played': self.season_divisions.count(),
             'awards': len(self.awards_association),
             '_links': {
                 'self': url_for('api.teams.get_team', team_id=self.id),
@@ -442,6 +447,114 @@ class Team(PaginatedAPIMixin, db.Model):
         for field in ['name', 'acronym', 'color', 'logo', 'founded_date']:
             if field in data:
                 setattr(self, field, data[field])
+
+    def get_stats(self, season_division=None, finals=None):
+        matches = db.session.query(Match).filter(
+            sa.and_(
+                sa.or_(
+                    Match.home_team_id == self.id,
+                    Match.away_team_id == self.id
+                ),
+                Match.results != None  # noqa
+            )
+        )
+        players_query = self.player_association
+        if season_division:
+            player_data_query = season_division.get_player_data_query()
+
+            matches = matches.filter(Match.season_division_id == season_division.id)
+
+            if finals:
+                players_query = players_query \
+                    .filter(PlayerTeam.start_date < season_division.season.finals_end) \
+                    .filter(sa.or_(
+                    PlayerTeam.end_date > season_division.season.finals_start,
+                    PlayerTeam.end_date == None  # noqa
+                ))
+            else:
+                players_query = players_query \
+                    .filter(PlayerTeam.start_date < season_division.season.end_date) \
+                    .filter(sa.or_(
+                    PlayerTeam.end_date > season_division.season.start_date,
+                    PlayerTeam.end_date == None  # noqa
+                ))
+        else:
+            player_data_query = db.session.query(PlayerMatchData) \
+                .join(PlayerMatchData.match) \
+                .join(MatchData.lobby) \
+                .join(Lobby.match) \
+                .filter(MatchData.accepted == 1)
+
+        player_data_query = player_data_query.filter(sa.or_(
+            Match.home_team_id == self.id,
+            Match.away_team_id == self.id
+        ))
+        if finals:
+            player_data_query = player_data_query.filter(Match.final_id != None)  # noqa
+        else:
+            player_data_query = player_data_query.filter(Match.final_id == None)  # noqa
+        self_player_data_query = player_data_query \
+            .filter(PlayerMatchData.team_id == self.id)
+        versus_player_data_query = player_data_query \
+            .filter(PlayerMatchData.team_id != self.id)
+
+        wins = matches.filter(Match.results.has(winner_id=self.id, overtime=False)).count()
+        ot_wins = matches.filter(Match.results.has(winner_id=self.id, overtime=True)).count()
+        losses = matches.filter(Match.results.has(loser_id=self.id, overtime=False)).count()
+        ot_losses = matches.filter(Match.results.has(loser_id=self.id, overtime=True)).count()
+        goals_for = 0
+        for record in self_player_data_query.filter(PlayerMatchData.stat_total == 1):
+            goals_for += record.goals
+        goals_against = 0
+        for record in versus_player_data_query.filter(PlayerMatchData.stat_total == 1):
+            goals_against += record.goals
+
+        players = []
+        for player_assoc in players_query:
+            added = next((i for i, player_dict, in enumerate(players) if player_dict['id'] == player_assoc.player.id),
+                         None)
+            if not added:
+                periods = self_player_data_query \
+                    .filter(PlayerMatchData.player_id == player_assoc.player.id)
+
+                stat_totals = periods.filter(PlayerMatchData.stat_total == 1)
+
+                goals = 0
+                shots = 0
+                assists = 0
+                saves = 0
+                for record in stat_totals:
+                    goals += record.goals
+                    shots += record.shots
+                    assists += record.assists
+                    saves += record.saves
+
+                player = {
+                    'name': player_assoc.player.player_name,
+                    'id': player_assoc.player_id,
+                    'periods': periods.count(),
+                    'goals': goals,
+                    'shots': shots,
+                    'assists': assists,
+                    'saves': saves
+                }
+                players.append(player)
+
+        return {
+            'name': self.name,
+            'id': self.id,
+            'color': self.color,
+            'acronym': self.acronym,
+            'matches': matches.count(),
+            'wins': wins,
+            'ot_wins': ot_wins,
+            'losses': losses,
+            'ot_losses': ot_losses,
+            'points': (wins * 3) + (ot_wins * 2) + ot_losses,
+            'goals_for': goals_for,
+            'goals_against': goals_against,
+            'players': players
+        }
 
 
 # this is a helper table for recording which players were a part of which team and when (aka 'roster')
@@ -662,12 +775,15 @@ class FreeAgent(db.Model):
             'league': season_division.season.league.acronym,
             'free_agents': players,
             '_links': {
-                'self': url_for('api.season_division.get_free_agents_in_season_division', season_division_id=season_division.id),
-                'season_division': url_for('api.season_division.get_season_division', season_division_id=season_division.id),
+                'self': url_for('api.season_division.get_free_agents_in_season_division',
+                                season_division_id=season_division.id),
+                'season_division': url_for('api.season_division.get_season_division',
+                                           season_division_id=season_division.id),
                 'league': url_for('api.leagues.get_league', league_id_or_acronym=season_division.season.league.id)
             }
         }
         return response
+
 
 """
 class PlayerTeamRegistrations(PlayerTeam):
@@ -852,7 +968,8 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
                 'season': url_for('api.seasons.get_season', season_id=self.season_id),
                 'division': url_for('api.divisions.get_division', division_id=self.division_id),
                 'teams': url_for('api.season_division.get_teams_in_season_division', season_division_id=self.id),
-                'free_agents': url_for('api.season_division.get_free_agents_in_season_division', season_division_id=self.id),
+                'free_agents': url_for('api.season_division.get_free_agents_in_season_division',
+                                       season_division_id=self.id),
                 'rookies': url_for('api.season_division.get_rookies_in_season_division', season_division_id=self.id),
                 'matches': url_for('api.season_division.get_matches_in_season_division', season_division_id=self.id),
                 'finals': url_for('api.season_division.get_finals_in_season_division', season_division_id=self.id)
@@ -884,12 +1001,15 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
             team_data = team.to_simple_dict()
 
             if season_division.season.start_date and season_division.season.finals_end:
-                season_start = datetime.combine(season_division.season.start_date, datetime.min.time()).replace(tzinfo=timezone.utc)
-                season_end = datetime.combine(season_division.season.finals_end, datetime.min.time()).replace(tzinfo=timezone.utc)
+                season_start = datetime.combine(season_division.season.start_date, datetime.min.time()).replace(
+                    tzinfo=timezone.utc)
+                season_end = datetime.combine(season_division.season.finals_end, datetime.min.time()).replace(
+                    tzinfo=timezone.utc)
                 players = []
                 for player_assoc in team.player_association:
                     player_start_date = player_assoc.start_date.replace(tzinfo=timezone.utc)
-                    player_end_date = player_assoc.end_date.replace(tzinfo=timezone.utc) if player_assoc.end_date is not None else None
+                    player_end_date = player_assoc.end_date.replace(
+                        tzinfo=timezone.utc) if player_assoc.end_date is not None else None
                     if player_start_date < season_end and (player_end_date is None or player_end_date > season_start):
                         player = {
                             'id': player_assoc.player.id,
@@ -907,7 +1027,8 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
         response['teams'] = teams
         links = {
             'self': url_for('api.season_division.get_teams_in_season_division', season_division_id=season_division.id),
-            'season_division': url_for('api.season_division.get_season_division', season_division_id=season_division.id),
+            'season_division': url_for('api.season_division.get_season_division',
+                                       season_division_id=season_division.id),
             'league': url_for('api.leagues.get_league', league_id_or_acronym=season_division.season.league.id)
         }
         response['_links'] = links
@@ -946,8 +1067,12 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
     def get_matches_dict(self, unplayed=False):
         matches = []
         for match in self.matches:
-            if match.results is None or not unplayed:
-                matches.append(match.to_simple_dict())
+            if unplayed:
+                if match.results is None:
+                    matches.append(match.to_simple_dict())
+            else:
+                if match.results:
+                    matches.append(match.to_simple_dict())
 
         response = self.to_simple_dict()
         response['matches'] = matches
@@ -958,6 +1083,74 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
         }
         response['_links'] = links
         return response
+
+    def top_players(self, stat, secondary_stat, secondary_sort_reverse=False):
+        query = db.session.query(
+            PlayerMatchData.player_id,
+            sa.func.sum(getattr(PlayerMatchData, stat)).label('goals'),
+            sa.func.sum(getattr(PlayerMatchData, secondary_stat)).label('goals')
+        ) \
+            .filter(PlayerMatchData.stat_total == 1) \
+            .join(PlayerMatchData.match) \
+            .join(MatchData.lobby) \
+            .filter(Lobby.match.has(season_division_id=self.id)) \
+            .group_by(PlayerMatchData.player_id) \
+            .limit(10)
+
+        data = []
+        for row in query:
+            player = db.session.get(Player, row[0])
+            current_team = player.current_team(season=self.season)
+            periods_played = self.get_player_data_query().filter(PlayerMatchData.player_id == player.id).count()
+            player_data = {
+                'id': player.id,
+                'name': player.player_name,
+                'team_id': current_team.team.id if current_team else None,
+                'team': current_team.team.name if current_team else 'Free Agent',
+                stat: int(row[1]),
+                secondary_stat: int(row[2]),
+                'periods': periods_played
+            }
+            data.append(player_data)
+        if secondary_sort_reverse:
+            sorted_data = sorted(data, key=lambda p: (p[stat], -p['periods'], -p[secondary_stat]), reverse=True)
+        else:
+            sorted_data = sorted(data, key=lambda p: (p[stat], -p['periods'], p[secondary_stat]), reverse=True)
+        return sorted_data
+
+    def leaderboard(self):
+        team_data = []
+        for team in self.teams:
+            team_data.append(team.get_stats(season_division=self))
+
+        sorted_teams = sorted(team_data, key=lambda t: (t['points'], (t['goals_for'] - t['goals_against']), t['goals_for']), reverse=True)
+
+        return {
+            'id': self.id,
+            'season': self.season.to_dict(),
+            'division': self.division.to_dict(),
+            'teams': sorted_teams,
+            'most_goals': self.top_players('goals', 'shots', True),
+            'most_assists': self.top_players('assists', 'primary_assists'),
+            'most_saves': self.top_players('saves', 'blocks')
+        }
+
+    def get_match_data_query(self):
+        return db.session.query(MatchData) \
+            .join(MatchData.lobby) \
+            .join(Lobby.match) \
+            .join(Match.season_division) \
+            .filter(SeasonDivision.id == self.id) \
+            .filter(MatchData.accepted == True)  # noqa
+
+    def get_player_data_query(self):
+        return db.session.query(PlayerMatchData) \
+            .join(PlayerMatchData.match) \
+            .join(MatchData.lobby) \
+            .join(Lobby.match) \
+            .join(Match.season_division) \
+            .filter(SeasonDivision.id == self.id) \
+            .filter(MatchData.accepted == 1)
 
 
 # info of a match between two registered league teams
@@ -1007,10 +1200,12 @@ class Match(db.Model):
             'results': self.results.to_dict() if self.results else None,
             '_links': {
                 'self': url_for('api.match.get_match', match_id=self.id),
-                'season_division': url_for('api.season_division.get_season_division', season_division_id=self.season_division_id),
+                'season_division': url_for('api.season_division.get_season_division',
+                                           season_division_id=self.season_division_id),
                 'home_team': url_for('api.teams.get_team', team_id=self.home_team_id),
                 'away_team': url_for('api.teams.get_team', team_id=self.away_team_id),
-                'streamer': url_for('api.users.twitch.get_user_twitch', user_id=self.streamer_id) if self.streamer else None
+                'streamer': url_for('api.users.twitch.get_user_twitch',
+                                    user_id=self.streamer_id) if self.streamer else None
             }
         }
         return data
@@ -1018,8 +1213,8 @@ class Match(db.Model):
     def to_simple_dict(self):
         data = {
             'id': self.id,
-            'home_team': self.home_team.name,
-            'away_team': self.away_team.name,
+            'home_team': self.home_team.to_dict(),
+            'away_team': self.away_team.to_dict(),
             'result': self.results.get_result() if self.results else None,
             'round': self.round,
             'match_week': self.match_week,
@@ -1109,7 +1304,8 @@ class Matchtype(db.Model):
         return data
 
     def from_dict(self, data):
-        for field in ['name', 'description', 'periods', 'arena', 'mercy_rule', 'match_length', 'game_mode', 'num_players']:
+        for field in ['name', 'description', 'periods', 'arena', 'mercy_rule', 'match_length', 'game_mode',
+                      'num_players']:
             if field in data:
                 setattr(self, field, data[field])
 
@@ -1153,7 +1349,8 @@ class MatchData(db.Model):
 
     def from_dict(self, data):
         for field in ['lobby_id', 'processed', 'match_id', 'region', 'gamemode', 'created', 'arena', 'home_score',
-                      'away_score', 'winner', 'current_period', 'periods_enabled', 'custom_mercy_rule', 'end_reason', 'source']:
+                      'away_score', 'winner', 'current_period', 'periods_enabled', 'custom_mercy_rule', 'end_reason',
+                      'source']:
             if field in data:
                 setattr(self, field, data[field])
 

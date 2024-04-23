@@ -20,11 +20,11 @@ Currently, the list of features is:
  - Automatic stat retrieval for lobbies
  - Automatic stat validation
  - User registration
+ - Match review system
+ - Link user account to players
 
 Planned features:
- - Match review system
  - Manage finals fixtures
- - Link user account to players
  - Awards
  - Match scheduling
  - Web relay for discord notification/news bots
