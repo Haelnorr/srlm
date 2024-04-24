@@ -448,7 +448,7 @@ class Team(PaginatedAPIMixin, db.Model):
             if field in data:
                 setattr(self, field, data[field])
 
-    def get_stats(self, season_division=None, finals=None):
+    def get_stats(self, season_division=None, finals=None, current=False):
         matches = db.session.query(Match).filter(
             sa.and_(
                 sa.or_(
@@ -484,6 +484,13 @@ class Team(PaginatedAPIMixin, db.Model):
                 .join(MatchData.lobby) \
                 .join(Lobby.match) \
                 .filter(MatchData.accepted == 1)
+            if current:
+                now = datetime.now(timezone.utc)
+                players_query = players_query \
+                    .filter(PlayerTeam.start_date < now) \
+                    .filter(
+                        PlayerTeam.end_date == None  # noqa
+                    )
 
         player_data_query = player_data_query.filter(sa.or_(
             Match.home_team_id == self.id,
@@ -532,6 +539,8 @@ class Team(PaginatedAPIMixin, db.Model):
                 player = {
                     'name': player_assoc.player.player_name,
                     'id': player_assoc.player_id,
+                    'start_date': player_assoc.start_date,
+                    'end_date': player_assoc.end_date,
                     'periods': periods.count(),
                     'goals': goals,
                     'shots': shots,
@@ -545,6 +554,7 @@ class Team(PaginatedAPIMixin, db.Model):
             'id': self.id,
             'color': self.color,
             'acronym': self.acronym,
+            'logo': self.logo,
             'matches': matches.count(),
             'wins': wins,
             'ot_wins': ot_wins,

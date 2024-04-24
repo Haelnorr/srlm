@@ -73,7 +73,12 @@ class StatsFilterSchema(ma.Schema):
     """Defines filter arg for stats"""
     season = ma.Int()
     division = ma.Int()
+    season_division = ma.Int()
     team = ma.Int()
+
+
+class TeamStatsFilter(CurrentFilterSchema):
+    season_division = ma.Int()
 
 
 class BasicAuthSchema(ma.Schema):
@@ -1090,6 +1095,8 @@ class TeamStatsSchema(ma.Schema):
     class PlayerStatSchema(ma.Schema):
         id = ma.Int()
         name = ma.Str()
+        start_date = ma.Date()
+        end_date = ma.Date()
         periods = ma.Int()
         goals = ma.Int()
         shots = ma.Int()
@@ -1100,6 +1107,7 @@ class TeamStatsSchema(ma.Schema):
     name = ma.Str()
     acronym = ma.Str()
     color = ma.Str()
+    logo = ma.Str()
     matches = ma.Int()
     wins = ma.Int()
     ot_wins = ma.Int()

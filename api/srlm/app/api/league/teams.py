@@ -14,7 +14,8 @@ from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, TeamCollection, TeamSchema, LinkSuccessSchema, EditTeamSchema, \
-    TeamPlayers, TeamSeasonPlayers, TeamSeasons, CurrentFilterSchema, TeamsListSchema
+    TeamPlayers, TeamSeasonPlayers, TeamSeasons, CurrentFilterSchema, TeamsListSchema, TeamStatsSchema, \
+    TeamStatsFilter
 from api.srlm.app.models import Team, SeasonDivision, PlayerTeam
 from api.srlm.app.api.auth.utils import app_auth
 
@@ -252,6 +253,28 @@ def deregister_team_season(team_id, season_division_id):
 
     return responses.request_success(f'Team {team.name} de-registered from {season_division.get_readable_name()}',
                                      'api.season_division.get_season_division', season_division_id=season_division.id)
+
+
+@teams.route('/<int:team_id>/stats', methods=['GET'])
+@cache.cached(unless=force_refresh)
+@arguments(TeamStatsFilter())
+@response(TeamStatsSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def get_team_stats(filters, team_id):
+    """Get a teams stats
+    Can filter by season_division, or by current player roster
+    """
+    team = ensure_exists(Team, id=team_id)
+
+    season_division_id = filters.get('season_division', 0)
+    season_division = ensure_exists(SeasonDivision, return_none=True, id=season_division_id)
+
+    current = filters.get('current', False)
+
+    log.info(filters.get('current'))
+
+    return team.get_stats(season_division=season_division, current=current)
 
 
 @teams.route('/<int:team_id>/awards', methods=['GET'])
