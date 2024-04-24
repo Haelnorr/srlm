@@ -1151,3 +1151,8 @@ class LeaderboardSchema(ma.Schema):
     most_goals = ma.List(ma.Nested(TopGoals()))
     most_assists = ma.List(ma.Nested(TopAssists()))
     most_saves = ma.List(ma.Nested(TopSaves()))
+
+
+class TeamStatsMatchesSchema(TeamStatsSchema):
+    completed_matches = ma.List(ma.Nested(ViewMatchSchema))
+    upcoming_matches = ma.List(ma.Nested(ViewMatchSchema))

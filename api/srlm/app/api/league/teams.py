@@ -14,8 +14,8 @@ from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, TeamCollection, TeamSchema, LinkSuccessSchema, EditTeamSchema, \
-    TeamPlayers, TeamSeasonPlayers, TeamSeasons, CurrentFilterSchema, TeamsListSchema, TeamStatsSchema, \
-    TeamStatsFilter
+    TeamPlayers, TeamSeasonPlayers, TeamSeasons, CurrentFilterSchema, TeamsListSchema, \
+    TeamStatsFilter, TeamStatsMatchesSchema
 from api.srlm.app.models import Team, SeasonDivision, PlayerTeam
 from api.srlm.app.api.auth.utils import app_auth
 
@@ -256,9 +256,9 @@ def deregister_team_season(team_id, season_division_id):
 
 
 @teams.route('/<int:team_id>/stats', methods=['GET'])
-@cache.cached(unless=force_refresh)
+@cache.cached(unless=force_refresh, query_string=True)
 @arguments(TeamStatsFilter())
-@response(TeamStatsSchema())
+@response(TeamStatsMatchesSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def get_team_stats(filters, team_id):
@@ -272,9 +272,12 @@ def get_team_stats(filters, team_id):
 
     current = filters.get('current', False)
 
-    log.info(filters.get('current'))
+    response_json = team.get_stats(season_division=season_division, current=current)
 
-    return team.get_stats(season_division=season_division, current=current)
+    response_json['upcoming_matches'] = team.get_upcoming_matches()
+    response_json['completed_matches'] = team.get_completed_matches()
+
+    return response_json
 
 
 @teams.route('/<int:team_id>/awards', methods=['GET'])

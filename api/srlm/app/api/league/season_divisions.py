@@ -38,7 +38,7 @@ def get_season_division(season_division_id):
 
 @season_division.route('/leaderboard', methods=['GET'])
 @arguments(SeasonDivisionLookup())
-@cache.cached(unless=force_refresh)
+@cache.cached(unless=force_refresh, query_string=True)
 @response(LeaderboardSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
@@ -83,7 +83,7 @@ def get_leaderboard(filters):
 
 @season_division.route('', methods=['GET'])
 @arguments(SeasonDivisionLookup())
-@cache.cached(unless=force_refresh)
+@cache.cached(unless=force_refresh, query_string=True)
 @response(SeasonDivisionSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)

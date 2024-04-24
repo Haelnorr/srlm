@@ -566,6 +566,32 @@ class Team(PaginatedAPIMixin, db.Model):
             'players': players
         }
 
+    def get_upcoming_matches(self):
+        query = db.session.query(Match).filter(
+            sa.or_(
+                Match.home_team_id == self.id,
+                Match.away_team_id == self.id
+            )
+        ).filter(
+            Match.results == None  # noqa
+        )
+        return [match.to_dict() for match in query]
+
+    def get_completed_matches(self, limit=10):
+        query = db.session.query(Match).filter(
+            sa.or_(
+                Match.home_team_id == self.id,
+                Match.away_team_id == self.id
+            )
+        ).filter(
+            Match.results != None  # noqa
+        ).join(
+            Match.results
+        ).order_by(
+            sa.desc(MatchResult.completed_date)
+        ).limit(limit)
+        return [match.to_dict() for match in query]
+
 
 # this is a helper table for recording which players were a part of which team and when (aka 'roster')
 class PlayerTeam(db.Model):
