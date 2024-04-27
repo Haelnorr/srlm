@@ -48,10 +48,11 @@ class Config:
     APIFAIRY_TITLE = 'Slapshot: Rebound - League Manager API'
     APIFAIRY_VERSION = '0.8.12 - dev'
     CACHE_TYPE = 'RedisCache'
-    CACHE_DEFAULT_TIMEOUT = 10  # TODO set to 300 for prod
+    CACHE_DEFAULT_TIMEOUT = os.getenv('SRLM_CACHE_TIMEOUT') or 300
     CACHE_REDIS_URL = cache_backend
     CACHE_SOURCE_CHECK = True
-    RATELIMIT_APPLICATION = '200 per minute'  # TODO 50
+    RATELIMIT_APPLICATION = '200 per minute'
     RATELIMIT_STORAGE_URI = limiter_backend
     RATELIMIT_STRATEGY = 'fixed-window'
     RATELIMIT_HEADERS_ENABLED = True
+    SERVER_NAME = os.getenv('SRLM_SERVER_NAME') or None

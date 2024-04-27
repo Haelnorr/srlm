@@ -17,7 +17,7 @@ from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, PlayerSchema, PlayerCollection, LinkSuccessSchema, \
     EditPlayerSchema, PlayerTeams, PlayerSeasons, CurrentFilterSchema, PlayerStatsSchema, StatsFilterSchema
 from api.srlm.app.models import Player, SeasonDivision, Team, PlayerTeam, FreeAgent, PlayerMatchData, Match, Lobby, \
-    MatchData, Season, Division
+    MatchData, Season, Division, UserPermissions
 from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
@@ -236,7 +236,8 @@ def get_player_stats(search_filters, player_id):
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def register_player_team(data, player_id):
-    """Register a player to a team"""
+    """Register a player to a team
+    `team` is either team.id or team.acronym"""
     # get the player
     player = ensure_exists(Player, id=player_id)
     current_team = player.current_team()
@@ -280,6 +281,17 @@ def deregister_player_team(player_id):
 
     # de-register the player from the team (add end date)
     current_team.end_date = datetime.now(timezone.utc)
+    if player.user:
+        if player.user.has_permission('team_manager'):
+            query = db.session.query(UserPermissions).filter(
+                sa.and_(
+                    UserPermissions.user_id == player.user.id,
+                    UserPermissions.permission.has(key='team_manager')
+                )
+            )
+            for user_perm in query:
+                if str(current_team.team.id) == user_perm.additional_modifiers:
+                    db.session.query(UserPermissions).filter_by(id=user_perm.id).delete()
 
     db.session.commit()
 

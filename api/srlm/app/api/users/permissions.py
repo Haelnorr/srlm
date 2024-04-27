@@ -1,6 +1,6 @@
 """Endpoints for managing user permissions"""
 from apifairy import body, response, authenticate, other_responses
-from flask import url_for, request, Blueprint
+from flask import url_for, Blueprint
 from api.srlm.app import db
 from api.srlm.app.api.users import users_bp
 from api.srlm.app.api.auth.utils import app_auth
@@ -9,7 +9,7 @@ from api.srlm.app.api.utils.errors import BadRequest, ResourceNotFound
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import UserPermissionsList, UserPermissionsSchema, LinkSuccessSchema, \
-    UpdateUserPermissionSchema, RevokeUserPermission, UpdateUserPermissionsSchema
+    RevokeUserPermission, UpdateUserPermissionsSchema
 from api.srlm.app.models import User, Permission, UserPermissions
 from api.srlm.logger import get_logger
 
@@ -68,42 +68,13 @@ def add_user_permissions(data, user_id):
     user_perm = UserPermissions(user=user, permission=permission)
 
     if 'modifiers' in data:
-        modifiers = data['modifiers']
+        modifiers = ','.join(data['modifiers'])
         user_perm.additional_modifiers = modifiers
 
     db.session.add(user_perm)
     db.session.commit()
 
-    return responses.create_success(f'Permission {user_perm.permssion.key} added to user {user_perm.user.username}', 'api.users.permissions.get_user_permissions', user_id=user_id)
-
-
-@permissions.route('/<int:user_id>/permission', methods=['PUT'])
-@body(UpdateUserPermissionSchema())
-@response(LinkSuccessSchema())
-@authenticate(app_auth)
-@other_responses(unauthorized | not_found | bad_request)
-def update_user_permission(data, user_id):
-    """Update a users existing permission"""
-    user = ensure_exists(User, id=user_id)
-
-    required_fields = ['key', 'modifiers']
-
-    force_fields(data, required_fields)
-
-    permission = ensure_exists(Permission, key=data['key'])
-
-    user_perm = ensure_exists(UserPermissions, user_id=user.id, permission_id=permission.id)
-
-    modifiers = data['modifiers']
-    if data['modifiers'] == "":
-        modifiers = None
-    user_perm.additional_modifiers = modifiers
-    db.session.commit()
-
-    return responses.request_success(f'Permission {user_perm.permssion.key} updated '
-                                     f'for user {user_perm.user.username}',
-                                     'api.users.permissions.get_user_permissions',
-                                     user_id=user_id)
+    return responses.create_success(f'Permission {user_perm.permission.key} added to user {user_perm.user.username}', 'api.users.permissions.get_user_permissions', user_id=user_id)
 
 
 @permissions.route('/<int:user_id>/permissions', methods=['PUT'])
@@ -136,7 +107,7 @@ def update_user_permissions(data, user_id):
                 log.debug(user_perm)
                 # if user doesnt have the perm and request is adding the permission
                 if not user_perm and data[key]:
-                    if type(data[key]) == list and len(data[key]) is 0:
+                    if type(data[key]) == list and len(data[key]) == 0:
                         return
                     user_perm = UserPermissions()
                     user_perm.user = user

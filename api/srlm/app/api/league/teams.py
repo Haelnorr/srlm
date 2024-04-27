@@ -6,17 +6,17 @@ from apifairy import arguments, response, authenticate, other_responses, body
 from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
-from flask import request, url_for, Blueprint
+from flask import url_for, Blueprint
 import sqlalchemy as sa
 
 from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
-from api.srlm.app.fairy.schemas import PaginationArgs, TeamCollection, TeamSchema, LinkSuccessSchema, EditTeamSchema, \
+from api.srlm.app.fairy.schemas import TeamCollection, TeamSchema, LinkSuccessSchema, EditTeamSchema, \
     TeamPlayers, TeamSeasonPlayers, TeamSeasons, CurrentFilterSchema, TeamsListSchema, \
-    TeamStatsFilter, TeamStatsMatchesSchema
-from api.srlm.app.models import Team, SeasonDivision, PlayerTeam
+    TeamStatsFilter, TeamStatsMatchesSchema, TeamManageSchema, TeamFilters
+from api.srlm.app.models import Team, SeasonDivision, PlayerTeam, UserPermissions, Permission, TeamAward
 from api.srlm.app.api.auth.utils import app_auth
 
 # create a new logger for this module
@@ -30,15 +30,50 @@ bp.register_blueprint(teams, url_prefix='/teams')
 
 @teams.route('', methods=['GET'])
 @cache.cached(unless=force_refresh, query_string=True)
-@arguments(PaginationArgs())
+@arguments(TeamFilters())
 @response(TeamCollection())
 @authenticate(app_auth)
 @other_responses(unauthorized)
-def get_teams(pagination):
+def get_teams(filters):
     """Get the collection of all teams"""
-    page = pagination['page']
-    per_page = pagination['per_page']
-    return Team.to_collection_dict(sa.select(Team), page, per_page, 'api.teams.get_teams')
+    page = filters['page']
+    per_page = filters['per_page']
+    owner = filters['owner']
+    order = filters['order']
+    order_by = filters['order_by']
+
+    if order_by == 'seasons_played':
+        query = db.session.query(Team, sa.func.count(SeasonDivision.id).label('count')) \
+            .join(Team.season_divisions) \
+            .group_by(Team) \
+            .order_by(getattr(sa, order)('count'))
+    elif order_by == 'active_players':
+        current_player_filt = PlayerTeam.end_date == None # noqa
+        query = db.session.query(Team, sa.func.count(PlayerTeam.id).label('count')) \
+            .join(Team.player_association) \
+            .filter(current_player_filt) \
+            .group_by(Team) \
+            .order_by(getattr(sa, order)('count'))
+    elif order_by == 'awards':
+        query = db.session.query(Team, sa.func.count(TeamAward.id).label('count')) \
+            .join(Team.awards_association) \
+            .group_by(Team) \
+            .order_by(getattr(sa, order)('count'))
+    else:
+        query = sa.select(Team)
+        if owner:
+            team_ids_q = db.session.query(UserPermissions) \
+                .filter(UserPermissions.user_id == owner) \
+                .join(UserPermissions.permission) \
+                .filter(Permission.key == 'team_owner').first()
+
+            if team_ids_q:
+                team_ids = team_ids_q.additional_modifiers.split(',')
+                query = db.session.query(Team).filter(Team.id.in_(team_ids))
+
+            query = query.order_by(getattr(sa, order)(getattr(Team, order_by)))
+
+    return Team.to_collection_dict(query, page, per_page, 'api.teams.get_teams')
 
 
 @teams.route('/list', methods=['GET'])
@@ -104,9 +139,8 @@ def add_team(data):
 @response(LinkSuccessSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
-def update_team(team_id):
+def update_team(data, team_id):
     """Update an existing team"""
-    data = request.get_json()
 
     team = ensure_exists(Team, id=team_id)
 
@@ -278,6 +312,16 @@ def get_team_stats(filters, team_id):
     response_json['completed_matches'] = team.get_completed_matches()
 
     return response_json
+
+
+@teams.route('/<int:team_id>/manage', methods=['GET'])
+@response(TeamManageSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def get_team_manager_details(team_id):
+    """Get the management details of a team"""
+    team = ensure_exists(Team, id=team_id)
+    return team.get_manager_details()
 
 
 @teams.route('/<int:team_id>/awards', methods=['GET'])

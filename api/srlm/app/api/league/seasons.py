@@ -136,7 +136,8 @@ def add_season(data):
 
     unique_fields = ['name', 'acronym']
     required_fields = ['name', 'acronym', 'league', 'match_type']
-    valid_fields = ['name', 'acronym', 'league_id', 'start_date', 'end_date', 'finals_start', 'finals_end', 'match_type_id']
+    valid_fields = ['name', 'acronym', 'league_id', 'start_date', 'end_date', 'finals_start', 'finals_end',
+                    'match_type_id', 'can_register']
 
     force_fields(data, required_fields)
     league_db = ensure_exists(League, join_method='or', id=data['league'], acronym=data['league'])

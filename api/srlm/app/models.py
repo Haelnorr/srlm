@@ -114,9 +114,9 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
             self.set_password(data['password'])
 
     def has_permission(self, key):
-        for permission in self.permissions:
-            if permission.key == key:
-                return True
+        for perm in self.permission_assoc:
+            if perm.permission.key == key:
+                return perm.additional_modifiers if perm.permission.key == 'team_manager' else True
         else:
             return False
 
@@ -555,6 +555,7 @@ class Team(PaginatedAPIMixin, db.Model):
             'color': self.color,
             'acronym': self.acronym,
             'logo': self.logo,
+            'founded': self.founded_date,
             'matches': matches.count(),
             'wins': wins,
             'ot_wins': ot_wins,
@@ -591,6 +592,39 @@ class Team(PaginatedAPIMixin, db.Model):
             sa.desc(MatchResult.completed_date)
         ).limit(limit)
         return [match.to_dict() for match in query]
+
+    def get_manager_details(self):
+        players = [{
+            'id': pa.player.id,
+            'user_id': pa.player.user_id,
+            'name': pa.player.player_name,
+            'manager': pa.player.user.has_permission('team_manager') if pa.player.user else False
+        } for pa in self.player_association.filter(PlayerTeam.end_date == None)]  # noqa
+
+        owner = db.session.query(User) \
+            .join(User.permission_assoc) \
+            .join(UserPermissions.permission) \
+            .filter(Permission.key == 'team_owner') \
+            .filter(UserPermissions.additional_modifiers == str(self.id)) \
+            .first()
+
+        seasons = db.session.query(Season).filter(Season.can_register)
+
+        return {
+            'id': self.id,
+            'name': self.name,
+            'color': self.color,
+            'logo': self.logo,
+            'acronym': self.acronym,
+            'founded': self.founded_date,
+            'owner': owner.username if owner else None,
+            'players': players,
+            'invites': [inv.to_dict() for inv in self.invites],
+            'applications': [app.to_dict() for app in self.applications],
+            'open_seasons': [season.to_dict() for season in seasons],
+            'upcoming_matches': self.get_upcoming_matches(),
+            'recent_matches': self.get_completed_matches(limit=10)
+        }
 
 
 # this is a helper table for recording which players were a part of which team and when (aka 'roster')
@@ -638,6 +672,7 @@ class PlayerTeam(db.Model):
         )
         team_managers = [tm.user.username for tm in team_managers_q]
         data = {
+            'id': self.team.id,
             'name': self.team.name,
             'acronym': self.team.acronym,
             'color': self.team.color,
@@ -874,6 +909,7 @@ class Season(PaginatedAPIMixin, db.Model):
     finals_start = db.Column(db.Date)
     finals_end = db.Column(db.Date)
     match_type_id = db.Column(db.Integer, db.ForeignKey('matchtype.id'))
+    can_register = db.Column(db.Boolean, default=False)
 
     league = db.relationship('League', back_populates='seasons')
     division_association = db.relationship('SeasonDivision', back_populates='season', lazy='dynamic')
@@ -921,7 +957,7 @@ class Season(PaginatedAPIMixin, db.Model):
 
     def from_dict(self, data):
         for field in ['name', 'acronym', 'league_id', 'start_date', 'end_date', 'finals_start', 'finals_end',
-                      'match_type_id']:
+                      'match_type_id', 'can_register']:
             if field in data:
                 setattr(self, field, data[field])
 
@@ -1637,6 +1673,110 @@ class MatchReview(db.Model):
             'resolved_on': self.resolved_on
         }
         return data
+
+
+class SeasonRegistration(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
+    player_id = db.Column(db.Integer, db.ForeignKey('player.id'))
+    season_id = db.Column(db.Integer, db.ForeignKey('season.id'), nullable=False)
+    division_id = db.Column(db.Integer, db.ForeignKey('division.id'))
+    status = db.Column(db.String(16), default='Pending', nullable=False)
+    type = db.Column(db.String(10), nullable=False)
+
+    team = db.relationship('Team', backref='applications')
+    player = db.relationship('Player', backref='applications')
+    season = db.relationship('Season', backref='applications')
+    division = db.relationship('Division', backref='applications')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'team': self.team.to_dict() if self.team else None,
+            'player': self.player.to_dict() if self.player else None,
+            'season': self.season.to_dict(),
+            'division': self.division.to_dict() if self.division else None,
+            'status': self.status,
+            'type': self.type
+        }
+
+    def from_dict(self, data):
+        fields = ['player_id', 'team_id', 'season_id', 'division_id']
+        for field in fields:
+            if field in data:
+                setattr(self, field, data[field])
+                if field == 'team_id':
+                    self.type = 'team'
+                elif field == 'player_id':
+                    self.type = 'player'
+
+    def accept(self):
+        self.status = 'Accepted'
+        db.session.commit()
+
+    def reject(self):
+        self.status = 'Rejected'
+        db.session.commit()
+
+    def allocate_to_division(self, division):
+        self.division = division
+        sd = db.session.query(SeasonDivision)\
+            .filter_by(
+                season_id=self.season_id,
+                division_id=self.division_id)\
+            .first()
+        if self.team:
+            self.team.season_divisions.append(sd)
+        elif self.player:
+            now = datetime.now(timezone.utc)
+            free_agent = FreeAgent()
+            free_agent.player = self.player
+            free_agent.season_division = sd
+            free_agent.start_date = now
+            db.session.add(free_agent)
+        self.status = 'Completed'
+        db.session.commit()
+
+
+class TeamInvites(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
+    invited_player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
+    inviting_player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
+    status = db.Column(db.String(16), default='Pending', nullable=False)
+
+    team = db.relationship('Team', backref='invites')
+    invited_player = db.relationship('Player', backref='invites', foreign_keys=invited_player_id)
+    inviting_player = db.relationship('Player', foreign_keys=inviting_player_id)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'team': self.team.to_dict(),
+            'invited_player': self.invited_player.to_dict(),
+            'inviting_player': self.inviting_player.to_dict(),
+            'status': self.status
+        }
+
+    def from_dict(self, data):
+        fields = ['team_id', 'invited_player', 'inviting_player']
+        for field in fields:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def accept(self):
+        self.status = 'Accepted'
+        player_team = PlayerTeam()
+        player_team.player = self.invited_player
+        player_team.team = self.team
+        player_team.start_date = datetime.now(timezone.utc)
+
+        db.session.add(player_team)
+        db.session.commit()
+
+    def reject(self):
+        self.status = 'Rejected'
+        db.session.commit()
 
 
 @login.user_loader

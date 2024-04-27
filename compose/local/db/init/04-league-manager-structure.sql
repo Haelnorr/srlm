@@ -481,7 +481,7 @@ CREATE TABLE `permission` (
   `description` varchar(128) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `ix_permission_key` (`key`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -609,6 +609,7 @@ CREATE TABLE `season` (
   `finals_end` date DEFAULT NULL,
   `match_type_id` int DEFAULT NULL,
   `acronym` varchar(5) NOT NULL,
+  `can_register` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `league_id` (`league_id`),
   KEY `match_type_id` (`match_type_id`),
@@ -651,6 +652,33 @@ CREATE TABLE `season_division_team` (
   KEY `team_id` (`team_id`),
   CONSTRAINT `season_division_team_ibfk_1` FOREIGN KEY (`season_division_id`) REFERENCES `season_division` (`id`),
   CONSTRAINT `season_division_team_ibfk_2` FOREIGN KEY (`team_id`) REFERENCES `team` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `season_registration`
+--
+
+DROP TABLE IF EXISTS `season_registration`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `season_registration` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `team_id` int DEFAULT NULL,
+  `player_id` int DEFAULT NULL,
+  `season_id` int NOT NULL,
+  `division_id` int DEFAULT NULL,
+  `status` varchar(16) NOT NULL,
+  `type` varchar(10) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `division_id` (`division_id`),
+  KEY `player_id` (`player_id`),
+  KEY `season_id` (`season_id`),
+  KEY `team_id` (`team_id`),
+  CONSTRAINT `season_registration_ibfk_1` FOREIGN KEY (`division_id`) REFERENCES `division` (`id`),
+  CONSTRAINT `season_registration_ibfk_2` FOREIGN KEY (`player_id`) REFERENCES `player` (`id`),
+  CONSTRAINT `season_registration_ibfk_3` FOREIGN KEY (`season_id`) REFERENCES `season` (`id`),
+  CONSTRAINT `season_registration_ibfk_4` FOREIGN KEY (`team_id`) REFERENCES `team` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -710,6 +738,29 @@ CREATE TABLE `team_award` (
   CONSTRAINT `team_award_ibfk_1` FOREIGN KEY (`award_id`) REFERENCES `award` (`id`),
   CONSTRAINT `team_award_ibfk_2` FOREIGN KEY (`season_division_id`) REFERENCES `season_division` (`id`),
   CONSTRAINT `team_award_ibfk_3` FOREIGN KEY (`team_id`) REFERENCES `team` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `team_invites`
+--
+
+DROP TABLE IF EXISTS `team_invites`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `team_invites` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `team_id` int NOT NULL,
+  `invited_player_id` int NOT NULL,
+  `inviting_player_id` int NOT NULL,
+  `status` varchar(16) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `invited_player_id` (`invited_player_id`),
+  KEY `inviting_player_id` (`inviting_player_id`),
+  KEY `team_id` (`team_id`),
+  CONSTRAINT `team_invites_ibfk_1` FOREIGN KEY (`invited_player_id`) REFERENCES `player` (`id`),
+  CONSTRAINT `team_invites_ibfk_2` FOREIGN KEY (`inviting_player_id`) REFERENCES `player` (`id`),
+  CONSTRAINT `team_invites_ibfk_3` FOREIGN KEY (`team_id`) REFERENCES `team` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -774,7 +825,7 @@ CREATE TABLE `user_permissions` (
   KEY `user_id` (`user_id`),
   CONSTRAINT `user_permissions_ibfk_1` FOREIGN KEY (`permission_id`) REFERENCES `permission` (`id`),
   CONSTRAINT `user_permissions_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -786,4 +837,4 @@ CREATE TABLE `user_permissions` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-04-16 12:24:26
+-- Dump completed on 2024-04-25 14:20:40

@@ -4,7 +4,8 @@ from marshmallow.validate import OneOf
 
 from api.srlm.app import ma
 from api.srlm.app.models import Permission, Match, Team, MatchResult, MatchReview, PlayerMatchData, MatchData, Discord, \
-    Twitch, UserPermissions, User, Division, League, Season, SeasonDivision, Player, FreeAgent, Matchtype
+    Twitch, UserPermissions, User, Division, League, Season, SeasonDivision, Player, FreeAgent, Matchtype, TeamInvites, \
+    SeasonRegistration
 
 
 class Links(ma.Schema):
@@ -30,6 +31,14 @@ class PaginationArgs(ma.Schema):
     total_items = ma.Int(dump_only=True)
 
 
+class TeamFilters(PaginationArgs):
+    owner = ma.Int(missing=None)
+    order = ma.Str(missing="desc", validate=OneOf(['asc', 'desc']))
+    order_by = ma.Str(missing="id", validate=OneOf(
+        ['id', 'name', 'acronym', 'founded_date', 'color', 'logo', 'seasons_played',
+         'active_players', 'awards']))
+
+
 class DateFilters(PaginationArgs):
     """Defines filters for dates"""
     start_date = ma.Date()
@@ -44,7 +53,7 @@ class SeasonFilters(DateFilters):
     next = ma.Bool()
     order = ma.Str(missing="desc", validate=OneOf(['asc', 'desc']))
     order_by = ma.Str(missing="start_date", validate=OneOf(
-        ['start_date', 'end_date', 'finals_start', 'finals_end', 'name', 'league']))
+        ['start_date', 'end_date', 'finals_start', 'finals_end', 'name', 'league', 'id']))
 
 
 class PaginationLinks(Links):
@@ -147,14 +156,10 @@ class UserPermissionsSchema(ma.SQLAlchemySchema):
     permission_id = ma.auto_field(dump_only=True)
     user = ma.Str(dump_only=True)
     key = ma.Str(required=True)
-    description = ma.Str()
-    additional_modifiers = ma.auto_field()
-    _links = ma.Nested(UserLinks())
-
-
-class UpdateUserPermissionSchema(UserPermissionsSchema):
-    """Extends UserPermissionsSchema for defining update requests"""
-    additional_modifiers = ma.auto_field(required=True)
+    description = ma.Str(dump_only=True)
+    additional_modifiers = ma.auto_field(dump_only=True)
+    modifiers = ma.List(ma.Str(), load_only=True)
+    _links = ma.Nested(UserLinks(), dump_only=True)
 
 
 class UpdateUserPermissionsSchema(ma.Schema):
@@ -226,8 +231,8 @@ class TeamSchema(ma.SQLAlchemySchema):
 
 class EditTeamSchema(TeamSchema):
     """Overrides the team schema to make name and acronym optional"""
-    name = ma.auto_field()
-    acronym = ma.auto_field()
+    name = ma.auto_field(required=False)
+    acronym = ma.auto_field(required=False)
 
 
 class SimpleTeamSchema(ma.SQLAlchemySchema):
@@ -630,6 +635,7 @@ class SeasonSchema(ma.SQLAlchemySchema):
     finals_start = ma.auto_field()
     finals_end = ma.auto_field()
     match_type = ma.Str(required=True)
+    can_register = ma.Bool()
     divisions = ma.List(ma.Nested(DivisionLink()), dump_only=True)
     _links = ma.Nested(SeasonLinks(), dump_only=True)
 
@@ -866,6 +872,7 @@ class SeasonDivisionMatches(SimpleSeasonDivision):
 class PlayerTeams(ma.Schema):
     """Defines the response for the list of teams a player has been on"""
     class TeamList(ma.Schema):
+        id = ma.Int()
         name = ma.Str()
         acronym = ma.Str()
         color = ma.Str()
@@ -876,7 +883,7 @@ class PlayerTeams(ma.Schema):
 
     player = ma.Str(dump_only=True)
     teams = ma.List(ma.Nested(TeamList()), dump_only=True)
-    current_team = ma.Nested(TeamList())
+    current_team = ma.Nested(TeamList(), dump_only=True)
     _links = ma.Nested(PlayerLink(), dump_only=True)
     team = ma.Str(required=True, load_only=True)
 
@@ -1108,6 +1115,7 @@ class TeamStatsSchema(ma.Schema):
     acronym = ma.Str()
     color = ma.Str()
     logo = ma.Str()
+    founded = ma.Date()
     matches = ma.Int()
     wins = ma.Int()
     ot_wins = ma.Int()
@@ -1156,3 +1164,59 @@ class LeaderboardSchema(ma.Schema):
 class TeamStatsMatchesSchema(TeamStatsSchema):
     completed_matches = ma.List(ma.Nested(ViewMatchSchema))
     upcoming_matches = ma.List(ma.Nested(ViewMatchSchema))
+
+
+class TeamInvitesSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        ordered = True
+        model = TeamInvites
+
+    id = ma.auto_field(dump_only=True)
+    team_id = ma.auto_field(load_only=True)
+    team = ma.Nested(TeamSchema(), dump_only=True)
+    invited_player_id = ma.auto_field(load_only=True)
+    invited_player = ma.Nested(PlayerSchema(), dump_only=True)
+    inviting_player_id = ma.auto_field(load_only=True)
+    inviting_player = ma.Nested(PlayerSchema(), dump_only=True)
+    status = ma.auto_field(dump_only=True)
+
+
+class SeasonApplicationsSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        ordered = True
+        model = SeasonRegistration
+
+    id = ma.auto_field(dump_only=True)
+    team_id = ma.auto_field(load_only=True)
+    team = ma.Nested(TeamSchema(), dump_only=True)
+    player_id = ma.auto_field(load_only=True)
+    player = ma.Nested(PlayerSchema(), dump_only=True)
+    season_id = ma.auto_field(load_only=True)
+    season = ma.Nested(SeasonSchema(), dump_only=True)
+    division_id = ma.auto_field(load_only=True)
+    division = ma.Nested(DivisionSchema(), dump_only=True)
+    status = ma.auto_field(dump_only=True)
+    type = ma.auto_field(dump_only=True)
+
+
+class TeamManageSchema(ma.Schema):
+    """Structure of the team management dashboard request data"""
+    class TeamPlayerManage(ma.Schema):
+        id = ma.Int()
+        user_id = ma.Int()
+        name = ma.Str()
+        manager = ma.Bool()
+
+    id = ma.Int()
+    name = ma.Str()
+    color = ma.Str()
+    logo = ma.Str()
+    acronym = ma.Str()
+    founded = ma.Date()
+    owner = ma.Str()
+    players = ma.List(ma.Nested(TeamPlayerManage()))
+    completed_matches = ma.List(ma.Nested(ViewMatchSchema))
+    upcoming_matches = ma.List(ma.Nested(ViewMatchSchema))
+    invites = ma.List(ma.Nested(TeamInvitesSchema()))
+    applications = ma.List(ma.Nested(SeasonApplicationsSchema()))
+    open_seasons = ma.List(ma.Nested(SeasonSchema()))
