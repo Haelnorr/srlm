@@ -44,19 +44,18 @@ def get_teams(filters):
 
     if order_by == 'seasons_played':
         query = db.session.query(Team, sa.func.count(SeasonDivision.id).label('count')) \
-            .join(Team.season_divisions) \
+            .outerjoin(Team.season_divisions) \
             .group_by(Team) \
             .order_by(getattr(sa, order)('count'))
     elif order_by == 'active_players':
-        current_player_filt = PlayerTeam.end_date == None # noqa
         query = db.session.query(Team, sa.func.count(PlayerTeam.id).label('count')) \
-            .join(Team.player_association) \
-            .filter(current_player_filt) \
+            .outerjoin(PlayerTeam,
+                       (Team.id == PlayerTeam.team_id) & (PlayerTeam.end_date.is_(None))) \
             .group_by(Team) \
             .order_by(getattr(sa, order)('count'))
     elif order_by == 'awards':
         query = db.session.query(Team, sa.func.count(TeamAward.id).label('count')) \
-            .join(Team.awards_association) \
+            .outerjoin(Team.awards_association) \
             .group_by(Team) \
             .order_by(getattr(sa, order)('count'))
     else:

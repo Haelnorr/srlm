@@ -315,6 +315,7 @@ class Player(PaginatedAPIMixin, db.Model):
             'teams': len(unique_teams),
             'free_agent_seasons': self.season_association.count(),
             'awards': len(self.awards_association),
+            'stats': self.get_stats(),
             '_links': {
                 'self': url_for('api.players.get_player', player_id=self.id),
                 'user': url_for('api.users.get_user', user_id=self.user_id) if self.user else None,
@@ -372,6 +373,55 @@ class Player(PaginatedAPIMixin, db.Model):
             end_filter
         ))
         return current_team_q.first()
+
+    def get_stats(self, season_division=None, finals=None):
+        player_data_query = db.session.query(PlayerMatchData) \
+            .join(PlayerMatchData.match) \
+            .join(MatchData.lobby) \
+            .join(Lobby.match) \
+            .filter(MatchData.accepted == 1) \
+            .filter(PlayerMatchData.player_id == self.id)
+
+        start_date = None
+        end_date = None
+        if season_division:
+            player_data_query = player_data_query.filter(
+                Match.season_division_id == season_division.id)
+
+            start_date, end_date = db.session.query(FreeAgent.start_date, FreeAgent.end_date) \
+                .filter(sa.and_(
+                FreeAgent.season_division_id == season_division.id,
+                FreeAgent.player_id == self.id
+            )).first()
+
+        if finals:
+            player_data_query = player_data_query.filter(Match.final_id != None)  # noqa
+        else:
+            player_data_query = player_data_query.filter(Match.final_id == None)  # noqa
+
+        stat_totals = player_data_query.filter(PlayerMatchData.stat_total == 1)
+
+        goals = 0
+        shots = 0
+        assists = 0
+        saves = 0
+        for record in stat_totals:
+            goals += record.goals
+            shots += record.shots
+            assists += record.assists
+            saves += record.saves
+
+        return {
+            'name': self.player_name,
+            'id': self.id,
+            'start_date': start_date,
+            'end_date': end_date,
+            'periods': player_data_query.count(),
+            'goals': goals,
+            'shots': shots,
+            'assists': assists,
+            'saves': saves
+        }
 
 
 # this is a helper table for recording which teams played in which season and in which division
@@ -946,6 +996,7 @@ class Season(PaginatedAPIMixin, db.Model):
             'finals_end': self.finals_end,
             'match_type': self.match_type.name,
             'divisions': self.get_divisions(),
+            'can_register': self.can_register,
             '_links': {
                 'self': url_for('api.seasons.get_season', season_id=self.id),
                 'league': url_for('api.leagues.get_league', league_id_or_acronym=self.league_id),
@@ -1197,11 +1248,16 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
 
         sorted_teams = sorted(team_data, key=lambda t: (t['points'], (t['goals_for'] - t['goals_against']), t['goals_for']), reverse=True)
 
+        free_agents = []
+        for free_agent in self.free_agents:
+            free_agents.append(free_agent.get_stats(season_division=self))
+
         return {
             'id': self.id,
             'season': self.season.to_dict(),
             'division': self.division.to_dict(),
             'teams': sorted_teams,
+            'free_agents': free_agents,
             'most_goals': self.top_players('goals', 'shots', True),
             'most_assists': self.top_players('assists', 'primary_assists'),
             'most_saves': self.top_players('saves', 'blocks')

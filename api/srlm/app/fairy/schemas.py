@@ -761,6 +761,13 @@ class PlayerSchema(ma.SQLAlchemySchema):
         free_agent_seasons = ma.URL()
         awards = ma.URL()
 
+    class PlayerCareerStats(ma.Schema):
+        periods = ma.Int()
+        goals = ma.Int()
+        shots = ma.Int()
+        assists = ma.Int()
+        saves = ma.Int()
+
     id = ma.auto_field(dump_only=True)
     player_name = ma.auto_field(required=True)
     user = ma.Str(dump_only=True)
@@ -773,6 +780,7 @@ class PlayerSchema(ma.SQLAlchemySchema):
     teams = ma.Int(dump_only=True)
     free_agent_seasons = ma.Int(dump_only=True)
     awards = ma.Int(dump_only=True)
+    stats = ma.Nested(PlayerCareerStats(), dump_only=True)
     _links = ma.Nested(PlayerLinks(), dump_only=True)
 
 
@@ -1098,18 +1106,19 @@ class TeamsListSchema(ma.Schema):
     teams = ma.List(ma.Nested(TeamSimpleList()))
 
 
-class TeamStatsSchema(ma.Schema):
-    class PlayerStatSchema(ma.Schema):
-        id = ma.Int()
-        name = ma.Str()
-        start_date = ma.Date()
-        end_date = ma.Date()
-        periods = ma.Int()
-        goals = ma.Int()
-        shots = ma.Int()
-        assists = ma.Int()
-        saves = ma.Int()
+class PlayerStatSchema(ma.Schema):
+    id = ma.Int()
+    name = ma.Str()
+    start_date = ma.Date()
+    end_date = ma.Date()
+    periods = ma.Int()
+    goals = ma.Int()
+    shots = ma.Int()
+    assists = ma.Int()
+    saves = ma.Int()
 
+
+class TeamStatsSchema(ma.Schema):
     id = ma.Int()
     name = ma.Str()
     acronym = ma.Str()
@@ -1156,6 +1165,7 @@ class LeaderboardSchema(ma.Schema):
     season = ma.Nested(SeasonSchema())
     division = ma.Nested(DivisionSchema())
     teams = ma.List(ma.Nested(TeamStatsSchema()))
+    free_agents = ma.List(ma.Nested(PlayerStatSchema))
     most_goals = ma.List(ma.Nested(TopGoals()))
     most_assists = ma.List(ma.Nested(TopAssists()))
     most_saves = ma.List(ma.Nested(TopSaves()))

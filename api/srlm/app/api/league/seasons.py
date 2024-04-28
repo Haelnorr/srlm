@@ -169,7 +169,6 @@ def update_season(data, season_id):
     season = ensure_exists(Season, id=season_id)
 
     unique_fields = ['name', 'acronym']
-    valid_fields = ['name', 'acronym', 'start_date', 'end_date', 'finals_start', 'finals_end']
 
     for field in unique_fields:
         if field in data:
@@ -178,9 +177,7 @@ def update_season(data, season_id):
 
     force_unique(Season, data, unique_fields, restrict_query={'league_id': season.league.id})
 
-    cleaned_data = clean_data(data, valid_fields)
-
-    season.from_dict(cleaned_data)
+    season.from_dict(data)
 
     db.session.commit()
 
