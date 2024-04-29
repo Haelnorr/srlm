@@ -13,4 +13,9 @@ def after_request(response):
     return response
 
 
+@bp.route('/ready', methods=['GET'])
+def is_ready():
+    return 'READY', 200
+
+
 from api.srlm.app.api import utils, auth, users, league, game
