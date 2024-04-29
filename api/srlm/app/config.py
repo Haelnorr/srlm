@@ -8,20 +8,33 @@ config = configparser.ConfigParser()
 config.read(os.path.join(ROOT_DIR, 'config', 'mail.config'))
 mailing_list = config['MAIL']['MailingList'].split(', ')
 
-mysql_user = os.getenv('MYSQL_USER')
-mysql_pass = os.getenv('MYSQL_PASS')
-mysql_host = os.getenv('MYSQL_HOST')
-mysql_port = int(os.getenv('MYSQL_PORT'))
+db_type = os.getenv('DATABASE_TYPE')
+league_manager_db_uri = api_access_db_uri = ''
 
-base_db_url = f"mysql+pymysql://{mysql_user}:{mysql_pass}@{mysql_host}:{mysql_port}/"
-league_manager_db_uri = base_db_url + 'league_manager'
-api_access_db_uri = base_db_url + 'api_access'
+if db_type == 'postgres':
+    postgres_user = os.getenv('POSTGRES_USER')
+    postgres_pass = os.getenv('POSTGRES_PASS')
+    postgres_host = os.getenv('POSTGRES_HOST')
+    postgres_ssl_mode = os.getenv('POSTGRES_SSL_MODE')
+    base_db_url = f"postgresql://{postgres_user}:{postgres_pass}@{postgres_host}/(database)?sslmode={postgres_ssl_mode}"
+    league_manager_db_uri = base_db_url.replace('(database)', 'league_manager')
+    api_access_db_uri = base_db_url.replace('(database)', 'api_access')
+    celery_backend = "db+" + base_db_url.replace('(database)', "celery")
+
+elif db_type == 'mysql':
+    mysql_user = os.getenv('MYSQL_USER')
+    mysql_pass = os.getenv('MYSQL_PASS')
+    mysql_host = os.getenv('MYSQL_HOST')
+    mysql_port = int(os.getenv('MYSQL_PORT'))
+    base_db_url = f"mysql+pymysql://{mysql_user}:{mysql_pass}@{mysql_host}:{mysql_port}/"
+    league_manager_db_uri = base_db_url + 'league_manager'
+    api_access_db_uri = base_db_url + 'api_access'
+    celery_backend = "db+" + base_db_url + "celery"
 
 redis_host = os.getenv('REDIS_HOST')
 redis_port = int(os.getenv('REDIS_PORT'))
 
 celery_broker = f"redis://{redis_host}:{redis_port}/0"
-celery_backend = "db+" + base_db_url + "celery"
 
 cache_backend = f"redis://{redis_host}:{redis_port}/1"
 limiter_backend = f"redis://{redis_host}:{redis_port}/2"
