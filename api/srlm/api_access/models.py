@@ -5,6 +5,7 @@ import secrets
 
 class AuthorizedApp(db.Model):
     __bind_key__ = 'api_access'
+    __table_args__ = {"schema": "api_access"}
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32), index=True, unique=True)

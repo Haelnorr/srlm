@@ -68,6 +68,7 @@ packaging==24.0
 priority==2.0.0
 prometheus_client==0.20.0
 prompt-toolkit==3.0.43
+psycopg2==2.9.9
 pycparser==2.22
 Pygments==2.17.2
 PyJWT==2.6.0

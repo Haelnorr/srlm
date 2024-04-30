@@ -1,0 +1,68 @@
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ./compose/local/flask/Dockerfile
+    command: /start
+    ports:
+      - 8000:8000
+    env_file:
+      - .envfiles/.prod-env
+    environment:
+      - FLASK_APP=api\srlm\run.py
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - ./api:/api-docker/api
+
+  redis:
+    image: redis:latest
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: ./compose/local/flask/Dockerfile
+    command: /start-celeryworker
+    env_file:
+      - .envfiles/.prod-env
+    environment:
+      - FLASK_APP=api\srlm\run.py
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - ./api:/api-docker/api
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: ./compose/local/flask/Dockerfile
+    command: /start-celerybeat
+    env_file:
+      - .envfiles/.prod-env
+    environment:
+      - FLASK_APP=api\srlm\run.py
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - ./api:/api-docker/api
+
+  flower:
+    build:
+      context: .
+      dockerfile: ./compose/local/flask/Dockerfile
+    command: /start-flower
+    env_file:
+      - .envfiles/.prod-env
+    environment:
+      - FLASK_APP=api\srlm\run.py
+    ports:
+      - 5555:5555
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - ./api:/api-docker/api

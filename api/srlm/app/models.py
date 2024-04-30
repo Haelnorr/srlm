@@ -15,6 +15,10 @@ from flask_login import UserMixin
 from api.srlm.app import db, login
 
 
+class LeagueManagerTable:
+    __table_args__ = {"schema": "league_manager"}
+
+
 class PaginatedAPIMixin(object):
     @staticmethod
     def to_collection_dict(query, page, per_page, endpoint, **kwargs):
@@ -36,7 +40,7 @@ class PaginatedAPIMixin(object):
         return data
 
 
-class User(PaginatedAPIMixin, UserMixin, db.Model):
+class User(PaginatedAPIMixin, UserMixin, db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True, nullable=False)
     email = db.Column(db.String(120), index=True, unique=True)
@@ -140,7 +144,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         return user
 
 
-class Permission(PaginatedAPIMixin, db.Model):
+class Permission(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(32), unique=True, index=True, nullable=False)
     description = db.Column(db.String(128))
@@ -169,10 +173,10 @@ class Permission(PaginatedAPIMixin, db.Model):
                 setattr(self, field, data[field])
 
 
-class UserPermissions(db.Model):
+class UserPermissions(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    permission_id = db.Column(db.Integer, db.ForeignKey('permission.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('league_manager.user.id'))
+    permission_id = db.Column(db.Integer, db.ForeignKey('league_manager.permission.id'))
     additional_modifiers = db.Column(db.String(
         128))  # optional field for modifiers, like specifying which team a player is manager of, or which leagues LC's can manage
 
@@ -197,10 +201,10 @@ class UserPermissions(db.Model):
         return data
 
 
-class Discord(db.Model):
+class Discord(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
     discord_id = db.Column(db.String(32), unique=True, nullable=False, index=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('league_manager.user.id'))
     access_token = db.Column(db.String(64))
     refresh_token = db.Column(db.String(64))
     token_expiration = db.Column(db.DateTime)
@@ -234,10 +238,10 @@ class Discord(db.Model):
         self.token_expiration = now + timedelta(seconds=int(data['expires_in']))
 
 
-class Twitch(db.Model):
+class Twitch(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
     twitch_id = db.Column(db.String(32), unique=True, nullable=False, index=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('league_manager.user.id'), nullable=False)
     access_token = db.Column(db.String(64), nullable=False)
     refresh_token = db.Column(db.String(64), nullable=False)
     token_expiration = db.Column(db.DateTime, nullable=False)
@@ -271,13 +275,13 @@ class Twitch(db.Model):
         self.token_expiration = now + timedelta(seconds=int(data['expires_in']))
 
 
-class Player(PaginatedAPIMixin, db.Model):
+class Player(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
     slap_id = db.Column(db.Integer, unique=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('league_manager.user.id'))
     player_name = db.Column(db.String(64), nullable=False)
     rookie = db.Column(db.Boolean, nullable=False, default=True)
-    first_season_id = db.Column(db.Integer, db.ForeignKey('season_division.id'))
+    first_season_id = db.Column(db.Integer, db.ForeignKey('league_manager.season_division.id'))
     next_name_change = db.Column(db.DateTime)
 
     user = db.relationship('User', back_populates='player')
@@ -426,17 +430,12 @@ class Player(PaginatedAPIMixin, db.Model):
 
 # this is a helper table for recording which teams played in which season and in which division
 season_division_team = db.Table('season_division_team',
-                                db.Column('season_division_id', db.Integer, db.ForeignKey('season_division.id')),
-                                db.Column('team_id', db.Integer, db.ForeignKey('team.id'))
+                                db.Column('season_division_id', db.Integer, db.ForeignKey('league_manager.season_division.id')),
+                                db.Column('team_id', db.Integer, db.ForeignKey('league_manager.team.id'))
                                 )
-"""
-season_team_registration = db.Table('season_team_registration',
-                                    db.Column('season_id', db.Integer, db.ForeignKey('season.id')),
-                                    db.Column('team_id', db.Integer, db.ForeignKey('team.id'))
-                                    )"""
 
 
-class Team(PaginatedAPIMixin, db.Model):
+class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True, unique=True, nullable=False)
     acronym = db.Column(db.String(5), index=True, unique=True, nullable=False)
@@ -678,10 +677,10 @@ class Team(PaginatedAPIMixin, db.Model):
 
 
 # this is a helper table for recording which players were a part of which team and when (aka 'roster')
-class PlayerTeam(db.Model):
+class PlayerTeam(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    player_id = db.Column(db.Integer, db.ForeignKey('player.id'))
-    team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
+    player_id = db.Column(db.Integer, db.ForeignKey('league_manager.player.id'))
+    team_id = db.Column(db.Integer, db.ForeignKey('league_manager.team.id'))
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
 
@@ -820,10 +819,10 @@ class PlayerTeam(db.Model):
 
 
 # this is a helper table for recording which players were free agents, for which seasons and when
-class FreeAgent(db.Model):
+class FreeAgent(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    player_id = db.Column(db.Integer, db.ForeignKey('player.id'))
-    season_division_id = db.Column(db.Integer, db.ForeignKey('season_division.id'))
+    player_id = db.Column(db.Integer, db.ForeignKey('league_manager.player.id'))
+    season_division_id = db.Column(db.Integer, db.ForeignKey('league_manager.season_division.id'))
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
 
@@ -915,11 +914,11 @@ class PlayerSeasonRegistrations(FreeAgent):
     pass"""
 
 
-class League(PaginatedAPIMixin, db.Model):
+class League(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True, unique=True, nullable=False)
     acronym = db.Column(db.String(5), unique=True, nullable=False)
-    server_region_value = db.Column(db.String(32), db.ForeignKey('server_region.value'))
+    server_region_value = db.Column(db.String(32), db.ForeignKey('league_manager.server_region.value'))
 
     seasons = db.relationship('Season', back_populates='league', lazy='dynamic')
     divisions = db.relationship('Division', back_populates='league', lazy='dynamic')
@@ -949,16 +948,16 @@ class League(PaginatedAPIMixin, db.Model):
                 setattr(self, field, data[field])
 
 
-class Season(PaginatedAPIMixin, db.Model):
+class Season(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True, nullable=False)
     acronym = db.Column(db.String(5), nullable=False)
-    league_id = db.Column(db.Integer, db.ForeignKey('league.id'), nullable=False)
+    league_id = db.Column(db.Integer, db.ForeignKey('league_manager.league.id'), nullable=False)
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
     finals_start = db.Column(db.Date)
     finals_end = db.Column(db.Date)
-    match_type_id = db.Column(db.Integer, db.ForeignKey('matchtype.id'))
+    match_type_id = db.Column(db.Integer, db.ForeignKey('league_manager.matchtype.id'))
     can_register = db.Column(db.Boolean, default=False)
 
     league = db.relationship('League', back_populates='seasons')
@@ -1013,10 +1012,10 @@ class Season(PaginatedAPIMixin, db.Model):
                 setattr(self, field, data[field])
 
 
-class Division(PaginatedAPIMixin, db.Model):
+class Division(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)
-    league_id = db.Column(db.Integer, db.ForeignKey('league.id'), nullable=False)
+    league_id = db.Column(db.Integer, db.ForeignKey('league_manager.league.id'), nullable=False)
     acronym = db.Column(db.String(5), nullable=False)
     description = db.Column(db.String(128))
 
@@ -1049,10 +1048,10 @@ class Division(PaginatedAPIMixin, db.Model):
                 setattr(self, field, data[field])
 
 
-class SeasonDivision(PaginatedAPIMixin, db.Model):
+class SeasonDivision(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    season_id = db.Column(db.Integer, db.ForeignKey('season.id'))
-    division_id = db.Column(db.Integer, db.ForeignKey('division.id'))
+    season_id = db.Column(db.Integer, db.ForeignKey('league_manager.season.id'))
+    division_id = db.Column(db.Integer, db.ForeignKey('league_manager.division.id'))
 
     teams = db.relationship('Team', secondary=season_division_team, back_populates='season_divisions')
     free_agent_association = db.relationship('FreeAgent', back_populates='season_division')
@@ -1282,16 +1281,16 @@ class SeasonDivision(PaginatedAPIMixin, db.Model):
 
 
 # info of a match between two registered league teams
-class Match(db.Model):
+class Match(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    season_division_id = db.Column(db.Integer, db.ForeignKey('season_division.id'))
-    home_team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
-    away_team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
+    season_division_id = db.Column(db.Integer, db.ForeignKey('league_manager.season_division.id'))
+    home_team_id = db.Column(db.Integer, db.ForeignKey('league_manager.team.id'))
+    away_team_id = db.Column(db.Integer, db.ForeignKey('league_manager.team.id'))
     round = db.Column(db.Integer)
     match_week = db.Column(db.Integer)
     cancelled = db.Column(db.String(32))  # cancelled reason
-    streamer_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    final_id = db.Column(db.Integer, db.ForeignKey('final.id'))
+    streamer_id = db.Column(db.Integer, db.ForeignKey('league_manager.user.id'))
+    final_id = db.Column(db.Integer, db.ForeignKey('league_manager.final.id'))
 
     season_division = db.relationship('SeasonDivision', back_populates='matches')
     home_team = db.relationship('Team', backref='matches_home', foreign_keys=home_team_id)
@@ -1359,10 +1358,10 @@ class Match(db.Model):
 
 
 # result of a match between two registered league teams, one-to-one relationship with match
-class MatchResult(db.Model):
-    id = db.Column(db.Integer, db.ForeignKey('match.id'), primary_key=True)
-    winner_id = db.Column(db.Integer, db.ForeignKey('team.id'))
-    loser_id = db.Column(db.Integer, db.ForeignKey('team.id'))
+class MatchResult(db.Model, LeagueManagerTable):
+    id = db.Column(db.Integer, db.ForeignKey('league_manager.match.id'), primary_key=True)
+    winner_id = db.Column(db.Integer, db.ForeignKey('league_manager.team.id'))
+    loser_id = db.Column(db.Integer, db.ForeignKey('league_manager.team.id'))
     draw = db.Column(db.Boolean, default=False)
     score_winner = db.Column(db.Integer, nullable=False, default=0)
     score_loser = db.Column(db.Integer, nullable=False, default=0)
@@ -1401,15 +1400,15 @@ class MatchResult(db.Model):
 
 
 # presets for creating lobbies using different match types
-class Matchtype(db.Model):
+class Matchtype(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32), nullable=False, unique=True)
     description = db.Column(db.String(128))
     periods = db.Column(db.Boolean, nullable=False, default=True)
-    arena = db.Column(db.String(32), db.ForeignKey('arena.value'), nullable=False)
+    arena = db.Column(db.String(32), db.ForeignKey('league_manager.arena.value'), nullable=False)
     mercy_rule = db.Column(db.Integer, nullable=False, default=0)
     match_length = db.Column(db.Integer, nullable=False, default=300)
-    game_mode = db.Column(db.String(32), db.ForeignKey('game_mode.value'), nullable=False)
+    game_mode = db.Column(db.String(32), db.ForeignKey('league_manager.game_mode.value'), nullable=False)
     num_players = db.Column(db.Integer, nullable=False, default=3)
 
     seasons = db.relationship('Season', back_populates='match_type', lazy=True)
@@ -1439,9 +1438,9 @@ class Matchtype(db.Model):
 
 
 # stores data on an in game lobby for use with Slapshot Public API
-class Lobby(db.Model):
+class Lobby(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    match_id = db.Column(db.Integer, db.ForeignKey('match.id'))
+    match_id = db.Column(db.Integer, db.ForeignKey('league_manager.match.id'))
     lobby_id = db.Column(db.String(64), nullable=False)
     active = db.Column(db.Boolean, nullable=False, default=True)
     password = db.Column(db.String(64), nullable=False)
@@ -1452,9 +1451,9 @@ class Lobby(db.Model):
 
 
 # stores data on in game matches (periods of a match are separate entries)
-class MatchData(db.Model):
+class MatchData(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    lobby_id = db.Column(db.Integer, db.ForeignKey('lobby.id'))
+    lobby_id = db.Column(db.Integer, db.ForeignKey('league_manager.lobby.id'))
     processed = db.Column(db.Boolean, nullable=False, default=False)
     accepted = db.Column(db.Boolean, nullable=False, default=False)
     match_id = db.Column(db.String(64), nullable=False)
@@ -1506,11 +1505,11 @@ class MatchData(db.Model):
 
 
 # stores match data of particular players (periods of a match are separate entries)
-class PlayerMatchData(db.Model):
+class PlayerMatchData(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    match_id = db.Column(db.Integer, db.ForeignKey('match_data.id'))
-    player_id = db.Column(db.Integer, db.ForeignKey('player.id'))
-    team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
+    match_id = db.Column(db.Integer, db.ForeignKey('league_manager.match_data.id'))
+    player_id = db.Column(db.Integer, db.ForeignKey('league_manager.player.id'))
+    team_id = db.Column(db.Integer, db.ForeignKey('league_manager.team.id'))
     goals = db.Column(db.Integer, default=0)
     shots = db.Column(db.Integer, default=0)
     assists = db.Column(db.Integer, default=0)
@@ -1571,14 +1570,14 @@ class PlayerMatchData(db.Model):
         return data
 
 
-class Final(db.Model):
+class Final(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    season_division_id = db.Column(db.Integer, db.ForeignKey('season_division.id'))
+    season_division_id = db.Column(db.Integer, db.ForeignKey('league_manager.season_division.id'))
     best_of = db.Column(db.Integer, nullable=False, default=1)
     elimination = db.Column(db.Boolean, nullable=False, default=True)
     round = db.Column(db.String(20), nullable=False)
-    home_team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
-    away_team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
+    home_team_id = db.Column(db.Integer, db.ForeignKey('league_manager.team.id'))
+    away_team_id = db.Column(db.Integer, db.ForeignKey('league_manager.team.id'))
     completed = db.Column(db.Boolean, nullable=False, default=False)
 
     season_division = db.relationship('SeasonDivision', back_populates='finals')
@@ -1588,11 +1587,11 @@ class Final(db.Model):
     results = db.relationship('FinalResults', back_populates='final', lazy=True, uselist=False)
 
 
-class FinalResults(db.Model):
+class FinalResults(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    final_id = db.Column(db.Integer, db.ForeignKey('final.id'))
-    winner_id = db.Column(db.Integer, db.ForeignKey('team.id'))
-    loser_id = db.Column(db.Integer, db.ForeignKey('team.id'))
+    final_id = db.Column(db.Integer, db.ForeignKey('league_manager.final.id'))
+    winner_id = db.Column(db.Integer, db.ForeignKey('league_manager.team.id'))
+    loser_id = db.Column(db.Integer, db.ForeignKey('league_manager.team.id'))
     home_team_score = db.Column(db.Integer, nullable=False, default=0)
     away_team_score = db.Column(db.Integer, nullable=False, default=0)
 
@@ -1601,7 +1600,7 @@ class FinalResults(db.Model):
     loser = db.relationship('Team', backref='finals_lost', foreign_keys=loser_id)
 
 
-class Award(db.Model):
+class Award(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32), nullable=False, unique=True, index=True)
     description = db.Column(db.String(128), nullable=False)
@@ -1612,31 +1611,31 @@ class Award(db.Model):
     players = association_proxy('players_association', 'player')
 
 
-class TeamAward(db.Model):
+class TeamAward(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
-    award_id = db.Column(db.Integer, db.ForeignKey('award.id'))
-    season_division_id = db.Column(db.Integer, db.ForeignKey('season_division.id'))
+    team_id = db.Column(db.Integer, db.ForeignKey('league_manager.team.id'))
+    award_id = db.Column(db.Integer, db.ForeignKey('league_manager.award.id'))
+    season_division_id = db.Column(db.Integer, db.ForeignKey('league_manager.season_division.id'))
 
     team = db.relationship('Team', back_populates='awards_association')
     award = db.relationship('Award', back_populates='teams_association')
     season_division = db.relationship('SeasonDivision', back_populates='team_awards')
 
 
-class PlayerAward(db.Model):
+class PlayerAward(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    player_id = db.Column(db.Integer, db.ForeignKey('player.id'))
-    award_id = db.Column(db.Integer, db.ForeignKey('award.id'))
-    season_division_id = db.Column(db.Integer, db.ForeignKey('season_division.id'))
+    player_id = db.Column(db.Integer, db.ForeignKey('league_manager.player.id'))
+    award_id = db.Column(db.Integer, db.ForeignKey('league_manager.award.id'))
+    season_division_id = db.Column(db.Integer, db.ForeignKey('league_manager.season_division.id'))
 
     player = db.relationship('Player', back_populates='awards_association')
     award = db.relationship('Award', back_populates='players_association')
     season_division = db.relationship('SeasonDivision', back_populates='player_awards')
 
 
-class MatchSchedule(db.Model):
+class MatchSchedule(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    match_id = db.Column(db.Integer, db.ForeignKey('match.id'))
+    match_id = db.Column(db.Integer, db.ForeignKey('league_manager.match.id'))
     scheduled_time = db.Column(db.DateTime)
     home_team_accepted = db.Column(db.Boolean, default=False, nullable=False)
     away_team_accepted = db.Column(db.Boolean, default=False, nullable=False)
@@ -1644,10 +1643,10 @@ class MatchSchedule(db.Model):
     match = db.relationship('Match', back_populates='schedule')
 
 
-class MatchAvailability(db.Model):
+class MatchAvailability(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    match_id = db.Column(db.Integer, db.ForeignKey('match.id'))
-    team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
+    match_id = db.Column(db.Integer, db.ForeignKey('league_manager.match.id'))
+    team_id = db.Column(db.Integer, db.ForeignKey('league_manager.team.id'))
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
     available = db.Column(db.Boolean, nullable=False, default=True)
@@ -1656,7 +1655,7 @@ class MatchAvailability(db.Model):
     team = db.relationship('Team', back_populates='match_availability')
 
 
-class ServerRegion(db.Model):
+class ServerRegion(db.Model, LeagueManagerTable):
     value = db.Column(db.String(32), primary_key=True)
     label = db.Column(db.String(32), unique=True, nullable=False)
     info = db.Column(db.String(64))
@@ -1665,19 +1664,19 @@ class ServerRegion(db.Model):
     leagues = db.relationship('League', back_populates='server_region')
 
 
-class Arena(db.Model):
+class Arena(db.Model, LeagueManagerTable):
     value = db.Column(db.String(32), primary_key=True)
     label = db.Column(db.String(32), unique=True, nullable=False)
     info = db.Column(db.String(64))
 
 
-class EndReason(db.Model):
+class EndReason(db.Model, LeagueManagerTable):
     value = db.Column(db.String(32), primary_key=True)
     label = db.Column(db.String(32), unique=True, nullable=False)
     info = db.Column(db.String(64))
 
 
-class GameMode(db.Model):
+class GameMode(db.Model, LeagueManagerTable):
     value = db.Column(db.String(32), primary_key=True)
     label = db.Column(db.String(32), unique=True, nullable=False)
     info = db.Column(db.String(64))
@@ -1691,23 +1690,23 @@ class GameMode(db.Model):
         return data
 
 
-class Event(db.Model):
+class Event(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('league_manager.user.id'))
     module = db.Column(db.String(50), index=True)
     message = db.Column(db.String(200))
 
 
-class MatchReview(db.Model):
+class MatchReview(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    match_id = db.Column(db.Integer, db.ForeignKey('match.id'))
+    match_id = db.Column(db.Integer, db.ForeignKey('league_manager.match.id'))
     type = db.Column(db.String(16), nullable=False)
     reason = db.Column(db.String(256), nullable=False)
     raised_by = db.Column(db.String(32))
     comments = db.Column(db.String(256))
     resolved = db.Column(db.Boolean, nullable=False, default=False)
-    resolved_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    resolved_by = db.Column(db.Integer, db.ForeignKey('league_manager.user.id'))
     resolved_on = db.Column(db.Integer)
 
     reviewer = db.relationship('User', backref='match_review')
@@ -1731,12 +1730,12 @@ class MatchReview(db.Model):
         return data
 
 
-class SeasonRegistration(db.Model):
+class SeasonRegistration(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
-    player_id = db.Column(db.Integer, db.ForeignKey('player.id'))
-    season_id = db.Column(db.Integer, db.ForeignKey('season.id'), nullable=False)
-    division_id = db.Column(db.Integer, db.ForeignKey('division.id'))
+    team_id = db.Column(db.Integer, db.ForeignKey('league_manager.team.id'))
+    player_id = db.Column(db.Integer, db.ForeignKey('league_manager.player.id'))
+    season_id = db.Column(db.Integer, db.ForeignKey('league_manager.season.id'), nullable=False)
+    division_id = db.Column(db.Integer, db.ForeignKey('league_manager.division.id'))
     status = db.Column(db.String(16), default='Pending', nullable=False)
     type = db.Column(db.String(10), nullable=False)
 
@@ -1794,11 +1793,11 @@ class SeasonRegistration(db.Model):
         db.session.commit()
 
 
-class TeamInvites(db.Model):
+class TeamInvites(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
-    team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
-    invited_player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
-    inviting_player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
+    team_id = db.Column(db.Integer, db.ForeignKey('league_manager.team.id'), nullable=False)
+    invited_player_id = db.Column(db.Integer, db.ForeignKey('league_manager.player.id'), nullable=False)
+    inviting_player_id = db.Column(db.Integer, db.ForeignKey('league_manager.player.id'), nullable=False)
     status = db.Column(db.String(16), default='Pending', nullable=False)
 
     team = db.relationship('Team', backref='invites')

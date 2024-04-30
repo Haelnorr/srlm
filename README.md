@@ -1,5 +1,7 @@
-### Current Version - 0.8.12
+### Current Version - 0.8.14
 History:
+ - 0.8.14 - Added support for PostgreSQL (requires docker rebuild)
+ - 0.8.13 - Expanded database and routes to handle teams, registrations and invites
  - 0.8.12 - Added leaderboard for season_division
  - 0.8.11 - Added some routes for easier permission management
  - 0.8.10 - Added better error messages for field validation

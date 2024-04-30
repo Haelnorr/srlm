@@ -35,6 +35,10 @@ WORKDIR /api-docker
 # Leverage a cache mount to /root/.cache/pip to speed up subsequent builds.
 # Leverage a bind mount to requirements.txt to avoid having to copy them into
 # into this layer.
+
+RUN apt-get update \
+    && apt-get -y install libpq-dev gcc \
+    && pip install psycopg2
 RUN python -m pip install --upgrade pip
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
@@ -44,8 +48,6 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Copy the source code into the container.
 COPY . .
-
-# Switch to the non-privileged user to run the application.
 
 COPY ./compose/local/flask/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint
@@ -68,15 +70,7 @@ RUN sed -i 's/\r$//g' /start-flower
 RUN chmod +x /start-flower
 
 RUN mkdir /var/log/srlm
-#RUN chown -R appuser /var/log/srlm
 RUN chmod o+rw -R /var/log/srlm
 
-# USER appuser
-
-# Expose the port that the application listens on.
-# EXPOSE 8000
 
 ENTRYPOINT ["/entrypoint"]
-
-# Run the application.
-# CMD hypercorn -b 0.0.0.0:8000 api:asgi

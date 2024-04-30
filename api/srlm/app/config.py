@@ -15,7 +15,10 @@ if db_type == 'postgres':
     postgres_user = os.getenv('POSTGRES_USER')
     postgres_pass = os.getenv('POSTGRES_PASS')
     postgres_host = os.getenv('POSTGRES_HOST')
+    postgres_port = os.getenv('POSTGRES_PORT')
     postgres_ssl_mode = os.getenv('POSTGRES_SSL_MODE')
+    if postgres_port:
+        postgres_host = f'{postgres_host}:{postgres_port}'
     base_db_url = f"postgresql://{postgres_user}:{postgres_pass}@{postgres_host}/(database)?sslmode={postgres_ssl_mode}"
     league_manager_db_uri = base_db_url.replace('(database)', 'league_manager')
     api_access_db_uri = base_db_url.replace('(database)', 'api_access')
@@ -59,7 +62,7 @@ class Config:
         'result_backend': celery_backend
     }
     APIFAIRY_TITLE = 'Slapshot: Rebound - League Manager API'
-    APIFAIRY_VERSION = '0.8.12 - dev'
+    APIFAIRY_VERSION = '0.8.14 - dev'
     CACHE_TYPE = 'RedisCache'
     CACHE_DEFAULT_TIMEOUT = os.getenv('SRLM_CACHE_TIMEOUT') or 300
     CACHE_REDIS_URL = cache_backend

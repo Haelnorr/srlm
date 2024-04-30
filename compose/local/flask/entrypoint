@@ -12,26 +12,42 @@ python << END
 import sys
 
 import pymysql
+import psycopg2
 import os
 
-try:
-    pymysql.connect(
-        database='league_manager',
-        user=os.getenv('MYSQL_USER'),
-        password=os.getenv('MYSQL_PASS'),
-        host=os.getenv('MYSQL_HOST'),
-        port=int(os.getenv('MYSQL_PORT'))
-    )
-except pymysql.OperationalError:
-    sys.exit(-1)
-sys.exit(0)
+db_type = os.getenv('DATABASE_TYPE')
+
+if db_type == 'mysql':
+    try:
+        pymysql.connect(
+            database='league_manager',
+            user=os.getenv('MYSQL_USER'),
+            password=os.getenv('MYSQL_PASS'),
+            host=os.getenv('MYSQL_HOST'),
+            port=int(os.getenv('MYSQL_PORT'))
+        )
+    except pymysql.OperationalError:
+        sys.exit(-1)
+    sys.exit(0)
+else:
+    try:
+        psycopg2.connect(
+            dbname='league_manager',
+            user=os.getenv('POSTGRES_USER'),
+            password=os.getenv('POSTGRES_PASS'),
+            host=os.getenv('POSTGRES_HOST'),
+            port=os.getenv('POSTGRES_PORT')
+        )
+    except psycopg2.OperationalError:
+        sys.exit(-1)
+    sys.exit(0)
 
 END
 }
 until mysql_ready; do
-  >&2 echo 'Waiting for MySQL to become available...'
+  >&2 echo 'Waiting for Database to become available...'
   sleep 1
 done
->&2 echo 'MySQL is available'
+>&2 echo 'Database is available'
 
 exec "$@"
