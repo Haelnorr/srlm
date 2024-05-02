@@ -6,7 +6,7 @@ from apifairy import arguments, response, authenticate, other_responses, body
 from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
-from flask import url_for, Blueprint
+from flask import url_for, Blueprint, request
 import sqlalchemy as sa
 
 from api.srlm.app.api.utils.cache import force_refresh
@@ -15,9 +15,10 @@ from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import TeamCollection, TeamSchema, LinkSuccessSchema, EditTeamSchema, \
     TeamPlayers, TeamSeasonPlayers, TeamSeasons, CurrentFilterSchema, TeamsListSchema, \
-    TeamStatsFilter, TeamStatsMatchesSchema, TeamManageSchema, TeamFilters
-from api.srlm.app.models import Team, SeasonDivision, PlayerTeam, UserPermissions, Permission, TeamAward
-from api.srlm.app.api.auth.utils import app_auth
+    TeamStatsFilter, TeamStatsMatchesSchema, TeamManageSchema, TeamFilters, SendInviteSchema, BasicSuccessSchema
+from api.srlm.app.models import Team, SeasonDivision, PlayerTeam, UserPermissions, Permission, TeamAward, Player, User, \
+    TeamInvites
+from api.srlm.app.api.auth.utils import app_auth, user_auth, get_bearer_token
 
 # create a new logger for this module
 from api.srlm.logger import get_logger
@@ -311,6 +312,31 @@ def get_team_stats(filters, team_id):
     response_json['completed_matches'] = team.get_completed_matches()
 
     return response_json
+
+
+@teams.route('/<int:team_id>/invite', methods=['POST'])
+@body(SendInviteSchema())
+@response(BasicSuccessSchema())
+@authenticate(user_auth)
+@other_responses(unauthorized | not_found | bad_request)
+def send_invite(data, team_id):
+    """Invite a player to join a team
+    Requires user token"""
+    team = ensure_exists(Team, id=team_id)
+    invited_player = ensure_exists(Player, id=data['player_id'])
+    inviting_user = User.check_token(get_bearer_token(request.headers)['user'])
+    team.invite_player(invited_player, inviting_user.player)
+    return responses.request_success(f'Invite to {team.name} sent to {invited_player.player_name}')
+
+
+@teams.route('/invite/<int:invite_id>', methods=['DELETE'])
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def withdraw_invite(invite_id):
+    invite = ensure_exists(TeamInvites, id=invite_id)
+    invite.withdraw()
+    return responses.request_success('Invite withdrawn')
 
 
 @teams.route('/<int:team_id>/manage', methods=['GET'])

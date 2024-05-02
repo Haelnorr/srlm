@@ -29,6 +29,11 @@ class PaginationArgs(ma.Schema):
     per_page = ma.Int(missing=10)
     total_pages = ma.Int(dump_only=True)
     total_items = ma.Int(dump_only=True)
+    search = ma.Str(missing=None)
+
+
+class PlayerFilters(PaginationArgs):
+    has_team = ma.Bool(missing=None)
 
 
 class TeamFilters(PaginationArgs):
@@ -1230,3 +1235,7 @@ class TeamManageSchema(ma.Schema):
     invites = ma.List(ma.Nested(TeamInvitesSchema()))
     applications = ma.List(ma.Nested(SeasonApplicationsSchema()))
     open_seasons = ma.List(ma.Nested(SeasonSchema()))
+
+
+class SendInviteSchema(ma.Schema):
+    player_id = ma.Int(required=True)

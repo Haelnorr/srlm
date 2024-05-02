@@ -301,7 +301,7 @@ class Player(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     def to_dict(self):
         now = datetime.now(timezone.utc)
         current_team_q = self.team_association.filter(
-            sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))  # noqa
+            sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date.is_(None)))
         current_team = current_team_q.first()
         unique_teams = []
         for team in self.teams:
@@ -337,7 +337,7 @@ class Player(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     def to_simple_dict(self):
         now = datetime.now(timezone.utc)
         current_team_q = self.team_association.filter(
-            sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))  # noqa
+            sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date.is_(None)))
         current_team = current_team_q.first()
         data = {
             'player_name': self.player_name,
@@ -365,12 +365,12 @@ class Player(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             start_filter = season.finals_end > PlayerTeam.start_date
             end_filter = sa.or_(
                 season.start_date < PlayerTeam.end_date,
-                PlayerTeam.end_date == None  # noqa
+                PlayerTeam.end_date.is_(None)
             )
 
         else:
             start_filter = PlayerTeam.start_date < now
-            end_filter = PlayerTeam.end_date == None  # noqa
+            end_filter = PlayerTeam.end_date.is_(None)
 
         current_team_q = self.team_association.filter(sa.and_(
             start_filter,
@@ -383,7 +383,7 @@ class Player(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             .join(PlayerMatchData.match) \
             .join(MatchData.lobby) \
             .join(Lobby.match) \
-            .filter(MatchData.accepted == 1) \
+            .filter(MatchData.accepted.is_(True)) \
             .filter(PlayerMatchData.player_id == self.id)
 
         start_date = None
@@ -394,16 +394,16 @@ class Player(PaginatedAPIMixin, db.Model, LeagueManagerTable):
 
             start_date, end_date = db.session.query(FreeAgent.start_date, FreeAgent.end_date) \
                 .filter(sa.and_(
-                FreeAgent.season_division_id == season_division.id,
-                FreeAgent.player_id == self.id
-            )).first()
+                    FreeAgent.season_division_id == season_division.id,
+                    FreeAgent.player_id == self.id
+                )).first()
 
         if finals:
-            player_data_query = player_data_query.filter(Match.final_id != None)  # noqa
+            player_data_query = player_data_query.filter(Match.final_id.not_(None))
         else:
-            player_data_query = player_data_query.filter(Match.final_id == None)  # noqa
+            player_data_query = player_data_query.filter(Match.final_id.is_(None))
 
-        stat_totals = player_data_query.filter(PlayerMatchData.stat_total == 1)
+        stat_totals = player_data_query.filter(PlayerMatchData.stat_total.is_(True))
 
         goals = 0
         shots = 0
@@ -448,9 +448,10 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     season_divisions = db.relationship('SeasonDivision', secondary=season_division_team, back_populates='teams',
                                        lazy='dynamic')
     player_match_data = db.relationship('PlayerMatchData', back_populates='team')
-    awards_association = db.relationship('TeamAward', back_populates='team', lazy=True)
+    awards_association = db.relationship('TeamAward', back_populates='team', lazy='dynamic')
     awards = association_proxy('awards_association', 'award')
-    match_availability = db.relationship('MatchAvailability', back_populates='team', lazy=True)
+    match_availability = db.relationship('MatchAvailability', back_populates='team', lazy='dynamic')
+    invites = db.relationship('TeamInvites', back_populates='team', lazy='dynamic')
 
     def __repr__(self):
         return f'<Team {self.name} ({self.acronym})>'
@@ -458,7 +459,7 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     def to_dict(self):
         now = datetime.now(timezone.utc)
         active_players = self.player_association.filter(
-            sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date == None))  # noqa
+            sa.and_(PlayerTeam.start_date < now, PlayerTeam.end_date.is_(None)))
         data = {
             'id': self.id,
             'name': self.name,
@@ -468,7 +469,7 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             'logo': True if self.logo else False,
             'active_players': active_players.count(),
             'seasons_played': self.season_divisions.count(),
-            'awards': len(self.awards_association),
+            'awards': self.awards_association.count(),
             '_links': {
                 'self': url_for('api.teams.get_team', team_id=self.id),
                 'logo': self.logo,
@@ -517,28 +518,28 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
                 players_query = players_query \
                     .filter(PlayerTeam.start_date < season_division.season.finals_end) \
                     .filter(sa.or_(
-                    PlayerTeam.end_date > season_division.season.finals_start,
-                    PlayerTeam.end_date == None  # noqa
-                ))
+                        PlayerTeam.end_date > season_division.season.finals_start,
+                        PlayerTeam.end_date.is_(None)
+                    ))
             else:
                 players_query = players_query \
                     .filter(PlayerTeam.start_date < season_division.season.end_date) \
                     .filter(sa.or_(
-                    PlayerTeam.end_date > season_division.season.start_date,
-                    PlayerTeam.end_date == None  # noqa
-                ))
+                        PlayerTeam.end_date > season_division.season.start_date,
+                        PlayerTeam.end_date.is_(None)
+                    ))
         else:
             player_data_query = db.session.query(PlayerMatchData) \
                 .join(PlayerMatchData.match) \
                 .join(MatchData.lobby) \
                 .join(Lobby.match) \
-                .filter(MatchData.accepted == 1)
+                .filter(MatchData.accepted.is_(True))
             if current:
                 now = datetime.now(timezone.utc)
                 players_query = players_query \
                     .filter(PlayerTeam.start_date < now) \
                     .filter(
-                        PlayerTeam.end_date == None  # noqa
+                        PlayerTeam.end_date.is_(None)
                     )
 
         player_data_query = player_data_query.filter(sa.or_(
@@ -546,9 +547,9 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             Match.away_team_id == self.id
         ))
         if finals:
-            player_data_query = player_data_query.filter(Match.final_id != None)  # noqa
+            player_data_query = player_data_query.filter(Match.final_id.not_(None))
         else:
-            player_data_query = player_data_query.filter(Match.final_id == None)  # noqa
+            player_data_query = player_data_query.filter(Match.final_id.is_(None))
         self_player_data_query = player_data_query \
             .filter(PlayerMatchData.team_id == self.id)
         versus_player_data_query = player_data_query \
@@ -559,10 +560,10 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
         losses = matches.filter(Match.results.has(loser_id=self.id, overtime=False)).count()
         ot_losses = matches.filter(Match.results.has(loser_id=self.id, overtime=True)).count()
         goals_for = 0
-        for record in self_player_data_query.filter(PlayerMatchData.stat_total == 1):
+        for record in self_player_data_query.filter(PlayerMatchData.stat_total.is_(True)):
             goals_for += record.goals
         goals_against = 0
-        for record in versus_player_data_query.filter(PlayerMatchData.stat_total == 1):
+        for record in versus_player_data_query.filter(PlayerMatchData.stat_total.is_(True)):
             goals_against += record.goals
 
         players = []
@@ -573,7 +574,7 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
                 periods = self_player_data_query \
                     .filter(PlayerMatchData.player_id == player_assoc.player.id)
 
-                stat_totals = periods.filter(PlayerMatchData.stat_total == 1)
+                stat_totals = periods.filter(PlayerMatchData.stat_total.is_(True))
 
                 goals = 0
                 shots = 0
@@ -648,7 +649,7 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             'user_id': pa.player.user_id,
             'name': pa.player.player_name,
             'manager': pa.player.user.has_permission('team_manager') if pa.player.user else False
-        } for pa in self.player_association.filter(PlayerTeam.end_date == None)]  # noqa
+        } for pa in self.player_association.filter(PlayerTeam.end_date.is_(None))]
 
         owner = db.session.query(User) \
             .join(User.permission_assoc) \
@@ -659,6 +660,8 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
 
         seasons = db.session.query(Season).filter(Season.can_register)
 
+        invites = self.invites.filter_by(status='Pending')
+
         return {
             'id': self.id,
             'name': self.name,
@@ -668,12 +671,22 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             'founded': self.founded_date,
             'owner': owner.username if owner else None,
             'players': players,
-            'invites': [inv.to_dict() for inv in self.invites],
+            'invites': [inv.to_dict() for inv in invites],
             'applications': [app.to_dict() for app in self.applications],
             'open_seasons': [season.to_dict() for season in seasons],
             'upcoming_matches': self.get_upcoming_matches(),
             'recent_matches': self.get_completed_matches(limit=10)
         }
+
+    def invite_player(self, invited_player, inviting_player):
+        invite = TeamInvites()
+        invite.from_dict({
+            'team': self,
+            'invited_player': invited_player,
+            'inviting_player': inviting_player
+        })
+        db.session.add(invite)
+        db.session.commit()
 
 
 # this is a helper table for recording which players were a part of which team and when (aka 'roster')
@@ -1212,7 +1225,7 @@ class SeasonDivision(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             sa.func.sum(getattr(PlayerMatchData, stat)).label('goals'),
             sa.func.sum(getattr(PlayerMatchData, secondary_stat)).label('goals')
         ) \
-            .filter(PlayerMatchData.stat_total == 1) \
+            .filter(PlayerMatchData.stat_total.is_(True)) \
             .join(PlayerMatchData.match) \
             .join(MatchData.lobby) \
             .filter(Lobby.match.has(season_division_id=self.id)) \
@@ -1268,7 +1281,7 @@ class SeasonDivision(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             .join(Lobby.match) \
             .join(Match.season_division) \
             .filter(SeasonDivision.id == self.id) \
-            .filter(MatchData.accepted == True)  # noqa
+            .filter(MatchData.accepted.is_(True))
 
     def get_player_data_query(self):
         return db.session.query(PlayerMatchData) \
@@ -1277,7 +1290,7 @@ class SeasonDivision(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             .join(Lobby.match) \
             .join(Match.season_division) \
             .filter(SeasonDivision.id == self.id) \
-            .filter(MatchData.accepted == 1)
+            .filter(MatchData.accepted.is_(True))
 
 
 # info of a match between two registered league teams
@@ -1800,7 +1813,7 @@ class TeamInvites(db.Model, LeagueManagerTable):
     inviting_player_id = db.Column(db.Integer, db.ForeignKey('league_manager.player.id'), nullable=False)
     status = db.Column(db.String(16), default='Pending', nullable=False)
 
-    team = db.relationship('Team', backref='invites')
+    team = db.relationship('Team', back_populates='invites')
     invited_player = db.relationship('Player', backref='invites', foreign_keys=invited_player_id)
     inviting_player = db.relationship('Player', foreign_keys=inviting_player_id)
 
@@ -1814,7 +1827,7 @@ class TeamInvites(db.Model, LeagueManagerTable):
         }
 
     def from_dict(self, data):
-        fields = ['team_id', 'invited_player', 'inviting_player']
+        fields = ['team', 'invited_player', 'inviting_player']
         for field in fields:
             if field in data:
                 setattr(self, field, data[field])
@@ -1833,6 +1846,9 @@ class TeamInvites(db.Model, LeagueManagerTable):
         self.status = 'Rejected'
         db.session.commit()
 
+    def withdraw(self):
+        self.status = 'Withdrawn'
+        db.session.commit()
 
 @login.user_loader
 def load_user(user_id):

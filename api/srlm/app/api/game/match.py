@@ -187,7 +187,7 @@ def get_match_stats(match_id):
 
     period_query = db.session.query(MatchData).filter(
         sa.and_(
-            MatchData.accepted == True,  # noqa
+            MatchData.accepted.is_(True),
             MatchData.lobby_id.in_(lobby_ids)
         )
     ).order_by(sa.asc(MatchData.current_period))

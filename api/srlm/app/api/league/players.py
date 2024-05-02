@@ -14,8 +14,9 @@ from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.errors import BadRequest, ResourceNotFound
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_unique, clean_data
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
-from api.srlm.app.fairy.schemas import PaginationArgs, PlayerSchema, PlayerCollection, LinkSuccessSchema, \
-    EditPlayerSchema, PlayerTeams, PlayerSeasons, CurrentFilterSchema, PlayerStatsSchema, StatsFilterSchema
+from api.srlm.app.fairy.schemas import PlayerSchema, PlayerCollection, LinkSuccessSchema, \
+    EditPlayerSchema, PlayerTeams, PlayerSeasons, CurrentFilterSchema, PlayerStatsSchema, StatsFilterSchema, \
+    PlayerFilters
 from api.srlm.app.models import Player, SeasonDivision, Team, PlayerTeam, FreeAgent, PlayerMatchData, Match, Lobby, \
     MatchData, Season, Division, UserPermissions
 from api.srlm.logger import get_logger
@@ -39,7 +40,7 @@ def get_player(player_id):
 
 @players.route('', methods=['GET'])
 @cache.cached(unless=force_refresh, query_string=True)
-@arguments(PaginationArgs())
+@arguments(PlayerFilters())
 @response(PlayerCollection())
 @authenticate(app_auth)
 @other_responses(unauthorized)
@@ -47,7 +48,14 @@ def get_players(pagination):
     """Get the collection of all players"""
     page = pagination['page']
     per_page = pagination['per_page']
-    return Player.to_collection_dict(sa.select(Player), page, per_page, 'api.players.get_players')
+    has_team = pagination['has_team']
+    search = pagination['search']
+    query = sa.select(Player)
+
+    if search:
+        query = query.filter(Player.player_name.like(f"%{search}%"))
+
+    return Player.to_collection_dict(query, page, per_page, 'api.players.get_players')
 
 
 @players.route('', methods=['POST'])
@@ -166,7 +174,7 @@ def get_player_stats(search_filters, player_id):
     lobbies = [lb.id for lb in lobby_query]
 
     match_data_query = db.session.query(MatchData).filter(
-        MatchData.accepted == True,  # noqa
+        MatchData.accepted.is_(True),
         MatchData.lobby_id.in_(lobbies)
     )
     filtered_matches = [match.id for match in match_data_query]
