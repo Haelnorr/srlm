@@ -428,11 +428,20 @@ class Player(PaginatedAPIMixin, db.Model, LeagueManagerTable):
         }
 
 
-# this is a helper table for recording which teams played in which season and in which division
+"""# this is a helper table for recording which teams played in which season and in which division
 season_division_team = db.Table('season_division_team',
                                 db.Column('season_division_id', db.Integer, db.ForeignKey('league_manager.season_division.id')),
-                                db.Column('team_id', db.Integer, db.ForeignKey('league_manager.team.id'))
-                                )
+                                db.Column('team_id', ),
+                                schema='league_manager')"""
+
+
+class SeasonDivisionTeam(db.Model, LeagueManagerTable):
+    id = db.Column(db.Integer, primary_key=True)
+    season_division_id = db.Column(db.Integer, db.ForeignKey('league_manager.season_division.id'))
+    team_id = db.Column(db.Integer, db.ForeignKey('league_manager.team.id'))
+
+    team = db.relationship('Team', back_populates='season_division_assoc')
+    season_division = db.relationship('SeasonDivision', back_populates='team_assoc')
 
 
 class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
@@ -445,8 +454,8 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
 
     player_association = db.relationship('PlayerTeam', back_populates='team', lazy='dynamic')
     players = association_proxy('player_association', 'player')
-    season_divisions = db.relationship('SeasonDivision', secondary=season_division_team, back_populates='teams',
-                                       lazy='dynamic')
+    season_division_assoc = db.relationship('SeasonDivisionTeam', back_populates='team', lazy='dynamic')
+    season_divisions = association_proxy('season_division_assoc', 'season_division')
     player_match_data = db.relationship('PlayerMatchData', back_populates='team')
     awards_association = db.relationship('TeamAward', back_populates='team', lazy='dynamic')
     awards = association_proxy('awards_association', 'award')
@@ -959,6 +968,7 @@ class League(PaginatedAPIMixin, db.Model, LeagueManagerTable):
         for field in ['name', 'acronym']:
             if field in data:
                 setattr(self, field, data[field])
+        self.acronym = self.acronym.upper()
 
 
 class Season(PaginatedAPIMixin, db.Model, LeagueManagerTable):
@@ -1066,7 +1076,8 @@ class SeasonDivision(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     season_id = db.Column(db.Integer, db.ForeignKey('league_manager.season.id'))
     division_id = db.Column(db.Integer, db.ForeignKey('league_manager.division.id'))
 
-    teams = db.relationship('Team', secondary=season_division_team, back_populates='season_divisions')
+    team_assoc = db.relationship('SeasonDivisionTeam', back_populates='season_division', lazy='dynamic')
+    teams = association_proxy('team_assoc', 'team')
     free_agent_association = db.relationship('FreeAgent', back_populates='season_division')
     free_agents = association_proxy('free_agent_association', 'player')
     season = db.relationship('Season', back_populates='division_association')
@@ -1849,6 +1860,7 @@ class TeamInvites(db.Model, LeagueManagerTable):
     def withdraw(self):
         self.status = 'Withdrawn'
         db.session.commit()
+
 
 @login.user_loader
 def load_user(user_id):

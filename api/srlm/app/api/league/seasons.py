@@ -92,6 +92,8 @@ def get_seasons(search_filters):
             )
 
     if league_filter:
+        league_filter = league_filter.upper()
+        log.info(league_filter)
         league = ensure_exists(League, return_none=True, join_method='or', id=league_filter, acronym=league_filter)
         query = query.filter(Season.league_id == league.id)
 

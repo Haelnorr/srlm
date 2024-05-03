@@ -10,7 +10,7 @@ services:
     env_file:
       - .envfiles/.dev-env
     environment:
-      - FLASK_APP=api\srlm\run.py
+      - FLASK_APP=api/srlm/run.py
     depends_on:
       - redis
       - db
@@ -68,10 +68,10 @@ services:
       - ./api:/api-docker/api
 
   db:
-    image: mysql:8.0.36
+    image: postgres:latest
     ports:
-      - 3306:3306
+      - 5432:5432
     environment:
-      MYSQL_ROOT_PASSWORD: 1643i8q6d2br3q8ind7354
+      POSTGRES_PASSWORD: 1643i8q6d2br3q8ind7354
     volumes:
-      - ./compose/local/db/init:/docker-entrypoint-initdb.d
+      - ./compose/local/db/init.sql:/docker-entrypoint-initdb.d/init.sql

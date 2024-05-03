@@ -1,28 +1,38 @@
 """Useful functions for interfacing with the database"""
 
 from datetime import datetime
+
+import sqlalchemy.exc
+
 from api.srlm.app import db
 from api.srlm.app.api.utils.errors import BadRequest, ResourceNotFound, FieldBadRequest
 
 
 def ensure_exists(model, return_none=False, join_method='and', **kwargs):
-    query = None
     if join_method == 'and':
         fail_message = f'{model.__name__} with {kwargs}'
         query = db.session.query(model).filter_by(**kwargs).first()
+
+        if query:
+            return query
+
     elif join_method == 'or':
         fail_message = f"{model.__name__} identified by '{next(iter(kwargs.values()))}'"
         for key in kwargs:
-            query = db.session.query(model).filter_by(**{key: kwargs[key]}).first()
-            if query:
-                break
+            try:
+                query = db.session.query(model).filter_by(**{key: kwargs[key]})
+                query = query.first()
+                if query:
+                    return query
+            except sqlalchemy.exc.DataError:
+                db.session.rollback()
     else:
         raise ValueError("'join_method' must be 'and' or 'or'")
 
-    if not return_none and not query:
+    if not return_none:
         raise ResourceNotFound(fail_message)
     else:
-        return query
+        return None
 
 
 def force_fields(data, required_fields):

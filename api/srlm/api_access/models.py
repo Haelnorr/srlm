@@ -4,7 +4,6 @@ import secrets
 
 
 class AuthorizedApp(db.Model):
-    __bind_key__ = 'api_access'
     __table_args__ = {"schema": "api_access"}
 
     id = db.Column(db.Integer, primary_key=True)
@@ -31,6 +30,8 @@ class AuthorizedApp(db.Model):
 
 
 class ExternalApp(db.Model):
+    __table_args__ = {"schema": "api_access"}
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(32), nullable=False, unique=True)
     client_id = db.Column(db.String(128))

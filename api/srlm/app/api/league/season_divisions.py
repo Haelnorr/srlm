@@ -1,4 +1,5 @@
 """Endpoints Relating to SeasonDivisions"""
+import sqlalchemy.exc
 from apifairy import authenticate, other_responses, response, arguments, body
 
 from api.srlm.app import db, cache
@@ -48,12 +49,16 @@ def get_leaderboard(filters):
     season_filter = filters['season']
     division_filter = filters['division']
 
-    league = ensure_exists(League, join_method='or', id=league_filter, acronym=league_filter)
+    league = ensure_exists(League, join_method='or', id=league_filter, acronym=league_filter.upper())
 
+    try:
+        season_id = int(season_filter)
+    except ValueError:
+        season_id = 0
     season = db.session.query(Season).filter(sa.and_(
         sa.or_(
-            Season.acronym == season_filter,
-            Season.id == season_filter
+            Season.acronym == season_filter.upper(),
+            Season.id == season_id
         ),
         Season.league == league
     )).first()
@@ -64,7 +69,7 @@ def get_leaderboard(filters):
     division = db.session.query(Division).filter(
         sa.or_(
             Division.name.contains(division_filter),
-            Division.acronym == division_filter
+            Division.acronym == division_filter.upper()
         ),
         Division.league == league
     ).first()
