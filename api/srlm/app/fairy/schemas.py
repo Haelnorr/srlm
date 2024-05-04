@@ -1239,3 +1239,7 @@ class TeamManageSchema(ma.Schema):
 
 class SendInviteSchema(ma.Schema):
     player_id = ma.Int(required=True)
+
+
+class SendApplicationSchema(ma.Schema):
+    season_id = ma.Int(required=True)

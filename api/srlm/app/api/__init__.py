@@ -9,7 +9,7 @@ bp = Blueprint('api', __name__)
 
 @bp.after_request
 def after_request(response):
-    log.info(f'{request.remote_addr} {request.method} {request.scheme} {request.full_path} {response.status}')
+    log.debug(f'{request.remote_addr} {request.method} {request.scheme} {request.full_path} {response.status}')
     return response
 
 

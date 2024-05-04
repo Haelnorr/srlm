@@ -15,9 +15,10 @@ from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import TeamCollection, TeamSchema, LinkSuccessSchema, EditTeamSchema, \
     TeamPlayers, TeamSeasonPlayers, TeamSeasons, CurrentFilterSchema, TeamsListSchema, \
-    TeamStatsFilter, TeamStatsMatchesSchema, TeamManageSchema, TeamFilters, SendInviteSchema, BasicSuccessSchema
+    TeamStatsFilter, TeamStatsMatchesSchema, TeamManageSchema, TeamFilters, SendInviteSchema, BasicSuccessSchema, \
+    SendApplicationSchema
 from api.srlm.app.models import Team, SeasonDivision, PlayerTeam, UserPermissions, Permission, TeamAward, Player, User, \
-    TeamInvites
+    TeamInvites, Season, SeasonRegistration
 from api.srlm.app.api.auth.utils import app_auth, user_auth, get_bearer_token
 
 # create a new logger for this module
@@ -334,9 +335,36 @@ def send_invite(data, team_id):
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found)
 def withdraw_invite(invite_id):
+    """Withdraw a players invite to the team"""
     invite = ensure_exists(TeamInvites, id=invite_id)
     invite.withdraw()
     return responses.request_success('Invite withdrawn')
+
+
+@teams.route('/<int:team_id>/apply', methods=['POST'])
+@body(SendApplicationSchema())
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | bad_request | not_found)
+def apply_to_season(data, team_id):
+    """Apply for a team to join a season"""
+    team = ensure_exists(Team, id=team_id)
+    season = ensure_exists(Season, id=data['season_id'])
+    if not season.can_register:
+        raise BadRequest('Season not open for registration')
+    team.apply_to_season(season)
+    return responses.request_success(f'Application to join season {season.name} submitted')
+
+
+@teams.route('/apply/<int:application_id>', methods=['DELETE'])
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def cancel_application(application_id):
+    """Cancel an application to join a season"""
+    application = ensure_exists(SeasonRegistration, id=application_id)
+    application.withdraw()
+    return responses.request_success('Application withdrawn')
 
 
 @teams.route('/<int:team_id>/manage', methods=['GET'])

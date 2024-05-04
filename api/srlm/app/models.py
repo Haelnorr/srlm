@@ -461,6 +461,7 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     awards = association_proxy('awards_association', 'award')
     match_availability = db.relationship('MatchAvailability', back_populates='team', lazy='dynamic')
     invites = db.relationship('TeamInvites', back_populates='team', lazy='dynamic')
+    applications = db.relationship('SeasonRegistration', back_populates='team', lazy='dynamic')
 
     def __repr__(self):
         return f'<Team {self.name} ({self.acronym})>'
@@ -477,7 +478,7 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             'color': self.color,
             'logo': True if self.logo else False,
             'active_players': active_players.count(),
-            'seasons_played': self.season_divisions.count(),
+            'seasons_played': self.season_division_assoc.count(),
             'awards': self.awards_association.count(),
             '_links': {
                 'self': url_for('api.teams.get_team', team_id=self.id),
@@ -670,6 +671,7 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
         seasons = db.session.query(Season).filter(Season.can_register)
 
         invites = self.invites.filter_by(status='Pending')
+        applications = self.applications.filter(SeasonRegistration.status != 'Withdrawn').order_by(sa.desc(SeasonRegistration.id))
 
         return {
             'id': self.id,
@@ -681,7 +683,7 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             'owner': owner.username if owner else None,
             'players': players,
             'invites': [inv.to_dict() for inv in invites],
-            'applications': [app.to_dict() for app in self.applications],
+            'applications': [app.to_dict() for app in applications],
             'open_seasons': [season.to_dict() for season in seasons],
             'upcoming_matches': self.get_upcoming_matches(),
             'recent_matches': self.get_completed_matches(limit=10)
@@ -695,6 +697,15 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             'inviting_player': inviting_player
         })
         db.session.add(invite)
+        db.session.commit()
+
+    def apply_to_season(self, season):
+        application = SeasonRegistration()
+        application.from_dict({
+            'team_id': self.id,
+            'season_id': season.id
+        })
+        db.session.add(application)
         db.session.commit()
 
 
@@ -1763,7 +1774,7 @@ class SeasonRegistration(db.Model, LeagueManagerTable):
     status = db.Column(db.String(16), default='Pending', nullable=False)
     type = db.Column(db.String(10), nullable=False)
 
-    team = db.relationship('Team', backref='applications')
+    team = db.relationship('Team', back_populates='applications')
     player = db.relationship('Player', backref='applications')
     season = db.relationship('Season', backref='applications')
     division = db.relationship('Division', backref='applications')
@@ -1795,6 +1806,10 @@ class SeasonRegistration(db.Model, LeagueManagerTable):
 
     def reject(self):
         self.status = 'Rejected'
+        db.session.commit()
+
+    def withdraw(self):
+        self.status = 'Withdrawn'
         db.session.commit()
 
     def allocate_to_division(self, division):

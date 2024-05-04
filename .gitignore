@@ -6,6 +6,7 @@
 /test.py
 /.envfiles
 /config/mail.config
+/config/logger.config
 /api/mail.bat
 /api/test.bat
 /api/test.py
