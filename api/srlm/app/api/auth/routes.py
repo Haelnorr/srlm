@@ -60,7 +60,7 @@ def validate_user_token(data):
     if 'perms' in data:
         perms = []
         for perm in data['perms']:
-            if perm == 'team_manager':
+            if perm == 'team_manager' or perm == 'team_owner':
                 perm_query = db.session.query(UserPermissions).filter(
                     sa.and_(
                         UserPermissions.user_id == user.id,

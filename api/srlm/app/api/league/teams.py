@@ -72,7 +72,7 @@ def get_teams(filters):
                 team_ids = team_ids_q.additional_modifiers.split(',')
                 query = db.session.query(Team).filter(Team.id.in_(team_ids))
 
-            query = query.order_by(getattr(sa, order)(getattr(Team, order_by)))
+        query = query.order_by(getattr(sa, order)(getattr(Team, order_by)))
 
     return Team.to_collection_dict(query, page, per_page, 'api.teams.get_teams')
 
@@ -131,6 +131,12 @@ def add_team(data):
 
     db.session.add(team)
     db.session.commit()
+
+    user = User.check_token(get_bearer_token(request.headers)['user'])
+    if user:
+        user.grant_permission('team_owner', mods=[str(team.id)])
+        user.grant_permission('team_manager', mods=[str(team.id)])
+        user.player.join_team(team)
 
     return responses.create_success(f'Team {team.name} created', 'api.teams.get_team', team_id=team.id)
 

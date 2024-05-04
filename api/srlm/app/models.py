@@ -143,6 +143,25 @@ class User(PaginatedAPIMixin, UserMixin, db.Model, LeagueManagerTable):
             return None
         return user
 
+    def grant_permission(self, key, mods=None):
+        perm = db.session.query(Permission).filter(Permission.key == key).first()
+        if key == 'team_owner':
+            user_perm = db.session.query(UserPermissions) \
+                .filter(UserPermissions.user_id == self.id) \
+                .filter(UserPermissions.permission_id == perm.id).first()
+            if user_perm:
+                user_perm.additional_modifiers = ','.join(mods + [user_perm.additional_modifiers])
+                db.session.commit()
+                return
+
+        user_perm = UserPermissions()
+        user_perm.user = self
+        user_perm.permission = perm
+        if mods:
+            user_perm.additional_modifiers = ','.join(mods)
+        db.session.add(user_perm)
+        db.session.commit()
+
 
 class Permission(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
@@ -427,12 +446,14 @@ class Player(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             'saves': saves
         }
 
+    def join_team(self, team):
+        player_team = PlayerTeam()
+        player_team.player = self
+        player_team.team = team
+        player_team.start_date = datetime.now(timezone.utc)
 
-"""# this is a helper table for recording which teams played in which season and in which division
-season_division_team = db.Table('season_division_team',
-                                db.Column('season_division_id', db.Integer, db.ForeignKey('league_manager.season_division.id')),
-                                db.Column('team_id', ),
-                                schema='league_manager')"""
+        db.session.add(player_team)
+        db.session.commit()
 
 
 class SeasonDivisionTeam(db.Model, LeagueManagerTable):
@@ -665,7 +686,7 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             .join(User.permission_assoc) \
             .join(UserPermissions.permission) \
             .filter(Permission.key == 'team_owner') \
-            .filter(UserPermissions.additional_modifiers == str(self.id)) \
+            .filter(UserPermissions.additional_modifiers.contains(str(self.id))) \
             .first()
 
         seasons = db.session.query(Season).filter(Season.can_register)

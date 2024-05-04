@@ -261,13 +261,7 @@ def register_player_team(data, player_id):
     team = ensure_exists(Team, join_method='or', id=data['team'], acronym=data['team'])
 
     # register the player to the team
-    player_team = PlayerTeam()
-    player_team.player = player
-    player_team.team = team
-    player_team.start_date = datetime.now(timezone.utc)
-
-    db.session.add(player_team)
-    db.session.commit()
+    player.join_team(team)
 
     return responses.request_success(f'Player {player.player_name} registered to team {team.name}', 'api.players.get_team', team_id=team.id)
 
