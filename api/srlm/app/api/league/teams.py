@@ -62,15 +62,16 @@ def get_teams(filters):
             .order_by(getattr(sa, order)('count'))
     else:
         query = sa.select(Team)
+
         if owner:
             team_ids_q = db.session.query(UserPermissions) \
                 .filter(UserPermissions.user_id == owner) \
                 .join(UserPermissions.permission) \
                 .filter(Permission.key == 'team_owner').first()
-
+            team_ids = []
             if team_ids_q:
                 team_ids = team_ids_q.additional_modifiers.split(',')
-                query = db.session.query(Team).filter(Team.id.in_(team_ids))
+            query = db.session.query(Team).filter(Team.id.in_(team_ids))
 
         query = query.order_by(getattr(sa, order)(getattr(Team, order_by)))
 
@@ -172,7 +173,7 @@ def update_team(data, team_id):
 def get_team_players(search_filter, team_id):
     """Get a list of the teams players"""
     team = ensure_exists(Team, id=team_id)
-    current = search_filter.get('current', False, bool)
+    current = search_filter.get('current', False)
 
     team_players = PlayerTeam.get_players_dict(team.id, current)
 
@@ -202,7 +203,7 @@ def get_team_players_in_season(team_id, season_division_id):
         player_end_date = player_assoc.end_date.replace(tzinfo=timezone.utc) if player_assoc.end_date is not None else None
         if player_start_date < season_end and (player_end_date is None or player_end_date > season_start):
             player = {
-                'name': player_assoc.player.player_name,
+                'player_name': player_assoc.player.player_name,
                 'start_date': player_assoc.start_date,
                 'end_date': player_assoc.end_date,
                 '_links': {

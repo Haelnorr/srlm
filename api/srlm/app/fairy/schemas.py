@@ -302,33 +302,6 @@ class UpdateTwitchSchema(TwitchSchema):
     expires_in = ma.Int()
 
 
-class ViewMatchSchema(ma.SQLAlchemySchema):
-    """Defines the structure of Matches requests"""
-    class Meta:
-        model = Match
-        ordered = True
-
-    class MatchLinks(Links):
-        season_division = ma.URL()
-        home_team = ma.URL()
-        away_team = ma.URL()
-        steamer = ma.URL()
-
-    id = ma.auto_field()
-    season_division = ma.Str()
-    home_team = ma.Nested(SimpleTeamSchema())
-    away_team = ma.Nested(SimpleTeamSchema())
-    round = ma.auto_field()
-    match_week = ma.auto_field()
-    cancelled = ma.auto_field()
-    streamer = ma.Nested(TwitchSchema())
-    final = ma.Bool()
-    scheduled_time = ma.DateTime()
-    current_lobby = ma.Nested(CurrentLobby())
-    results = ma.Nested(MatchResultSchema())
-    _links = ma.Nested(MatchLinks())
-
-
 class SimpleMatchSchema(ma.SQLAlchemySchema):
     """Defines the structure of simple match response"""
     class Meta:
@@ -752,6 +725,34 @@ class SeasonDivisionSchema(ma.SQLAlchemySchema):
     _links = ma.Nested(SeasonDivisionLinks(), dump_only=True)
 
 
+class ViewMatchSchema(ma.SQLAlchemySchema):
+    """Defines the structure of Matches requests"""
+    class Meta:
+        model = Match
+        ordered = True
+
+    class MatchLinks(Links):
+        season_division = ma.URL()
+        home_team = ma.URL()
+        away_team = ma.URL()
+        steamer = ma.URL()
+
+    id = ma.auto_field()
+    season_division = ma.Nested(SeasonDivisionSchema())
+    home_team = ma.Nested(SimpleTeamSchema())
+    away_team = ma.Nested(SimpleTeamSchema())
+    round = ma.auto_field()
+    match_week = ma.auto_field()
+    cancelled = ma.auto_field()
+    streamer = ma.Nested(TwitchSchema())
+    final = ma.Bool()
+    scheduled_time = ma.DateTime()
+    current_lobby = ma.Nested(CurrentLobby())
+    results = ma.Nested(MatchResultSchema())
+    has_review = ma.Bool()
+    _links = ma.Nested(MatchLinks())
+
+
 class PlayerSchema(ma.SQLAlchemySchema):
     """Defines the structure for Player requests"""
     class Meta:
@@ -924,7 +925,7 @@ class TeamSeasonPlayers(ma.Schema):
     """Defines the response for the list of players in a team during a given season"""
     class CurrentPlayer(ma.Schema):
         id = ma.Int()
-        name = ma.Str()
+        player_name = ma.Str()
         dates = ma.List(ma.Nested(StartEndDates()))
         _links = ma.Nested(Links())
 
@@ -1243,3 +1244,12 @@ class SendInviteSchema(ma.Schema):
 
 class SendApplicationSchema(ma.Schema):
     season_id = ma.Int(required=True)
+
+
+class PlayerInvitesSchema(ma.Schema):
+    invites = ma.List(ma.Nested(TeamInvitesSchema()))
+
+
+class PlayerInviteAction(ma.Schema):
+    invite_id = ma.Int(required=True)
+    action = ma.Str(required=True, validate=OneOf(['accept', 'reject']))

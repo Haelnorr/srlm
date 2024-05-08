@@ -455,6 +455,21 @@ class Player(PaginatedAPIMixin, db.Model, LeagueManagerTable):
         db.session.add(player_team)
         db.session.commit()
 
+    def get_invites(self):
+        invites = []
+        for inv in self.invites:
+            if inv.status == 'Pending':
+                invites.append(inv.to_dict())
+        return {
+            'invites': invites
+        }
+
+    def accept_invite(self, invite):
+        invite.accept()
+        for inv in self.invites:
+            if inv.status == 'Pending':
+                inv.reject()
+
 
 class SeasonDivisionTeam(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
@@ -599,8 +614,7 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
 
         players = []
         for player_assoc in players_query:
-            added = next((i for i, player_dict, in enumerate(players) if player_dict['id'] == player_assoc.player.id),
-                         None)
+            added = any(player_dict['id'] == player_assoc.player.id for player_dict in players)
             if not added:
                 periods = self_player_data_query \
                     .filter(PlayerMatchData.player_id == player_assoc.player.id)
@@ -1135,7 +1149,7 @@ class SeasonDivision(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             'season': self.season.to_dict(),
             'division': self.division.to_dict(),
             'league': self.season.league.acronym,
-            'teams_count': len(self.teams),
+            'teams_count': self.team_assoc.count(),
             'free_agents_count': len(self.free_agents),
             'rookies_count': len(self.rookies),
             'matches_count': len(self.matches),
@@ -1357,6 +1371,7 @@ class Match(db.Model, LeagueManagerTable):
     schedule = db.relationship('MatchSchedule', back_populates='match', uselist=False)
     team_availability = db.relationship('MatchAvailability', back_populates='match')
     lobbies = db.relationship('Lobby', back_populates='match', lazy='dynamic')
+    match_reviews = db.relationship('MatchReview', back_populates='match', lazy='dynamic')
 
     def from_dict(self, data):
         for field in ['season_division_id', 'home_team_id', 'away_team_id', 'round', 'match_week']:
@@ -1370,7 +1385,7 @@ class Match(db.Model, LeagueManagerTable):
     def to_dict(self):
         data = {
             'id': self.id,
-            'season_division': self.season_division.get_readable_name(),
+            'season_division': self.season_division.to_dict(),
             'home_team': self.home_team.to_simple_dict(),
             'away_team': self.away_team.to_simple_dict(),
             'round': self.round,
@@ -1381,6 +1396,7 @@ class Match(db.Model, LeagueManagerTable):
             'scheduled_time': self.schedule.scheduled_time,
             'current_lobby': self.current_lobby(),
             'results': self.results.to_dict() if self.results else None,
+            'has_review': bool(self.match_reviews.count()),
             '_links': {
                 'self': url_for('api.match.get_match', match_id=self.id),
                 'season_division': url_for('api.season_division.get_season_division',
@@ -1766,6 +1782,7 @@ class MatchReview(db.Model, LeagueManagerTable):
     resolved_on = db.Column(db.Integer)
 
     reviewer = db.relationship('User', backref='match_review')
+    match = db.relationship('Match', back_populates='match_reviews')
 
     def from_dict(self, data):
         for field in ['match_id', 'type', 'raised_by', 'reason', 'comments', 'resolved', 'resolved_by', 'resolved_on']:

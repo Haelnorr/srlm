@@ -16,9 +16,9 @@ from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PlayerSchema, PlayerCollection, LinkSuccessSchema, \
     EditPlayerSchema, PlayerTeams, PlayerSeasons, CurrentFilterSchema, PlayerStatsSchema, StatsFilterSchema, \
-    PlayerFilters
+    PlayerFilters, PlayerInvitesSchema, PlayerInviteAction, BasicSuccessSchema
 from api.srlm.app.models import Player, SeasonDivision, Team, PlayerTeam, FreeAgent, PlayerMatchData, Match, Lobby, \
-    MatchData, Season, Division, UserPermissions
+    MatchData, Season, Division, UserPermissions, TeamInvites
 from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
@@ -355,6 +355,35 @@ def register_player_free_agent(data, player_id):
     return responses.request_success(f"Player {player.player_name} registered as a Free Agent to "
                                      f"{season_division.get_readable_name()} ({season_division.season.league.acronym})",
                                      'api.season_division.get_season_division', season_division_id=season_division.id)
+
+
+@players.route('/<int:player_id>/invites', methods=['GET'])
+@response(PlayerInvitesSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def get_invites(player_id):
+    """Get a list of the player's invites to join a team"""
+    player = ensure_exists(Player, id=player_id)
+    return player.get_invites()
+
+
+@players.route('/<int:player_id>/invites', methods=['POST'])
+@body(PlayerInviteAction())
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found | bad_request)
+def action_invite(data, player_id):
+    player = ensure_exists(Player, id=player_id)
+    invite = ensure_exists(TeamInvites, id=data['invite_id'])
+    action = data['action']
+
+    if action == 'accept':
+        player.accept_invite(invite)
+
+    elif action == 'reject':
+        invite.reject()
+
+    return responses.request_success(f'Invite to join team {invite.team.name} {action}ed')
 
 
 @players.route('/<int:player_id>/awards', methods=['GET'])
