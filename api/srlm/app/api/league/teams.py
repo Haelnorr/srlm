@@ -46,7 +46,7 @@ def get_teams(filters):
 
     if order_by == 'seasons_played':
         query = db.session.query(Team, sa.func.count(SeasonDivision.id).label('count')) \
-            .outerjoin(Team.season_divisions) \
+            .outerjoin(Team.season_division_assoc) \
             .group_by(Team) \
             .order_by(getattr(sa, order)('count'))
     elif order_by == 'active_players':
