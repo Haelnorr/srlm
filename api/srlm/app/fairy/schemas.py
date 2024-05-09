@@ -460,8 +460,14 @@ class MatchStatsSchema(ma.Schema):
     stat_totals = ma.Nested(TeamsPlayerDataSplitFinal())
 
 
-class MatchReviewSchema(MatchStatsSchema):
+class MatchReviewSchema(ma.Schema):
     """Defines structure of MatchReview requests"""
+    class MatchReviewPeriods(MatchDataSchema):
+        player_data = ma.List(ma.Nested(PlayerMatchDataSchema()))
+
+    match_id = ma.Int(dump_only=True)
+    match_details = ma.Nested(SimpleMatchSchema(), dump_only=True)
+    periods = ma.List(ma.Nested(MatchReviewPeriods()))
     flags = ma.List(ma.Nested(MatchFlag()), required=True)
 
 
@@ -952,6 +958,10 @@ class PlayerSeasons(ma.Schema):
     season_division_id = ma.Int(load_only=True, required=True)
 
 
+class FreeAgentApplication(ma.Schema):
+    season_id = ma.Int(required=True)
+
+
 class MatchtypeSchema(ma.SQLAlchemySchema):
     """Defines the structure for Matchtype requests"""
     class Meta:
@@ -1253,3 +1263,18 @@ class PlayerInvitesSchema(ma.Schema):
 class PlayerInviteAction(ma.Schema):
     invite_id = ma.Int(required=True)
     action = ma.Str(required=True, validate=OneOf(['accept', 'reject']))
+
+
+class FreeAgentFilter(ma.Schema):
+    player = ma.Int(missing=None)
+
+
+class FreeAgentApplicationSchema(ma.Schema):
+    open_seasons = ma.List(ma.Nested(SeasonSchema()))
+    applications = ma.List(ma.Nested(SeasonApplicationsSchema()))
+
+
+class SeasonApplicationSchema(ma.Schema):
+    application_id = ma.Int(required=True)
+    action = ma.Str(required=True, validate=OneOf(['accept', 'reject', 'assign']))
+    division_id = ma.Int()

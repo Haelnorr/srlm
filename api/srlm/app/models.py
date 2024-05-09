@@ -1396,7 +1396,7 @@ class Match(db.Model, LeagueManagerTable):
             'scheduled_time': self.schedule.scheduled_time,
             'current_lobby': self.current_lobby(),
             'results': self.results.to_dict() if self.results else None,
-            'has_review': bool(self.match_reviews.count()),
+            'has_review': bool(self.match_reviews.filter_by(resolved=False).count()),
             '_links': {
                 'self': url_for('api.match.get_match', match_id=self.id),
                 'season_division': url_for('api.season_division.get_season_division',
@@ -1549,7 +1549,7 @@ class MatchData(db.Model, LeagueManagerTable):
     def from_dict(self, data):
         for field in ['lobby_id', 'processed', 'match_id', 'region', 'gamemode', 'created', 'arena', 'home_score',
                       'away_score', 'winner', 'current_period', 'periods_enabled', 'custom_mercy_rule', 'end_reason',
-                      'source']:
+                      'source', 'accepted']:
             if field in data:
                 setattr(self, field, data[field])
 

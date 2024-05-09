@@ -14,8 +14,8 @@ from api.srlm.app.api.utils.functions import force_fields, clean_data, force_uni
     force_date_format
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, SeasonSchema, LinkSuccessSchema, SeasonCollection, \
-    DivisionsInSeason, SeasonFilters, SeasonLookup, EditSeasonSchema
-from api.srlm.app.models import Season, League, SeasonDivision, Matchtype
+    DivisionsInSeason, SeasonFilters, SeasonLookup, EditSeasonSchema, SeasonApplicationSchema, BasicSuccessSchema
+from api.srlm.app.models import Season, League, SeasonDivision, Matchtype, SeasonRegistration, Division
 from api.srlm.app.api.auth.utils import app_auth
 import sqlalchemy as sa
 
@@ -209,3 +209,29 @@ def get_divisions_in_season(pagination, season_id):
     }
 
     return response_json
+
+
+@seasons.route('/apply', methods=['POST'])
+@body(SeasonApplicationSchema())
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def action_application(data):
+    """Action an application to join a season
+    Accepting just marks application as accepted. To allocate to a division and complete the application
+    use `action: "assign"` and provide a `division_id`.
+    """
+    application = ensure_exists(SeasonRegistration, id=data['application_id'])
+    action = data['action']
+
+    if action == 'accept':
+        application.accept()
+
+    elif action == 'reject':
+        application.reject()
+
+    elif action == 'assign':
+        division = ensure_exists(Division, id=data['division_id'])
+        application.allocate_to_division(division)
+
+    return responses.request_success('Application withdrawn')

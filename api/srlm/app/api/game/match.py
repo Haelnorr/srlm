@@ -119,6 +119,7 @@ def get_match_review(match_id):
 @other_responses(unauthorized | bad_request | not_found)
 def update_match_review(match_id):
     """Updates a match review. Requires user token"""
+
     match_db = ensure_exists(Match, id=match_id)
     if match_db.results:
         raise BadRequest('Match results already confirmed. Unable to submit review')
@@ -150,7 +151,7 @@ def update_match_review(match_id):
                 raise BadRequest('One or more period data entries are missing ID tags')
             period = ensure_exists(MatchData, id=period_data['id'])
             valid_fields = ['home_score', 'away_score', 'winner', 'current_period', 'periods_enabled',
-                            'custom_mercy_rule', 'end_reason']
+                            'custom_mercy_rule', 'end_reason', 'accepted']
             period.from_dict(clean_data(period_data, valid_fields))
             if 'player_data' in period_data:
                 for player_data in period_data['player_data']:

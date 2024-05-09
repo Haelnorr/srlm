@@ -16,9 +16,10 @@ from api.srlm.app.api.utils.functions import ensure_exists, force_fields, force_
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PlayerSchema, PlayerCollection, LinkSuccessSchema, \
     EditPlayerSchema, PlayerTeams, PlayerSeasons, CurrentFilterSchema, PlayerStatsSchema, StatsFilterSchema, \
-    PlayerFilters, PlayerInvitesSchema, PlayerInviteAction, BasicSuccessSchema
+    PlayerFilters, PlayerInvitesSchema, PlayerInviteAction, BasicSuccessSchema, FreeAgentApplication, \
+    FreeAgentApplicationSchema, FreeAgentFilter
 from api.srlm.app.models import Player, SeasonDivision, Team, PlayerTeam, FreeAgent, PlayerMatchData, Match, Lobby, \
-    MatchData, Season, Division, UserPermissions, TeamInvites
+    MatchData, Season, Division, UserPermissions, TeamInvites, SeasonRegistration
 from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
@@ -48,7 +49,6 @@ def get_players(pagination):
     """Get the collection of all players"""
     page = pagination['page']
     per_page = pagination['per_page']
-    has_team = pagination['has_team']
     search = pagination['search']
     query = sa.select(Player)
 
@@ -373,6 +373,7 @@ def get_invites(player_id):
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def action_invite(data, player_id):
+    """Action an invite to join a team"""
     player = ensure_exists(Player, id=player_id)
     invite = ensure_exists(TeamInvites, id=data['invite_id'])
     action = data['action']
@@ -384,6 +385,71 @@ def action_invite(data, player_id):
         invite.reject()
 
     return responses.request_success(f'Invite to join team {invite.team.name} {action}ed')
+
+
+@players.route('/free_agent_application', methods=['GET'])
+@arguments(FreeAgentFilter())
+@response(FreeAgentApplicationSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized)
+def get_free_agent_info(filters):
+    """Get the required info for free agent applications"""
+    player_id = filters['player']
+
+    status = ['Pending']
+    query = db.session.query(SeasonRegistration)
+    if player_id:
+        status = status + ['Accepted', 'Rejected', 'Completed']
+        player = ensure_exists(Player, id=player_id)
+        query = query.filter_by(player_id=player.id)
+
+    query = query.filter(SeasonRegistration.status.in_(status))
+
+    applications = [app.to_dict() for app in query]
+
+    query = db.session.query(Season).filter(Season.can_register.is_(True))
+    open_seasons = [season.to_dict() for season in query]
+
+    response_json = {
+        'open_seasons': open_seasons,
+        'applications': applications
+    }
+    return response_json
+
+
+@players.route('/<int:player_id>/free_agent/apply', methods=['POST'])
+@body(FreeAgentApplication())
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found | bad_request)
+def apply_to_season(data, player_id):
+    """Apply for a player to a season as a free agent"""
+    player = ensure_exists(Player, id=player_id)
+
+    season = ensure_exists(Season, id=data['season_id'])
+
+    application = SeasonRegistration()
+    application_data = {
+        'player_id': player.id,
+        'season_id': season.id
+    }
+    application.from_dict(application_data)
+    db.session.add(application)
+    db.session.commit()
+
+    return responses.request_success(f"Player {player.player_name} applied as a Free Agent to {season.name} "
+                                     f"({season.league.acronym})")
+
+
+@players.route('/apply/<int:application_id>', methods=['DELETE'])
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def cancel_application(application_id):
+    """Cancel an application to join a season"""
+    application = ensure_exists(SeasonRegistration, id=application_id)
+    application.withdraw()
+    return responses.request_success('Application withdrawn')
 
 
 @players.route('/<int:player_id>/awards', methods=['GET'])
