@@ -68,11 +68,13 @@ def get_leaderboard(filters):
 
     division = db.session.query(Division).filter(
         sa.or_(
-            Division.name.contains(division_filter),
-            Division.acronym == division_filter.upper()
+            sa.func.lower(Division.name).contains(division_filter.lower()),
+            Division.acronym.ilike(division_filter)
         ),
         Division.league == league
-    ).first()
+    )
+    log.info(division)
+    division = division.first()
 
     if not division:
         raise ResourceNotFound(f'No division matching {division_filter} in league {league.name}')
@@ -113,8 +115,8 @@ def season_division_lookup(filters):
 
     division = db.session.query(Division).filter(
         sa.or_(
-            Division.name.contains(division_filter),
-            Division.acronym == division_filter
+            sa.func.lower(Division.name).contains(division_filter.lower()),
+            Division.acronym.ilike(division_filter)
         ),
         Division.league == league
     ).first()
@@ -143,12 +145,12 @@ def add_season_division(data):
     """
     season = ensure_exists(Season, id=data['season_id'])
     if 'league' and 'division_acronym' in data:
-        division = db.session.query(Division).filter(
-            sa.and_(
-                Division.acronym == data['division_acronym'],
-                Division.league.has(acronym=data['league'])
-            )
-        ).first()
+        division = db.session.query(Division) \
+            .join(Division.league) \
+            .filter(Division.acronym.ilike(data['division_acronym'])) \
+            .filter(League.acronym.ilike(data['league'])).first()
+        if division is None:
+            raise ResourceNotFound('No existing division found')
     elif 'division_id' in data:
         division = ensure_exists(Division, id=data['division_id'])
     else:

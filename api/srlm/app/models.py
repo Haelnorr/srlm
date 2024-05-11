@@ -87,12 +87,13 @@ class User(PaginatedAPIMixin, UserMixin, db.Model, LeagueManagerTable):
             perms_list.append(permission.key)
         return perms_list
 
-    def to_dict(self, include_email=False):
+    def to_dict(self, authenticated=False):
         data = {
             'id': self.id,
             'username': self.username,
-            'player': self.player.id if self.player is not None else None,
-            'discord': self.discord.id if self.discord is not None else None,
+            'player': self.player.to_dict() if self.player is not None else None,
+            'discord': self.discord.to_dict(authenticated) if self.discord is not None else None,
+            'twitch': self.twitch.to_dict() if self.twitch is not None else None,
             'permissions': self.permissions_list(),
             'matches_streamed': len(self.streamed_matches),
             'reset_pass': self.reset_pass,
@@ -106,7 +107,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model, LeagueManagerTable):
                 'matches_streamed': url_for('api.users.get_user_matches_streamed', user_id=self.id),
             }
         }
-        if include_email:
+        if authenticated:
             data['email'] = self.email
         return data
 
@@ -334,7 +335,12 @@ class Player(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             'rookie': self.rookie,
             'first_season': self.first_season.get_readable_name() if self.first_season else None,
             'next_name_change': self.next_name_change,
-            'current_team': current_team.team.name if current_team else None,
+            'current_team': {
+                'name': current_team.team.name,
+                'id': current_team.team.id,
+                'acronym': current_team.team.acronym,
+                'color': current_team.team.color
+            } if current_team else None,
             'teams': len(unique_teams),
             'free_agent_seasons': self.season_association.count(),
             'awards': len(self.awards_association),

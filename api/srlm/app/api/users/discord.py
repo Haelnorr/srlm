@@ -72,7 +72,7 @@ def create_user_discord(data, user_id):
 @response(LinkSuccessSchema())
 @authenticate(dual_auth)
 @other_responses(unauthorized | not_found | bad_request)
-def update_user_discord(user_id):
+def update_user_discord(data, user_id):
     """Update a users Discord information. Requires user token"""
     user = ensure_exists(User, id=user_id)
 
@@ -82,8 +82,6 @@ def update_user_discord(user_id):
     if user.discord is None:
         raise BadRequest('User does not have a linked Discord account')
 
-    data = request.get_json()
-
     valid_fields = False
     for field in ['discord_id', 'access_token', 'refresh_token', 'expires_in']:
         if field in data:
@@ -92,7 +90,7 @@ def update_user_discord(user_id):
     if not valid_fields:
         raise BadRequest("No valid fields provided - provide one of the following: discord_id, access_token, refresh_token, expires_in")
 
-    if 'discord_id' in data:
+    if 'discord_id' in data and data['discord_id'] != user.discord.discord_id:
         discord_db = db.session.query(Discord).filter(Discord.discord_id == data['discord_id']).first()
         if discord_db is not None:
             raise BadRequest('Discord account is linked to another user')

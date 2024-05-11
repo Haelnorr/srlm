@@ -130,7 +130,10 @@ def get_league_divisions(pagination, league_id_or_acronym):
     page = pagination['page']
     per_page = pagination['per_page']
 
-    league_db = ensure_exists(League, join_method='or', id=league_id_or_acronym, acronym=league_id_or_acronym)
+    if type(league_id_or_acronym) is int:
+        league_db = ensure_exists(League, id=league_id_or_acronym)
+    else:
+        league_db = ensure_exists(League, acronym=league_id_or_acronym.upper())
 
     divisions = Division.to_collection_dict(league_db.divisions, page, per_page, 'api.leagues.get_league_divisions', league_id_or_acronym=league_db.id)
 

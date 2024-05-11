@@ -10,8 +10,7 @@ from flask import Blueprint
 
 from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.errors import ResourceNotFound
-from api.srlm.app.api.utils.functions import force_fields, clean_data, force_unique, ensure_exists, \
-    force_date_format
+from api.srlm.app.api.utils.functions import force_fields, clean_data, force_unique, ensure_exists
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, SeasonSchema, LinkSuccessSchema, SeasonCollection, \
     DivisionsInSeason, SeasonFilters, SeasonLookup, EditSeasonSchema, SeasonApplicationSchema, BasicSuccessSchema
@@ -67,7 +66,10 @@ def get_seasons(search_filters):
     if current_season:
         query = query.filter(
             Season.start_date <= now,
-            Season.finals_end >= now
+            sa.or_(
+                Season.finals_end >= now,
+                Season.finals_end.is_(None)
+            )
         )
 
     elif last_season:
@@ -93,7 +95,6 @@ def get_seasons(search_filters):
 
     if league_filter:
         league_filter = league_filter.upper()
-        log.info(league_filter)
         league = ensure_exists(League, return_none=True, join_method='or', id=league_filter, acronym=league_filter)
         query = query.filter(Season.league_id == league.id)
 
@@ -114,14 +115,17 @@ def get_season(search, season_id):
     if not league_filter:
         season = ensure_exists(Season, id=season_id)
     else:
-        league = ensure_exists(League, join_method='or', id=league_filter, acronym=league_filter)
-        season = db.session.query(Season).filter(sa.and_(
-            sa.or_(
-                Season.id == season_id,
-                Season.acronym == season_id
-            ),
-            Season.league == league
-        )).first()
+        league_filter = league_filter.upper()
+        league = ensure_exists(League, return_none=True, acronym=league_filter)
+
+        query = db.session.query(Season) \
+            .filter(Season.league_id == league.id)
+        try:
+            season_id = int(season_id)
+            season = query.filter(Season.id == season_id).first()
+        except ValueError:
+            season = query.filter(Season.acronym.ilike(season_id)).first()
+
         if not season:
             raise ResourceNotFound(f'No season found with the identifier {season_id}')
 

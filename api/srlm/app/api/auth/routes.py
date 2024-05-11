@@ -52,13 +52,13 @@ def validate_user_token(data):
     response_json = {
         'user': user.id,
         'expires': user.token_expiration,
+        'has_perms': [],
         '_links': {
             'user': url_for('api.users.get_user', user_id=user.id)
         }
     }
 
     if 'perms' in data:
-        perms = []
         for perm in data['perms']:
             if perm == 'team_manager' or perm == 'team_owner':
                 perm_query = db.session.query(UserPermissions).filter(
@@ -73,8 +73,7 @@ def validate_user_token(data):
                     data = (perm, False)
             else:
                 data = (perm, user.has_permission(perm))
-            perms.append(data)
-        response_json['has_perms'] = perms
+            response_json['has_perms'].append(data)
 
     return response_json
 

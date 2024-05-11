@@ -29,12 +29,12 @@ def get_user(user_id):
     user_token = get_bearer_token(request.headers)['user']
     current_user = User.check_token(user_token)
 
-    include_email = False
+    authenticated = False
 
     if current_user and current_user.id == user.id:
-        include_email = True
+        authenticated = True
 
-    return user.to_dict(include_email=include_email)
+    return user.to_dict(authenticated=authenticated)
 
 
 @users.route('', methods=['GET'])

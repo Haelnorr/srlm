@@ -522,30 +522,6 @@ class PasswordResetSchema(ma.Schema):
     _links = ma.Nested(UserNoSelfLinks(), dump_only=True)
 
 
-class UserSchema(ma.SQLAlchemySchema):
-    """Defines the structure of user requests"""
-    class Meta:
-        model = User
-        ordered = True
-
-    class UserSchemaLinks(Links):
-        player = ma.URL()
-        discord = ma.URL()
-        permissions = ma.URL()
-        matches_streamed = ma.URL()
-
-    id = ma.auto_field()
-    username = ma.auto_field(required=True)
-    email = ma.auto_field()
-    password = ma.Str(load_only=True, required=True)
-    player = ma.Int(dump_only=True)
-    discord = ma.Int(dump_only=True)
-    permissions = ma.List(ma.Str(), dump_only=True)
-    matches_streamed = ma.Int(dump_only=True)
-    reset_pass = ma.Bool(dump_only=True)
-    _links = ma.Nested(UserSchemaLinks(), dump_only=True)
-
-
 class UpdateUserSchema(ma.SQLAlchemySchema):
     class Meta:
         model = User
@@ -553,11 +529,6 @@ class UpdateUserSchema(ma.SQLAlchemySchema):
 
     username = ma.auto_field()
     email = ma.auto_field()
-
-
-class UserCollection(Collection):
-    """Defines the structure of the users collection"""
-    items = ma.List(ma.Nested(UserSchema()))
 
 
 class LeagueLink(Links):
@@ -780,6 +751,12 @@ class PlayerSchema(ma.SQLAlchemySchema):
         assists = ma.Int()
         saves = ma.Int()
 
+    class CurrentTeam(ma.Schema):
+        id = ma.Int()
+        name = ma.Str()
+        color = ma.Str()
+        acronym = ma.Str()
+
     id = ma.auto_field(dump_only=True)
     player_name = ma.auto_field(required=True)
     user = ma.Str(dump_only=True)
@@ -788,12 +765,42 @@ class PlayerSchema(ma.SQLAlchemySchema):
     first_season = ma.Str(dump_only=True)
     first_season_id = ma.auto_field(load_only=True)
     next_name_change = ma.auto_field(dump_only=True)
-    current_team = ma.Str(dump_only=True)
+    current_team = ma.Nested(CurrentTeam(), dump_only=True)
     teams = ma.Int(dump_only=True)
     free_agent_seasons = ma.Int(dump_only=True)
     awards = ma.Int(dump_only=True)
     stats = ma.Nested(PlayerCareerStats(), dump_only=True)
     _links = ma.Nested(PlayerLinks(), dump_only=True)
+
+
+class UserSchema(ma.SQLAlchemySchema):
+    """Defines the structure of user requests"""
+    class Meta:
+        model = User
+        ordered = True
+
+    class UserSchemaLinks(Links):
+        player = ma.URL()
+        discord = ma.URL()
+        permissions = ma.URL()
+        matches_streamed = ma.URL()
+
+    id = ma.auto_field()
+    username = ma.auto_field(required=True)
+    email = ma.auto_field()
+    password = ma.Str(load_only=True, required=True)
+    player = ma.Nested(PlayerSchema(), dump_only=True)
+    discord = ma.Nested(DiscordSchema(), dump_only=True)
+    twitch = ma.Nested(TwitchSchema(), dump_only=True)
+    permissions = ma.List(ma.Str(), dump_only=True)
+    matches_streamed = ma.Int(dump_only=True)
+    reset_pass = ma.Bool(dump_only=True)
+    _links = ma.Nested(UserSchemaLinks(), dump_only=True)
+
+
+class UserCollection(Collection):
+    """Defines the structure of the users collection"""
+    items = ma.List(ma.Nested(UserSchema()))
 
 
 class EditPlayerSchema(PlayerSchema):
