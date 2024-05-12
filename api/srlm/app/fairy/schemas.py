@@ -103,6 +103,8 @@ class BasicAuthSchema(ma.Schema):
 
 class DiscordAuthSchema(ma.Schema):
     """Defines the scheme for auth via discord"""
+    class Meta:
+        unknown = EXCLUDE
     access_token = ma.Str(required=True)
     refresh_token = ma.Str(required=True)
     expires_in = ma.Int(required=True)

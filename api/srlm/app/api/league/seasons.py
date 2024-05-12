@@ -146,7 +146,7 @@ def add_season(data):
                     'match_type_id', 'can_register']
 
     force_fields(data, required_fields)
-    league_db = ensure_exists(League, join_method='or', id=data['league'], acronym=data['league'])
+    league_db = ensure_exists(League, join_method='or', id=data['league'], acronym=data['league'].upper())
     match_type = ensure_exists(Matchtype, join_method='or', id=data['match_type'], name=data['match_type'])
     data['league_id'] = league_db.id
     data['match_type_id'] = match_type.id
