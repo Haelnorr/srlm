@@ -13,7 +13,8 @@ from api.srlm.app.api.utils.errors import ResourceNotFound
 from api.srlm.app.api.utils.functions import force_fields, clean_data, force_unique, ensure_exists
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import PaginationArgs, SeasonSchema, LinkSuccessSchema, SeasonCollection, \
-    DivisionsInSeason, SeasonFilters, SeasonLookup, EditSeasonSchema, SeasonApplicationSchema, BasicSuccessSchema
+    DivisionsInSeason, SeasonFilters, SeasonLookup, EditSeasonSchema, SeasonApplicationSchema, BasicSuccessSchema, \
+    SeasonApplicationsList
 from api.srlm.app.models import Season, League, SeasonDivision, Matchtype, SeasonRegistration, Division
 from api.srlm.app.api.auth.utils import app_auth
 import sqlalchemy as sa
@@ -238,4 +239,40 @@ def action_application(data):
         division = ensure_exists(Division, id=data['division_id'])
         application.allocate_to_division(division)
 
-    return responses.request_success('Application withdrawn')
+    return responses.request_success(f'Application {action}ed')
+
+
+@seasons.route('/applications', methods=['GET'])
+@response(SeasonApplicationsList())
+@authenticate(app_auth)
+@other_responses(unauthorized)
+def get_applications():
+    """Get a list of applications to register for a season"""
+    applications_query = db.session.query(SeasonRegistration) \
+        .filter(SeasonRegistration.status.in_(['Pending', 'Accepted']))
+
+    seasons_list = {}
+
+    team_applications = []
+    free_agent_applications = []
+
+    for application in applications_query:
+        app_dict = application.to_dict()
+        if application.season_id not in seasons_list:
+            seasons_list[application.season_id] = []
+            for div in application.season.divisions:
+                seasons_list[application.season_id].append({
+                    'id': div.id,
+                    'name': div.name
+                })
+        app_dict['divisions'] = seasons_list[application.season_id]
+        if application.type == 'team':
+            team_applications.append(app_dict)
+        else:
+            free_agent_applications.append(app_dict)
+
+    response_json = {
+        'team_applications': team_applications,
+        'free_agent_applications': free_agent_applications
+    }
+    return response_json

@@ -575,11 +575,12 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
                     ))
             else:
                 players_query = players_query \
-                    .filter(PlayerTeam.start_date < season_division.season.end_date) \
                     .filter(sa.or_(
                         PlayerTeam.end_date > season_division.season.start_date,
                         PlayerTeam.end_date.is_(None)
                     ))
+                if season_division.season.end_date:
+                    players_query = players_query.filter(PlayerTeam.start_date < season_division.season.end_date)
         else:
             player_data_query = db.session.query(PlayerMatchData) \
                 .join(PlayerMatchData.match) \
@@ -1861,10 +1862,13 @@ class SeasonRegistration(db.Model, LeagueManagerTable):
         sd = db.session.query(SeasonDivision)\
             .filter_by(
                 season_id=self.season_id,
-                division_id=self.division_id)\
+                division_id=division.id)\
             .first()
         if self.team:
-            self.team.season_divisions.append(sd)
+            season_division_team = SeasonDivisionTeam()
+            season_division_team.team = self.team
+            season_division_team.season_division = sd
+            db.session.add(season_division_team)
         elif self.player:
             now = datetime.now(timezone.utc)
             free_agent = FreeAgent()

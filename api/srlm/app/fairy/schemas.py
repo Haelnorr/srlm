@@ -1287,3 +1287,13 @@ class SeasonApplicationSchema(ma.Schema):
     application_id = ma.Int(required=True)
     action = ma.Str(required=True, validate=OneOf(['accept', 'reject', 'assign']))
     division_id = ma.Int()
+
+
+class SeasonApplicationsList(ma.Schema):
+    class SeasonApplicationList(SeasonApplicationsSchema):
+        class SeasonApplicationDivision(ma.Schema):
+            id = ma.Int()
+            name = ma.Str()
+        divisions = ma.List(ma.Nested(SeasonApplicationDivision()))
+    team_applications = ma.List(ma.Nested(SeasonApplicationList()))
+    free_agent_applications = ma.List(ma.Nested(SeasonApplicationList()))
