@@ -1297,3 +1297,13 @@ class SeasonApplicationsList(ma.Schema):
         divisions = ma.List(ma.Nested(SeasonApplicationDivision()))
     team_applications = ma.List(ma.Nested(SeasonApplicationList()))
     free_agent_applications = ma.List(ma.Nested(SeasonApplicationList()))
+
+
+class MatchesListSchema(ma.Schema):
+    pending_review = ma.List(ma.Nested(ViewMatchSchema()))
+    upcoming = ma.List(ma.Nested(ViewMatchSchema()))
+    completed = ma.List(ma.Nested(ViewMatchSchema()))
+
+
+class BulkMatchCreate(ma.Schema):
+    matches = ma.List(ma.Nested(NewMatchSchema()))

@@ -1,11 +1,10 @@
 """Endpoints Relating to SeasonDivisions"""
-import sqlalchemy.exc
 from apifairy import authenticate, other_responses, response, arguments, body
 
 from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
-from flask import Blueprint
+from flask import Blueprint, jsonify
 import sqlalchemy as sa
 from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.errors import ResourceNotFound, BadRequest
@@ -73,7 +72,6 @@ def get_leaderboard(filters):
         ),
         Division.league == league
     )
-    log.info(division)
     division = division.first()
 
     if not division:
@@ -238,3 +236,22 @@ def get_matches_in_season_division(search_filter, season_division_id):
 @cache.cached(unless=force_refresh)
 def get_finals_in_season_division(season_division_id):  # noqa TODO
     pass
+
+
+@season_division.route('/<int:season_division_id>/teams-list', methods=['GET'])
+def get_divisions_in_season_list(season_division_id):
+    """Get a list of teams ID's, names and colors for a given season_division"""
+    season_division_db = ensure_exists(SeasonDivision, id=season_division_id)
+
+    teams = [{
+        'id': team.id,
+        'name': team.name,
+        'color': team.color
+    } for team in season_division_db.teams]
+
+    response_json = {
+        'teams': teams
+    }
+    response_json = jsonify(response_json)
+    response_json.headers.add('Access-Control-Allow-Origin', '*')
+    return response_json

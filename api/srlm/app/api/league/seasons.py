@@ -6,7 +6,7 @@ from apifairy import arguments, body, response, authenticate, other_responses
 from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
-from flask import Blueprint
+from flask import Blueprint, jsonify
 
 from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.errors import ResourceNotFound
@@ -275,4 +275,39 @@ def get_applications():
         'team_applications': team_applications,
         'free_agent_applications': free_agent_applications
     }
+    return response_json
+
+
+# This is the 'I hate React' section. Fuck you React, fuck you
+@seasons.route('/list', methods=['GET'])
+def get_season_list():
+    """Get a list of season ID's and names"""
+    seasons_db = db.session.query(Season.id, Season.name).order_by(sa.desc(Season.id))
+    season_dicts = [{
+        'id': sid,
+        'name': name
+    } for sid, name in seasons_db]
+    response_json = {
+        'seasons': season_dicts
+    }
+    response_json = jsonify(response_json)
+    response_json.headers.add('Access-Control-Allow-Origin', '*')
+    return response_json
+
+
+@seasons.route('/<int:season_id>/divisions-list', methods=['GET'])
+def get_divisions_in_season_list(season_id):
+    """Get a list of season_division ID's and names for a given season"""
+    season = ensure_exists(Season, id=season_id)
+
+    divisions = [{
+        'id': season_division.id,
+        'name': season_division.division.name
+    } for season_division in season.division_association]
+
+    response_json = {
+        'divisions': divisions
+    }
+    response_json = jsonify(response_json)
+    response_json.headers.add('Access-Control-Allow-Origin', '*')
     return response_json

@@ -17,13 +17,17 @@ from api.srlm.app.api.utils.errors import BadRequest
 from api.srlm.app.api.utils.functions import force_fields, ensure_exists, clean_data, force_unique
 from api.srlm.app.fairy.errors import unauthorized, bad_request, not_found
 from api.srlm.app.fairy.schemas import LinkSuccessSchema, NewMatchSchema, ViewMatchSchema, MatchReviewSchema, \
-    MatchtypeSchema, MatchStatsSchema, NewMatchFlag, LogsUploadSchema, GamemodeSchema, MatchtypeList
+    MatchtypeSchema, MatchStatsSchema, NewMatchFlag, LogsUploadSchema, GamemodeSchema, MatchtypeList, MatchesListSchema, \
+    BulkMatchCreate, BasicSuccessSchema
 from api.srlm.app.models import SeasonDivision, Team, Match, MatchSchedule, MatchReview, MatchData, Matchtype, User, \
-    PlayerMatchData, GameMode, Lobby
+    PlayerMatchData, GameMode, Lobby, MatchResult
 from api.srlm.app.spapi.lobby_manager import generate_lobby, validate_stats
 
 match = Blueprint('match', __name__)
 bp.register_blueprint(match, url_prefix='/match')
+
+from api.srlm.logger import get_logger
+log = get_logger(__name__)
 
 
 @match.route('', methods=['POST'])
@@ -33,9 +37,36 @@ bp.register_blueprint(match, url_prefix='/match')
 @other_responses(unauthorized | bad_request)
 def create_match(data):
     """Create a new match"""
+    match_db = create_new_match(data)
 
-    required_fields = ['season_division_id', 'home_team_id', 'away_team_id']
-    force_fields(data, required_fields)
+    return responses.create_success(f'Match between {match_db.home_team.name} and {match_db.away_team.name} created', 'api.match.get_match', match_id=match_db.id)
+
+
+@match.route('/bulk', methods=['POST'])
+@body(BulkMatchCreate())
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | bad_request)
+def create_bulk_matches(data):
+    """Bulk create matches"""
+    success_count = 0
+    fail_count = 0
+    for match_data in data['matches']:
+        log.info('pre-pass')
+        try:
+            create_new_match(match_data)
+            success_count += 1
+        except Exception as e:
+            log.info(e)
+            fail_count += 1
+            pass
+
+    return responses.request_success(f'Successfully created {success_count} matches with {fail_count} failures')
+
+
+def create_new_match(data):
+    log.info('post-pass')
+    log.info(data)
 
     season_division = ensure_exists(SeasonDivision, id=data['season_division_id'])
     if data['home_team_id'] == data['away_team_id']:
@@ -49,18 +80,15 @@ def create_match(data):
         raise BadRequest(f'Team {away_team.name} not registered to {season_division.get_readable_name()}')
 
     # create match
-    valid_fields = ['season_division_id', 'home_team_id', 'away_team_id', 'round', 'match_week']
-    cleaned_data = clean_data(data, valid_fields)
     match_db = Match()
-    match_db.from_dict(cleaned_data)
+    match_db.from_dict(data)
 
     # create match_schedule entry
     match_db.schedule = MatchSchedule()
 
     db.session.add(match_db)
     db.session.commit()
-
-    return responses.create_success(f'Match between {match_db.home_team.name} and {match_db.away_team.name} created', 'api.match.get_match', match_id=match_db.id)
+    return match_db
 
 
 @match.route('/<int:match_id>', methods=['GET'])
@@ -394,3 +422,40 @@ def get_gamemodes():
         gamemodes.append(gamemode.to_dict())
 
     return {'items': gamemodes}
+
+
+@match.route('', methods=['GET'])
+@response(MatchesListSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized)
+def get_matches():
+    """Get lists of matches
+    Completed matches limited to the 20 most recent
+    """
+
+    matches_pending_review = db.session.query(Match).filter(
+        sa.and_(
+            Match.results == None,  # noqa
+            Match.match_reviews != None  # noqa
+        )
+    )
+
+    matches_upcoming = db.session.query(Match).filter(
+        sa.and_(
+            Match.results == None,  # noqa
+            Match.match_reviews == None  # noqa
+        )
+    )
+
+    completed_matches = db.session.query(Match) \
+        .join(Match.results) \
+        .filter(MatchResult.id.is_not(None)) \
+        .order_by(sa.desc(MatchResult.completed_date)) \
+        .limit(20)
+
+    response_json = {
+        'pending_review': [match_db.to_dict() for match_db in matches_pending_review],
+        'upcoming': [match_db.to_dict() for match_db in matches_upcoming],
+        'completed': [match_db.to_dict() for match_db in completed_matches],
+    }
+    return response_json
