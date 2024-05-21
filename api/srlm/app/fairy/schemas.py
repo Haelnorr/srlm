@@ -1,6 +1,6 @@
 """Provides marshmallow schemas for documentation support"""
 from marshmallow import EXCLUDE, INCLUDE
-from marshmallow.validate import OneOf
+from marshmallow.validate import OneOf, Length
 
 from api.srlm.app import ma
 from api.srlm.app.models import Permission, Match, Team, MatchResult, MatchReview, PlayerMatchData, MatchData, Discord, \
@@ -351,6 +351,7 @@ class PlayerMatchDataSchema(ma.SQLAlchemySchema):
         team = ma.URL()
 
     id = ma.auto_field(required=True)
+    match_id = ma.auto_field(dump_only=True)
     player = ma.Str(dump_only=True)
     team = ma.Str(dump_only=True)
     goals = ma.auto_field()
@@ -392,7 +393,7 @@ class MatchDataSchema(ma.SQLAlchemySchema):
     winner = ma.auto_field()
     current_period = ma.auto_field()
     periods_enabled = ma.auto_field()
-    custom_mercy_rule = ma.auto_field()
+    custom_mercy_rule = ma.auto_field(dump_only=True)
     end_reason = ma.auto_field()
     source = ma.auto_field(dump_only=True)
 
@@ -409,7 +410,7 @@ class MatchFlag(ma.SQLAlchemySchema):
     raised_by = ma.auto_field(dump_only=True)
     comments = ma.auto_field()
     resolved = ma.auto_field()
-    resolved_by = ma.auto_field(dump_only=True)
+    resolved_by = ma.Str(dump_only=True)
     resolved_on = ma.auto_field(dump_only=True)
 
 
@@ -471,6 +472,14 @@ class MatchReviewSchema(ma.Schema):
     match_details = ma.Nested(SimpleMatchSchema(), dump_only=True)
     periods = ma.List(ma.Nested(MatchReviewPeriods()))
     flags = ma.List(ma.Nested(MatchFlag()), required=True)
+
+
+class MatchPeriodReviewSchema(ma.Schema):
+    """Defines structure of MatchReview requests"""
+    class MatchReviewPeriods(MatchDataSchema):
+        player_data = ma.List(ma.Nested(PlayerMatchDataSchema()))
+
+    periods = ma.List(ma.Nested(MatchReviewPeriods()), required=True)
 
 
 class GenerateLobbySchema(ma.Schema):
@@ -1307,3 +1316,13 @@ class MatchesListSchema(ma.Schema):
 
 class BulkMatchCreate(ma.Schema):
     matches = ma.List(ma.Nested(NewMatchSchema()))
+
+
+class EditMatchSchema(ma.Schema):
+    round = ma.Int()
+    match_week = ma.Int()
+    cancelled = ma.Str(validate=Length(max=32))
+
+
+class MatchFlagResolveAll(ma.Schema):
+    comments = ma.Str(validate=Length(max=256))

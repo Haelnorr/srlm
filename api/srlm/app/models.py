@@ -1435,6 +1435,21 @@ class Match(db.Model, LeagueManagerTable):
         }
         return data
 
+    def delete(self):
+        if self.results:
+            self.results.delete()
+        if self.schedule:
+            self.schedule.delete()
+        for availability in self.team_availability:
+            availability.delete()
+        for lobby in self.lobbies:
+            lobby.delete()
+        for review in self.match_reviews:
+            review.delete()
+
+        db.session.query(Match).filter(Match.id == self.id).delete()
+        db.session.commit()
+
 
 # result of a match between two registered league teams, one-to-one relationship with match
 class MatchResult(db.Model, LeagueManagerTable):
@@ -1476,6 +1491,10 @@ class MatchResult(db.Model, LeagueManagerTable):
             }
         }
         return data
+
+    def delete(self):
+        db.session.query(MatchResult).filter(MatchResult.id == self.id).delete()
+        db.session.commit()
 
 
 # presets for creating lobbies using different match types
@@ -1527,6 +1546,13 @@ class Lobby(db.Model, LeagueManagerTable):
 
     match = db.relationship('Match', back_populates='lobbies')
     match_data = db.relationship('MatchData', back_populates='lobby', lazy='dynamic')
+
+    def delete(self):
+        for match in self.match_data:
+            match.delete()
+
+        db.session.query(Lobby).filter(Lobby.id == self.id).delete()
+        db.session.commit()
 
 
 # stores data on in game matches (periods of a match are separate entries)
@@ -1582,6 +1608,13 @@ class MatchData(db.Model, LeagueManagerTable):
         }
         return data
 
+    def delete(self):
+        for player_data in self.player_data_assoc:
+            player_data.delete()
+
+        db.session.query(MatchData).filter(MatchData.id == self.id).delete()
+        db.session.commit()
+
 
 # stores match data of particular players (periods of a match are separate entries)
 class PlayerMatchData(db.Model, LeagueManagerTable):
@@ -1622,7 +1655,8 @@ class PlayerMatchData(db.Model, LeagueManagerTable):
 
     def to_dict(self):
         data = {
-            'id': self.match_id,
+            'id': self.id,
+            'match_id': self.match_id,
             'player': self.player.player_name,
             'team': self.team.name,
             'goals': self.goals,
@@ -1647,6 +1681,10 @@ class PlayerMatchData(db.Model, LeagueManagerTable):
             }
         }
         return data
+
+    def delete(self):
+        db.session.query(PlayerMatchData).filter(PlayerMatchData.id == self.id).delete()
+        db.session.commit()
 
 
 class Final(db.Model, LeagueManagerTable):
@@ -1721,6 +1759,10 @@ class MatchSchedule(db.Model, LeagueManagerTable):
 
     match = db.relationship('Match', back_populates='schedule')
 
+    def delete(self):
+        db.session.query(MatchSchedule).filter(MatchSchedule.id == self.id).delete()
+        db.session.commit()
+
 
 class MatchAvailability(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
@@ -1732,6 +1774,10 @@ class MatchAvailability(db.Model, LeagueManagerTable):
 
     match = db.relationship('Match', back_populates='team_availability')
     team = db.relationship('Team', back_populates='match_availability')
+
+    def delete(self):
+        db.session.query(MatchAvailability).filter(MatchAvailability.id == self.id).delete()
+        db.session.commit()
 
 
 class ServerRegion(db.Model, LeagueManagerTable):
@@ -1786,7 +1832,7 @@ class MatchReview(db.Model, LeagueManagerTable):
     comments = db.Column(db.String(256))
     resolved = db.Column(db.Boolean, nullable=False, default=False)
     resolved_by = db.Column(db.Integer, db.ForeignKey('league_manager.user.id'))
-    resolved_on = db.Column(db.Integer)
+    resolved_on = db.Column(db.DateTime)
 
     reviewer = db.relationship('User', backref='match_review')
     match = db.relationship('Match', back_populates='match_reviews')
@@ -1804,10 +1850,22 @@ class MatchReview(db.Model, LeagueManagerTable):
             'raised_by': self.raised_by,
             'comments': self.comments,
             'resolved': self.resolved,
-            'resolved_by': self.resolved_by,
+            'resolved_by': self.reviewer.username if self.reviewer else None,
             'resolved_on': self.resolved_on
         }
         return data
+
+    def resolve(self, comments, user):
+        if comments:
+            self.comments = comments
+        self.resolved_by = user.id
+        self.resolved_on = datetime.now(timezone.utc)
+        self.resolved = True
+        db.session.commit()
+
+    def delete(self):
+        db.session.query(MatchReview).filter(MatchReview.id == self.id).delete()
+        db.session.commit()
 
 
 class SeasonRegistration(db.Model, LeagueManagerTable):

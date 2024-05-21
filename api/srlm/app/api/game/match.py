@@ -12,13 +12,13 @@ from api.srlm.app.task_manager.tasks import cancel_task
 from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
-from api.srlm.app.api.auth.utils import get_bearer_token, app_auth, dual_auth
+from api.srlm.app.api.auth.utils import get_bearer_token, app_auth, dual_auth, user_auth
 from api.srlm.app.api.utils.errors import BadRequest
 from api.srlm.app.api.utils.functions import force_fields, ensure_exists, clean_data, force_unique
 from api.srlm.app.fairy.errors import unauthorized, bad_request, not_found
 from api.srlm.app.fairy.schemas import LinkSuccessSchema, NewMatchSchema, ViewMatchSchema, MatchReviewSchema, \
     MatchtypeSchema, MatchStatsSchema, NewMatchFlag, LogsUploadSchema, GamemodeSchema, MatchtypeList, MatchesListSchema, \
-    BulkMatchCreate, BasicSuccessSchema
+    BulkMatchCreate, BasicSuccessSchema, EditMatchSchema, MatchFlag, MatchFlagResolveAll, MatchPeriodReviewSchema
 from api.srlm.app.models import SeasonDivision, Team, Match, MatchSchedule, MatchReview, MatchData, Matchtype, User, \
     PlayerMatchData, GameMode, Lobby, MatchResult
 from api.srlm.app.spapi.lobby_manager import generate_lobby, validate_stats
@@ -145,7 +145,7 @@ def get_match_review(match_id):
 @response(LinkSuccessSchema())
 @authenticate(dual_auth)
 @other_responses(unauthorized | bad_request | not_found)
-def update_match_review(match_id):
+def update_match_review(data, match_id):
     """Updates a match review. Requires user token"""
 
     match_db = ensure_exists(Match, id=match_id)
@@ -154,8 +154,6 @@ def update_match_review(match_id):
 
     user_token = get_bearer_token(request.headers)['user']
     user = User.check_token(user_token)
-
-    data = request.get_json()
 
     if 'flags' not in data or type(data['flags']) is not list:
         raise BadRequest('Flags field missing or invalid format. Must be a list/array')
@@ -459,3 +457,135 @@ def get_matches():
         'completed': [match_db.to_dict() for match_db in completed_matches],
     }
     return response_json
+
+
+@match.route('/<int:match_id>', methods=['PUT'])
+@body(EditMatchSchema())
+@response(BasicSuccessSchema())
+def update_match(data, match_id):
+    """Update a selected match"""
+    match_db = ensure_exists(Match, id=match_id)
+    new_round = data.get('round', None)
+    new_match_week = data.get('match_week', None)
+    cancelled_reason = data.get('cancelled', None)
+    if new_round:
+        match_db.round = new_round
+    if new_match_week:
+        match_db.match_week = new_match_week
+    if cancelled_reason:
+        match_db.cancelled = cancelled_reason
+    db.session.commit()
+    return responses.request_success(f'Updated match {match_db}')
+
+
+@match.route('/<int:match_id>', methods=['DELETE'])
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def delete_match(match_id):
+    """Delete a selected match"""
+    match_db = ensure_exists(Match, id=match_id)
+    match_db.delete()
+    return responses.request_success(f'Deleted match {match_db}')
+
+
+@match.route('/flag/<int:flag_id>', methods=['PUT'])
+@body(MatchFlag())
+@response(BasicSuccessSchema())
+@authenticate(dual_auth)
+@other_responses(unauthorized | not_found | bad_request)
+def resolve_flag(data, flag_id):
+    """Resolve a specific match flag
+    Requires user token"""
+    flag = ensure_exists(MatchReview, id=flag_id)
+    user = User.check_token(get_bearer_token(request.headers)['user'])
+    comments = data.get('comments', None)
+    flag.resolve(comments, user)
+    return responses.request_success(f'Resolved flag {flag}')
+
+
+@match.route('/flag/<int:flag_id>', methods=['DELETE'])
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def delete_flag(flag_id):
+    """Delete a selected match flag"""
+    flag = ensure_exists(MatchReview, id=flag_id)
+    flag.delete()
+    return responses.request_success(f'Deleted match {flag}')
+
+
+@match.route('/<int:match_id>/flags', methods=['PUT'])
+@body(MatchFlagResolveAll())
+@response(BasicSuccessSchema())
+@authenticate(dual_auth)
+@other_responses(unauthorized | not_found | bad_request)
+def resolve_all_flags(data, match_id):
+    """Resolve all match flags for a given match
+    Requires user token"""
+    match_db = ensure_exists(Match, id=match_id)
+    user = User.check_token(get_bearer_token(request.headers)['user'])
+    comments = data.get('comments', None)
+    for flag in match_db.match_reviews.filter(MatchReview.resolved.is_(False)):
+        flag.resolve(comments, user)
+    return responses.request_success(f'Resolved all outstanding flags for match {match_db}')
+
+
+@match.route('/<int:match_id>/flags', methods=['DELETE'])
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def delete_all_flags(match_id):
+    """Delete all unresolved match flags for a given match
+    Requires user token"""
+    match_db = ensure_exists(Match, id=match_id)
+    for flag in match_db.match_reviews.filter(MatchReview.resolved.is_(False)):
+        flag.delete()
+    return responses.request_success(f'Deleted all unresolved flags for match {match_db}')
+
+
+@match.route('/period/<int:period_id>', methods=['DELETE'])
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def delete_match_data(period_id):
+    """Delete all data for a given period"""
+    period = ensure_exists(MatchData, id=period_id)
+    period.delete()
+    return responses.request_success(f'Deleted period {period}')
+
+
+@match.route('/<int:match_id>/periods', methods=['PUT'])
+@body(MatchPeriodReviewSchema())
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | bad_request | not_found)
+def update_match_periods(data, match_id):
+    """Updates match data for a specified match."""
+
+    match_db = ensure_exists(Match, id=match_id)
+    if match_db.results:
+        raise BadRequest('Match results already confirmed. Unable to submit review')
+
+    if 'periods' in data and type(data['periods']) is not list:
+        raise BadRequest('Periods field in invalid format. Must be a list/array')
+
+    if 'periods' in data:
+        for period_data in data['periods']:
+            if 'id' not in period_data:
+                raise BadRequest('One or more period data entries are missing ID tags')
+            period = ensure_exists(MatchData, id=period_data['id'])
+            valid_fields = ['home_score', 'away_score', 'winner', 'current_period', 'periods_enabled',
+                            'end_reason', 'accepted']
+            period.from_dict(clean_data(period_data, valid_fields))
+            if 'player_data' in period_data:
+                for player_data in period_data['player_data']:
+                    if 'id' not in player_data:
+                        raise BadRequest('One or more player data entries are missing ID tags')
+                    player_match_data = ensure_exists(PlayerMatchData, id=player_data['id'])
+                    player_match_data.from_dict(player_data)
+
+    db.session.commit()
+
+    return responses.request_success(f'Updated match data for {match_db.id}')
+

@@ -16,6 +16,7 @@ services:
       - db
     volumes:
       - ./api:/api-docker/api
+      - ./migrations/versions:/api-docker/migrations/versions
 
   redis:
     image: redis:latest
