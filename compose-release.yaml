@@ -10,11 +10,12 @@ services:
     env_file:
       - .envfiles/.prod-env
     environment:
-      - FLASK_APP=api\srlm\run.py
+      - FLASK_APP=api/srlm/run.py
     depends_on:
       - redis
     volumes:
       - ./api:/api-docker/api
+      - ./migrations/versions:/api-docker/migrations/versions
 
   redis:
     image: redis:latest

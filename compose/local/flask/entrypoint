@@ -7,7 +7,7 @@ set -o pipefail
 # exits if any of your variables is not set
 set -o nounset
 
-mysql_ready() {
+postgresql_ready() {
 python << END
 import sys
 
@@ -16,20 +16,34 @@ import psycopg2
 import os
 
 try:
-    psycopg2.connect(
-        dbname='league_manager_api',
-        user=os.getenv('POSTGRES_USER'),
-        password=os.getenv('POSTGRES_PASS'),
-        host=os.getenv('POSTGRES_HOST'),
-        port=os.getenv('POSTGRES_PORT')
-    )
-except psycopg2.OperationalError:
+    endpoint_id = os.getenv('POSTGRES_ENDPOINT')
+    if endpoint_id:
+          psycopg2.connect(
+          dbname='league_manager_api',
+          user=os.getenv('POSTGRES_USER'),
+          password=os.getenv('POSTGRES_PASS'),
+          host=os.getenv('POSTGRES_HOST'),
+          port=os.getenv('POSTGRES_PORT'),
+          sslmode=os.getenv('POSTGRES_SSL_MODE'),
+          options=f'endpoint={endpoint_id}'
+      )
+    else:
+      psycopg2.connect(
+          dbname='league_manager_api',
+          user=os.getenv('POSTGRES_USER'),
+          password=os.getenv('POSTGRES_PASS'),
+          host=os.getenv('POSTGRES_HOST'),
+          port=os.getenv('POSTGRES_PORT'),
+          sslmode=os.getenv('POSTGRES_SSL_MODE')
+      )
+except psycopg2.OperationalError as e:
+    print(e)
     sys.exit(-1)
 sys.exit(0)
 
 END
 }
-until mysql_ready; do
+until postgresql_ready; do
   >&2 echo 'Waiting for PostgreSQL Database to become available...'
   sleep 1
 done

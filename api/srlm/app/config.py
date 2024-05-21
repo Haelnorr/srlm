@@ -13,11 +13,14 @@ postgres_pass = os.getenv('POSTGRES_PASS')
 postgres_host = os.getenv('POSTGRES_HOST')
 postgres_port = os.getenv('POSTGRES_PORT')
 postgres_ssl_mode = os.getenv('POSTGRES_SSL_MODE')
+postgres_endpoint_id = os.getenv('POSTGRES_ENDPOINT')
 
 if postgres_port:
     postgres_host = f'{postgres_host}:{postgres_port}'
 
 base_db_url = f"postgresql://{postgres_user}:{postgres_pass}@{postgres_host}/(database)?sslmode={postgres_ssl_mode}"
+if postgres_endpoint_id:
+    base_db_url = base_db_url + f'&options=endpoint%3D{postgres_endpoint_id}'
 league_manager_db_uri = base_db_url.replace('(database)', 'league_manager_api')
 
 redis_host = os.getenv('REDIS_HOST')
