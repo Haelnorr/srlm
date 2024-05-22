@@ -53,7 +53,7 @@ def get_players(pagination):
     query = sa.select(Player)
 
     if search:
-        query = query.filter(Player.player_name.like(f"%{search}%"))
+        query = query.filter(Player.player_name.ilike(f"%{search}%"))
 
     return Player.to_collection_dict(query, page, per_page, 'api.players.get_players')
 
