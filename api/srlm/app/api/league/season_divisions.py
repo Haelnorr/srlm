@@ -252,6 +252,4 @@ def get_divisions_in_season_list(season_division_id):
     response_json = {
         'teams': teams
     }
-    response_json = jsonify(response_json)
-    response_json.headers.add('Access-Control-Allow-Origin', '*')
     return response_json

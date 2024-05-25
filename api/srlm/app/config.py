@@ -62,3 +62,4 @@ class Config:
     RATELIMIT_STRATEGY = 'fixed-window'
     RATELIMIT_HEADERS_ENABLED = True
     SERVER_NAME = os.getenv('SRLM_SERVER_NAME') or None
+    PREFERRED_URL_SCHEME = os.getenv('SRLM_PREFERRED_URL_SCHEME') or 'http'

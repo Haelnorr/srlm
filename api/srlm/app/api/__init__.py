@@ -1,19 +1,10 @@
 """Provides all the routes and helper functions for the main API"""
-from flask import Blueprint, request, Response
+from flask import Blueprint, request
 from api.srlm.logger import get_logger
 
 log = get_logger(__name__)
 
 bp = Blueprint('api', __name__)
-
-
-@bp.before_request
-def handle_preflight():
-    if request.method == 'OPTIONS':
-        res = Response()
-        res.headers['Access-Control-Allow-Origin'] = '*'
-        # res.headers['Access-Control-Allow-Headers'] = 'Authorization'
-        return res
 
 
 @bp.after_request

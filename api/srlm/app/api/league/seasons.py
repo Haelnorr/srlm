@@ -290,8 +290,6 @@ def get_season_list():
     response_json = {
         'seasons': season_dicts
     }
-    response_json = jsonify(response_json)
-    response_json.headers.add('Access-Control-Allow-Origin', '*')
     return response_json
 
 
@@ -308,6 +306,4 @@ def get_divisions_in_season_list(season_id):
     response_json = {
         'divisions': divisions
     }
-    response_json = jsonify(response_json)
-    response_json.headers.add('Access-Control-Allow-Origin', '*')
     return response_json
