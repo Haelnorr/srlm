@@ -59,6 +59,7 @@ from flask_migrate import Migrate
 from flask_mail import Mail
 from apifairy import APIFairy
 from flask_caching import Cache
+from flask_cors import CORS
 
 from api.srlm.app.celery import make_celery
 from api.srlm.logger import get_logger
@@ -74,6 +75,7 @@ mail = Mail()
 api_fairy = APIFairy()
 ma = Marshmallow()
 cache = Cache()
+cors = CORS()
 
 
 limiter = Limiter(get_remote_address)
@@ -100,6 +102,7 @@ def create_app(config_class=Config):
     ma.init_app(app)
     cache.init_app(app)
     limiter.init_app(app)
+    cors.init_app(app)
 
     celery_app = make_celery(app)
     celery_app.set_default()

@@ -31,7 +31,7 @@ def get_mail_handler():
         secure = ()
     mail_handler = SMTPHandler(
         mailhost=(mail_config.mail_server, mail_config.mail_port),
-        fromaddr='no-reply@' + mail_config.mail_server,
+        fromaddr=mail_config.from_address,
         toaddrs=mail_config.admins, subject='SRLM - Server Error',
         credentials=auth, secure=secure)
     mail_handler.setLevel(logging.ERROR)

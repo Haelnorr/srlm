@@ -37,6 +37,9 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY')
     SQLALCHEMY_DATABASE_URI = league_manager_db_uri
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 0
+    }
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'localhost')
     MAIL_PORT = int(os.getenv('MAIL_PORT', 25))
     MAIL_USE_TLS = os.getenv('MAIL_USE_TLS') is not None
@@ -59,3 +62,4 @@ class Config:
     RATELIMIT_STRATEGY = 'fixed-window'
     RATELIMIT_HEADERS_ENABLED = True
     SERVER_NAME = os.getenv('SRLM_SERVER_NAME') or None
+    PREFERRED_URL_SCHEME = os.getenv('SRLM_PREFERRED_URL_SCHEME') or 'http'
