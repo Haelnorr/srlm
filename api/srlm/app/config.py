@@ -38,7 +38,8 @@ class Config:
     SQLALCHEMY_DATABASE_URI = league_manager_db_uri
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 0
+        'pool_size': 0,
+        'pool_pre_ping': True
     }
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'localhost')
     MAIL_PORT = int(os.getenv('MAIL_PORT', 25))
