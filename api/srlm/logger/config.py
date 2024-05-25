@@ -30,6 +30,7 @@ class MailConfig:
         self.mail_username = os.getenv('MAIL_USERNAME')
         self.mail_password = os.getenv('MAIL_PASSWORD')
         self.admins = mailing_list
+        self.from_address = os.getenv('OUTGOING_MAIL_ADDRESS')
 
 
 def get_level(level):
