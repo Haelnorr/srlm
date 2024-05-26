@@ -1,5 +1,6 @@
-### Current Version - 0.8.16
+### Current Version - 0.8.17
 History:
+ - 0.8.17 - Lots of minor additions, fixes and tweaks
  - 0.8.16 - Added applying to seasons
  - 0.8.15 - Fully switched to using PostgreSQL. Removed MySQL support
  - 0.8.14 - Added support for PostgreSQL (requires docker rebuild)
