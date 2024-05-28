@@ -711,9 +711,22 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             .first()
 
         seasons = db.session.query(Season).filter(Season.can_register)
+        seasons_dicts = []
 
         invites = self.invites.filter_by(status='Pending')
         applications = self.applications.filter(SeasonRegistration.status != 'Withdrawn').order_by(sa.desc(SeasonRegistration.id))
+        applications_dicts = []
+        applied_season_ids = []
+
+        for app in applications:
+            applications_dicts.append(app.to_dict())
+            if app.status in ['Accepted', 'Completed', 'Pending']:
+                applied_season_ids.append(app.season.id)
+
+        for season in seasons:
+            if season.id not in applied_season_ids:
+                seasons_dicts.append(season.to_dict())
+
 
         return {
             'id': self.id,
@@ -725,8 +738,8 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             'owner': owner.username if owner else None,
             'players': players,
             'invites': [inv.to_dict() for inv in invites],
-            'applications': [app.to_dict() for app in applications],
-            'open_seasons': [season.to_dict() for season in seasons],
+            'applications': applications_dicts,
+            'open_seasons': seasons_dicts,
             'upcoming_matches': self.get_upcoming_matches(),
             'recent_matches': self.get_completed_matches(limit=10)
         }
@@ -978,15 +991,6 @@ class FreeAgent(db.Model, LeagueManagerTable):
             }
         }
         return response
-
-
-"""
-class PlayerTeamRegistrations(PlayerTeam):
-    pass
-
-
-class PlayerSeasonRegistrations(FreeAgent):
-    pass"""
 
 
 class League(PaginatedAPIMixin, db.Model, LeagueManagerTable):

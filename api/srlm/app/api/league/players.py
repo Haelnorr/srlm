@@ -405,10 +405,30 @@ def get_free_agent_info(filters):
 
     query = query.filter(SeasonRegistration.status.in_(status))
 
-    applications = [app.to_dict() for app in query]
+    applications = []
+    applied_season_ids = []
+    for app in query:
+        applications.append(app.to_dict())
+        if app.status != 'Rejected':
+            applied_season_ids.append(app.season.id)
+    now = datetime.now(timezone.utc)
+    query = db.session.query(Season).filter(
+        sa.or_(
+            Season.can_register.is_(True),
+            sa.and_(
+                Season.start_date < now,
+                sa.or_(
+                    Season.end_date > now,
+                    Season.end_date.is_(None)
+                )
+            )
+        )
+    )
+    open_seasons = []
 
-    query = db.session.query(Season).filter(Season.can_register.is_(True))
-    open_seasons = [season.to_dict() for season in query]
+    for season in query:
+        if season.id not in applied_season_ids:
+            open_seasons.append(season.to_dict())
 
     response_json = {
         'open_seasons': open_seasons,
