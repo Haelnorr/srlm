@@ -34,6 +34,9 @@ class PaginationArgs(ma.Schema):
 
 class PlayerFilters(PaginationArgs):
     has_team = ma.Bool(missing=None)
+    order = ma.Str(missing="desc", validate=OneOf(['asc', 'desc']))
+    order_by = ma.Str(missing="id", validate=OneOf(
+        ['id', 'name', 'user', 'slap_id', 'rookie', 'first_season', 'current_team', 'awards']))
 
 
 class TeamFilters(PaginationArgs):
