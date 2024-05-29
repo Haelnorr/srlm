@@ -485,6 +485,10 @@ class SeasonDivisionTeam(db.Model, LeagueManagerTable):
     team = db.relationship('Team', back_populates='season_division_assoc')
     season_division = db.relationship('SeasonDivision', back_populates='team_assoc')
 
+    def delete(self):
+        db.session.query(SeasonDivisionTeam).filter(SeasonDivisionTeam.id == self.id).delete()
+        db.session.commit()
+
 
 class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
@@ -992,6 +996,10 @@ class FreeAgent(db.Model, LeagueManagerTable):
         }
         return response
 
+    def delete(self):
+        db.session.query(FreeAgent).filter(FreeAgent.id == self.id).delete()
+        db.session.commit()
+
 
 class League(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
@@ -1194,6 +1202,23 @@ class SeasonDivision(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             }
         }
         return data
+
+    def delete(self):
+        for team in self.team_assoc:
+            team.delete()
+        for fa in self.free_agent_association:
+            fa.delete()
+        for match in self.matches:
+            match.delete()
+        for final in self.finals:
+            final.delete()
+        for award in self.team_awards:
+            award.delete()
+        for award in self.player_awards:
+            award.delete()
+        # deal with rookies somehow  # TODO
+        db.session.query(SeasonDivision).filter(SeasonDivision.id == self.id).delete()
+        db.session.commit()
 
     @staticmethod
     def get_teams_dict(season_division_id):
@@ -1707,6 +1732,14 @@ class Final(db.Model, LeagueManagerTable):
     matches = db.relationship('Match', back_populates='final', lazy=True)
     results = db.relationship('FinalResults', back_populates='final', lazy=True, uselist=False)
 
+    def delete(self):
+        for match in self.matches:
+            match.delete()
+        db.session.query(FinalResults).filter(FinalResults.id == self.results.id)
+        db.session.commit()
+        db.session.query(Final).filter(Final.id == self.id).delete()
+        db.session.commit()
+
 
 class FinalResults(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
@@ -1742,6 +1775,10 @@ class TeamAward(db.Model, LeagueManagerTable):
     award = db.relationship('Award', back_populates='teams_association')
     season_division = db.relationship('SeasonDivision', back_populates='team_awards')
 
+    def delete(self):
+        db.session.query(TeamAward).filter(TeamAward.id == self.id).delete()
+        db.session.commit()
+
 
 class PlayerAward(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
@@ -1752,6 +1789,10 @@ class PlayerAward(db.Model, LeagueManagerTable):
     player = db.relationship('Player', back_populates='awards_association')
     award = db.relationship('Award', back_populates='players_association')
     season_division = db.relationship('SeasonDivision', back_populates='player_awards')
+
+    def delete(self):
+        db.session.query(PlayerAward).filter(PlayerAward.id == self.id).delete()
+        db.session.commit()
 
 
 class MatchSchedule(db.Model, LeagueManagerTable):

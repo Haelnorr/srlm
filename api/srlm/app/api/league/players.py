@@ -240,7 +240,7 @@ def get_player_stats(search_filters, player_id):
 
 @players.route('/<int:player_id>/teams', methods=['POST'])
 @body(PlayerTeams())
-@response(LinkSuccessSchema())
+@response(BasicSuccessSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def register_player_team(data, player_id):
@@ -263,7 +263,7 @@ def register_player_team(data, player_id):
     # register the player to the team
     player.join_team(team)
 
-    return responses.request_success(f'Player {player.player_name} registered to team {team.name}', 'api.players.get_team', team_id=team.id)
+    return responses.request_success(f'Player {player.player_name} registered to team {team.name}')
 
 
 @players.route('/<int:player_id>/teams', methods=['DELETE'])
