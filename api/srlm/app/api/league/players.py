@@ -19,7 +19,7 @@ from api.srlm.app.fairy.schemas import PlayerSchema, PlayerCollection, LinkSucce
     PlayerFilters, PlayerInvitesSchema, PlayerInviteAction, BasicSuccessSchema, FreeAgentApplication, \
     FreeAgentApplicationSchema, FreeAgentFilter
 from api.srlm.app.models import Player, SeasonDivision, Team, PlayerTeam, FreeAgent, PlayerMatchData, Match, Lobby, \
-    MatchData, Season, Division, UserPermissions, TeamInvites, SeasonRegistration
+    MatchData, Season, Division, UserPermissions, TeamInvites, SeasonRegistration, PlayerAward, User
 from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
@@ -45,15 +45,58 @@ def get_player(player_id):
 @response(PlayerCollection())
 @authenticate(app_auth)
 @other_responses(unauthorized)
-def get_players(pagination):
+def get_players(filters):
     """Get the collection of all players"""
-    page = pagination['page']
-    per_page = pagination['per_page']
-    search = pagination['search']
-    query = sa.select(Player)
+    page = filters['page']
+    per_page = filters['per_page']
+    search = filters['search']
+    order = filters['order']
+    order_by = filters['order_by']
+    log.info(page)
+    log.info(per_page)
+    log.info(order)
+    log.info(order_by)
 
-    if search:
-        query = query.filter(Player.player_name.ilike(f"%{search}%"))
+    if order_by == 'name':
+        order_by = 'player_name'
+
+    if order_by == 'user':
+        query = db.session.query(Player) \
+            .outerjoin(Player.user) \
+            .order_by(getattr(sa, order)(User.username))
+    elif order_by == 'current_team':
+        current_team_subquery = db.session.query(Player.id.label('player_id'),
+                                                 func.max(PlayerTeam.team_id).label('team_id')) \
+            .outerjoin(Player.team_association) \
+            .filter(PlayerTeam.end_date.is_(None)) \
+            .group_by(Player.id) \
+            .subquery()
+
+        query = db.session.query(Player, Team) \
+            .outerjoin(current_team_subquery, Player.id == current_team_subquery.c.player_id) \
+            .outerjoin(Team, Team.id == current_team_subquery.c.team_id)
+        if order == 'asc':
+            query = query.order_by(sa.nullslast(Team.name.asc()))
+        else:
+            query = query.order_by(sa.nullsfirst(Team.name.desc()))
+    elif order_by == 'awards':
+        query = db.session.query(Player, sa.func.count(PlayerAward.id).label('count')) \
+            .outerjoin(Player.awards_association) \
+            .group_by(Player) \
+            .order_by(getattr(sa, order)('count'))
+    elif order_by == 'first_season':
+        query = db.session.query(Player) \
+            .outerjoin(Player.first_season) \
+            .outerjoin(SeasonDivision.season) \
+            .outerjoin(SeasonDivision.division) \
+            .order_by(getattr(Season.name, order)(), getattr(Division.name, order)())
+    else:
+        query = sa.select(Player)
+
+        if search:
+            query = query.filter(Player.player_name.ilike(f"%{search}%"))
+
+        query = query.order_by(getattr(sa, order)(getattr(Player, order_by)))
 
     return Player.to_collection_dict(query, page, per_page, 'api.players.get_players')
 
