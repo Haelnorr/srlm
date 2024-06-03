@@ -319,6 +319,8 @@ class SimpleMatchSchema(ma.SQLAlchemySchema):
         away_team = ma.URL()
 
     id = ma.auto_field()
+    season = ma.Str()
+    division = ma.Str()
     home_team = ma.Nested(SimpleTeamSchema())
     away_team = ma.Nested(SimpleTeamSchema())
     result = ma.Str()
@@ -740,6 +742,7 @@ class ViewMatchSchema(ma.SQLAlchemySchema):
     scheduled_time = ma.DateTime()
     current_lobby = ma.Nested(CurrentLobby())
     results = ma.Nested(MatchResultSchema())
+    has_data = ma.Bool()
     has_review = ma.Bool()
     _links = ma.Nested(MatchLinks())
 

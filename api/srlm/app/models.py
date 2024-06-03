@@ -1409,6 +1409,12 @@ class Match(db.Model, LeagueManagerTable):
     lobbies = db.relationship('Lobby', back_populates='match', lazy='dynamic')
     match_reviews = db.relationship('MatchReview', back_populates='match', lazy='dynamic')
 
+    def has_match_data(self):
+        match_data = db.session.query(MatchData) \
+            .join(MatchData.lobby) \
+            .filter(Lobby.match.has(id=self.id))
+        return bool(match_data.count())
+
     def from_dict(self, data):
         for field in ['season_division_id', 'home_team_id', 'away_team_id', 'round', 'match_week']:
             if field in data:
@@ -1433,6 +1439,7 @@ class Match(db.Model, LeagueManagerTable):
             'current_lobby': self.current_lobby(),
             'results': self.results.to_dict() if self.results else None,
             'has_review': bool(self.match_reviews.filter_by(resolved=False).count()),
+            'has_data': self.has_match_data(),
             '_links': {
                 'self': url_for('api.match.get_match', match_id=self.id),
                 'season_division': url_for('api.season_division.get_season_division',
@@ -1448,6 +1455,8 @@ class Match(db.Model, LeagueManagerTable):
     def to_simple_dict(self):
         data = {
             'id': self.id,
+            'season': self.season_division.season.name,
+            'division': self.season_division.division.name,
             'home_team': self.home_team.to_dict(),
             'away_team': self.away_team.to_dict(),
             'result': self.results.get_result() if self.results else None,
