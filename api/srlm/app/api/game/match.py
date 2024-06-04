@@ -438,18 +438,25 @@ def get_matches():
         )
     )
 
-    matches_upcoming = db.session.query(Match).filter(
-        sa.and_(
-            Match.results == None,  # noqa
-            Match.match_reviews == None  # noqa
+    matches_upcoming = db.session.query(Match) \
+        .outerjoin(Match.results) \
+        .outerjoin(Match.match_reviews) \
+        .filter(
+            sa.and_(
+                MatchResult.id.is_(None),
+                MatchReview.id.is_(None),
+                Match.cancelled.is_(None)
+            )
         )
-    )
 
     completed_matches = db.session.query(Match) \
-        .join(Match.results) \
+        .outerjoin(Match.results) \
         .filter(MatchResult.id.is_not(None)) \
         .order_by(sa.desc(MatchResult.completed_date)) \
         .limit(20)
+
+    cancelled_matches = db.session.query(Match) \
+        .filter(Match.cancelled.is_not(None))
 
     response_json = {
         'pending_review': [match_db.to_dict() for match_db in matches_pending_review],
