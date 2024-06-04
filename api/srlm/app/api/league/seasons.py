@@ -250,6 +250,53 @@ def get_applications():
     """Get a list of applications to register for a season"""
     applications_query = db.session.query(SeasonRegistration) \
         .filter(SeasonRegistration.status.in_(['Pending', 'Accepted']))
+    completed_query = db.session.query(SeasonRegistration).filter(SeasonRegistration.status == 'Completed').limit(20)
+    applications = applications_query.all() + completed_query.all()
+
+    seasons_list = {}
+
+    team_applications = []
+    free_agent_applications = []
+    recently_accepted = []
+
+    for application in applications:
+        app_dict = application.to_dict()
+        if application.season_id not in seasons_list:
+            seasons_list[application.season_id] = []
+            for div in application.season.divisions:
+                seasons_list[application.season_id].append({
+                    'id': div.id,
+                    'name': div.name
+                })
+        app_dict['divisions'] = seasons_list[application.season_id]
+        if application.status == 'Completed':
+            recently_accepted.append(app_dict)
+        else:
+            if application.type == 'team':
+                team_applications.append(app_dict)
+            else:
+                free_agent_applications.append(app_dict)
+
+    response_json = {
+        'team_applications': team_applications,
+        'free_agent_applications': free_agent_applications,
+        'recently_accepted': recently_accepted
+    }
+    return response_json
+
+
+@seasons.route('/applications/<int:season_id>', methods=['GET'])
+@response(SeasonApplicationsList())
+@authenticate(app_auth)
+@other_responses(unauthorized)
+def get_applications_for_season(season_id):
+    """Get a list of applications to register for a specific season"""
+
+    applications_query = db.session.query(SeasonRegistration) \
+        .filter(SeasonRegistration.status.in_(['Pending', 'Accepted', 'Completed'])) \
+        .filter(SeasonRegistration.season_id == season_id)
+
+    log.info(applications_query)
 
     seasons_list = {}
 

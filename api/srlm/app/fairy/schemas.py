@@ -1312,6 +1312,7 @@ class SeasonApplicationsList(ma.Schema):
         divisions = ma.List(ma.Nested(SeasonApplicationDivision()))
     team_applications = ma.List(ma.Nested(SeasonApplicationList()))
     free_agent_applications = ma.List(ma.Nested(SeasonApplicationList()))
+    recently_accepted = ma.List(ma.Nested(SeasonApplicationList()))
 
 
 class MatchesListSchema(ma.Schema):
