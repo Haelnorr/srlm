@@ -19,7 +19,7 @@ from api.srlm.app.fairy.schemas import PlayerSchema, PlayerCollection, LinkSucce
     PlayerFilters, PlayerInvitesSchema, PlayerInviteAction, BasicSuccessSchema, FreeAgentApplication, \
     FreeAgentApplicationSchema, FreeAgentFilter
 from api.srlm.app.models import Player, SeasonDivision, Team, PlayerTeam, FreeAgent, PlayerMatchData, Match, Lobby, \
-    MatchData, Season, Division, UserPermissions, TeamInvites, SeasonRegistration
+    MatchData, Season, Division, UserPermissions, TeamInvites, SeasonRegistration, PlayerAward, User
 from api.srlm.logger import get_logger
 log = get_logger(__name__)
 
@@ -45,15 +45,58 @@ def get_player(player_id):
 @response(PlayerCollection())
 @authenticate(app_auth)
 @other_responses(unauthorized)
-def get_players(pagination):
+def get_players(filters):
     """Get the collection of all players"""
-    page = pagination['page']
-    per_page = pagination['per_page']
-    search = pagination['search']
-    query = sa.select(Player)
+    page = filters['page']
+    per_page = filters['per_page']
+    search = filters['search']
+    order = filters['order']
+    order_by = filters['order_by']
+    log.info(page)
+    log.info(per_page)
+    log.info(order)
+    log.info(order_by)
 
-    if search:
-        query = query.filter(Player.player_name.ilike(f"%{search}%"))
+    if order_by == 'name':
+        order_by = 'player_name'
+
+    if order_by == 'user':
+        query = db.session.query(Player) \
+            .outerjoin(Player.user) \
+            .order_by(getattr(sa, order)(User.username))
+    elif order_by == 'current_team':
+        current_team_subquery = db.session.query(Player.id.label('player_id'),
+                                                 func.max(PlayerTeam.team_id).label('team_id')) \
+            .outerjoin(Player.team_association) \
+            .filter(PlayerTeam.end_date.is_(None)) \
+            .group_by(Player.id) \
+            .subquery()
+
+        query = db.session.query(Player, Team) \
+            .outerjoin(current_team_subquery, Player.id == current_team_subquery.c.player_id) \
+            .outerjoin(Team, Team.id == current_team_subquery.c.team_id)
+        if order == 'asc':
+            query = query.order_by(sa.nullslast(Team.name.asc()))
+        else:
+            query = query.order_by(sa.nullsfirst(Team.name.desc()))
+    elif order_by == 'awards':
+        query = db.session.query(Player, sa.func.count(PlayerAward.id).label('count')) \
+            .outerjoin(Player.awards_association) \
+            .group_by(Player) \
+            .order_by(getattr(sa, order)('count'))
+    elif order_by == 'first_season':
+        query = db.session.query(Player) \
+            .outerjoin(Player.first_season) \
+            .outerjoin(SeasonDivision.season) \
+            .outerjoin(SeasonDivision.division) \
+            .order_by(getattr(Season.name, order)(), getattr(Division.name, order)())
+    else:
+        query = sa.select(Player)
+
+        if search:
+            query = query.filter(Player.player_name.ilike(f"%{search}%"))
+
+        query = query.order_by(getattr(sa, order)(getattr(Player, order_by)))
 
     return Player.to_collection_dict(query, page, per_page, 'api.players.get_players')
 
@@ -240,7 +283,7 @@ def get_player_stats(search_filters, player_id):
 
 @players.route('/<int:player_id>/teams', methods=['POST'])
 @body(PlayerTeams())
-@response(LinkSuccessSchema())
+@response(BasicSuccessSchema())
 @authenticate(app_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def register_player_team(data, player_id):
@@ -263,7 +306,7 @@ def register_player_team(data, player_id):
     # register the player to the team
     player.join_team(team)
 
-    return responses.request_success(f'Player {player.player_name} registered to team {team.name}', 'api.players.get_team', team_id=team.id)
+    return responses.request_success(f'Player {player.player_name} registered to team {team.name}')
 
 
 @players.route('/<int:player_id>/teams', methods=['DELETE'])
@@ -405,10 +448,30 @@ def get_free_agent_info(filters):
 
     query = query.filter(SeasonRegistration.status.in_(status))
 
-    applications = [app.to_dict() for app in query]
+    applications = []
+    applied_season_ids = []
+    for app in query:
+        applications.append(app.to_dict())
+        if app.status != 'Rejected':
+            applied_season_ids.append(app.season.id)
+    now = datetime.now(timezone.utc)
+    query = db.session.query(Season).filter(
+        sa.or_(
+            Season.can_register.is_(True),
+            sa.and_(
+                Season.start_date < now,
+                sa.or_(
+                    Season.end_date > now,
+                    Season.end_date.is_(None)
+                )
+            )
+        )
+    )
+    open_seasons = []
 
-    query = db.session.query(Season).filter(Season.can_register.is_(True))
-    open_seasons = [season.to_dict() for season in query]
+    for season in query:
+        if season.id not in applied_season_ids:
+            open_seasons.append(season.to_dict())
 
     response_json = {
         'open_seasons': open_seasons,

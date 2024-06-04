@@ -12,7 +12,7 @@ from api.srlm.app.api.utils.functions import ensure_exists
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
 from api.srlm.app.fairy.schemas import SeasonDivisionSchema, SeasonDivisionLookup, LinkSuccessSchema, \
     SeasonDivisionTeams, SeasonDivisionRookies, SeasonDivisionFreeAgents, UnplayedFilterSchema, SeasonDivisionMatches, \
-    LeaderboardSchema
+    LeaderboardSchema, BasicSuccessSchema
 from api.srlm.app.models import SeasonDivision, FreeAgent, Season, Division, League
 from api.srlm.app.api.auth.utils import app_auth
 
@@ -167,6 +167,21 @@ def add_season_division(data):
 
     return responses.create_success(f'{season_division_db.get_readable_name()} created.',
                                     'api.season_division.get_season_division', season_division_id=season_division_db.id)
+
+
+@season_division.route('/<season_acr>/<division_acr>', methods=['DELETE'])
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def delete_season_division(season_acr, division_acr):
+    """Delete a SeasonDivision"""
+    season_division_db = db.session.query(SeasonDivision) \
+        .join(SeasonDivision.season) \
+        .filter(Season.acronym.ilike(season_acr)) \
+        .join(SeasonDivision.division) \
+        .filter(Division.acronym.ilike(division_acr)).first()
+    season_division_db.delete()
+    return responses.request_success(f'Deleted SeasonDivision {season_acr} {division_acr}')
 
 
 @season_division.route('/<int:season_division_id>/teams', methods=['GET'])

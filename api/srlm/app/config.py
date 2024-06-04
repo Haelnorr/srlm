@@ -38,7 +38,8 @@ class Config:
     SQLALCHEMY_DATABASE_URI = league_manager_db_uri
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 0
+        'pool_size': 0,
+        'pool_pre_ping': True
     }
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'localhost')
     MAIL_PORT = int(os.getenv('MAIL_PORT', 25))
@@ -54,12 +55,10 @@ class Config:
     APIFAIRY_TITLE = 'Slapshot: Rebound - League Manager API'
     APIFAIRY_VERSION = '0.8.17 - dev'
     CACHE_TYPE = 'RedisCache'
-    CACHE_DEFAULT_TIMEOUT = os.getenv('SRLM_CACHE_TIMEOUT') or 300
+    CACHE_DEFAULT_TIMEOUT = os.getenv('API_CACHE_TIMEOUT') or 300
     CACHE_REDIS_URL = cache_backend
     CACHE_SOURCE_CHECK = True
     RATELIMIT_APPLICATION = '200 per minute'
     RATELIMIT_STORAGE_URI = limiter_backend
     RATELIMIT_STRATEGY = 'fixed-window'
     RATELIMIT_HEADERS_ENABLED = True
-    SERVER_NAME = os.getenv('SRLM_SERVER_NAME') or None
-    PREFERRED_URL_SCHEME = os.getenv('SRLM_PREFERRED_URL_SCHEME') or 'http'

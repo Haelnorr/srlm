@@ -288,11 +288,20 @@ def raise_flag(match_id, reason):
 
 def check_lobby_count(match):
     num_lobbies = match.lobbies.count()
-    lobby_ids = [lobby.id for lobby in match.lobbies]
     if num_lobbies == 0:
         raise ValidationError(f'No lobbies found')
     elif num_lobbies > 1:
-        raise_flag(match.id, f'Multiple lobbies created for match: {lobby_ids}')
+        lobby_ids = []
+        for lobby in match.lobbies:
+            if lobby.match_data.count() > 0:
+                lobby_ids.append(lobby.id)
+        if len(lobby_ids) > 1:
+            raise_flag(match.id, f'Multiple lobbies created for match: {lobby_ids}')
+            return 1
+        elif len(lobby_ids) == 0:
+            raise ValidationError(f'No lobbies with recorded match data found')
+        else:
+            return 0
     else:
         return 0
 

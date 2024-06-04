@@ -485,6 +485,10 @@ class SeasonDivisionTeam(db.Model, LeagueManagerTable):
     team = db.relationship('Team', back_populates='season_division_assoc')
     season_division = db.relationship('SeasonDivision', back_populates='team_assoc')
 
+    def delete(self):
+        db.session.query(SeasonDivisionTeam).filter(SeasonDivisionTeam.id == self.id).delete()
+        db.session.commit()
+
 
 class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
@@ -711,9 +715,22 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             .first()
 
         seasons = db.session.query(Season).filter(Season.can_register)
+        seasons_dicts = []
 
         invites = self.invites.filter_by(status='Pending')
         applications = self.applications.filter(SeasonRegistration.status != 'Withdrawn').order_by(sa.desc(SeasonRegistration.id))
+        applications_dicts = []
+        applied_season_ids = []
+
+        for app in applications:
+            applications_dicts.append(app.to_dict())
+            if app.status in ['Accepted', 'Completed', 'Pending']:
+                applied_season_ids.append(app.season.id)
+
+        for season in seasons:
+            if season.id not in applied_season_ids:
+                seasons_dicts.append(season.to_dict())
+
 
         return {
             'id': self.id,
@@ -725,8 +742,8 @@ class Team(PaginatedAPIMixin, db.Model, LeagueManagerTable):
             'owner': owner.username if owner else None,
             'players': players,
             'invites': [inv.to_dict() for inv in invites],
-            'applications': [app.to_dict() for app in applications],
-            'open_seasons': [season.to_dict() for season in seasons],
+            'applications': applications_dicts,
+            'open_seasons': seasons_dicts,
             'upcoming_matches': self.get_upcoming_matches(),
             'recent_matches': self.get_completed_matches(limit=10)
         }
@@ -979,14 +996,9 @@ class FreeAgent(db.Model, LeagueManagerTable):
         }
         return response
 
-
-"""
-class PlayerTeamRegistrations(PlayerTeam):
-    pass
-
-
-class PlayerSeasonRegistrations(FreeAgent):
-    pass"""
+    def delete(self):
+        db.session.query(FreeAgent).filter(FreeAgent.id == self.id).delete()
+        db.session.commit()
 
 
 class League(PaginatedAPIMixin, db.Model, LeagueManagerTable):
@@ -1191,6 +1203,23 @@ class SeasonDivision(PaginatedAPIMixin, db.Model, LeagueManagerTable):
         }
         return data
 
+    def delete(self):
+        for team in self.team_assoc:
+            team.delete()
+        for fa in self.free_agent_association:
+            fa.delete()
+        for match in self.matches:
+            match.delete()
+        for final in self.finals:
+            final.delete()
+        for award in self.team_awards:
+            award.delete()
+        for award in self.player_awards:
+            award.delete()
+        # deal with rookies somehow  # TODO
+        db.session.query(SeasonDivision).filter(SeasonDivision.id == self.id).delete()
+        db.session.commit()
+
     @staticmethod
     def get_teams_dict(season_division_id):
         season_division = db.session.get(SeasonDivision, season_division_id)
@@ -1380,6 +1409,12 @@ class Match(db.Model, LeagueManagerTable):
     lobbies = db.relationship('Lobby', back_populates='match', lazy='dynamic')
     match_reviews = db.relationship('MatchReview', back_populates='match', lazy='dynamic')
 
+    def has_match_data(self):
+        match_data = db.session.query(MatchData) \
+            .join(MatchData.lobby) \
+            .filter(Lobby.match.has(id=self.id))
+        return bool(match_data.count())
+
     def from_dict(self, data):
         for field in ['season_division_id', 'home_team_id', 'away_team_id', 'round', 'match_week']:
             if field in data:
@@ -1404,6 +1439,7 @@ class Match(db.Model, LeagueManagerTable):
             'current_lobby': self.current_lobby(),
             'results': self.results.to_dict() if self.results else None,
             'has_review': bool(self.match_reviews.filter_by(resolved=False).count()),
+            'has_data': self.has_match_data(),
             '_links': {
                 'self': url_for('api.match.get_match', match_id=self.id),
                 'season_division': url_for('api.season_division.get_season_division',
@@ -1419,6 +1455,8 @@ class Match(db.Model, LeagueManagerTable):
     def to_simple_dict(self):
         data = {
             'id': self.id,
+            'season': self.season_division.season.name,
+            'division': self.season_division.division.name,
             'home_team': self.home_team.to_dict(),
             'away_team': self.away_team.to_dict(),
             'result': self.results.get_result() if self.results else None,
@@ -1703,6 +1741,14 @@ class Final(db.Model, LeagueManagerTable):
     matches = db.relationship('Match', back_populates='final', lazy=True)
     results = db.relationship('FinalResults', back_populates='final', lazy=True, uselist=False)
 
+    def delete(self):
+        for match in self.matches:
+            match.delete()
+        db.session.query(FinalResults).filter(FinalResults.id == self.results.id)
+        db.session.commit()
+        db.session.query(Final).filter(Final.id == self.id).delete()
+        db.session.commit()
+
 
 class FinalResults(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
@@ -1738,6 +1784,10 @@ class TeamAward(db.Model, LeagueManagerTable):
     award = db.relationship('Award', back_populates='teams_association')
     season_division = db.relationship('SeasonDivision', back_populates='team_awards')
 
+    def delete(self):
+        db.session.query(TeamAward).filter(TeamAward.id == self.id).delete()
+        db.session.commit()
+
 
 class PlayerAward(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)
@@ -1748,6 +1798,10 @@ class PlayerAward(db.Model, LeagueManagerTable):
     player = db.relationship('Player', back_populates='awards_association')
     award = db.relationship('Award', back_populates='players_association')
     season_division = db.relationship('SeasonDivision', back_populates='player_awards')
+
+    def delete(self):
+        db.session.query(PlayerAward).filter(PlayerAward.id == self.id).delete()
+        db.session.commit()
 
 
 class MatchSchedule(db.Model, LeagueManagerTable):

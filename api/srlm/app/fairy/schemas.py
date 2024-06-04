@@ -34,6 +34,9 @@ class PaginationArgs(ma.Schema):
 
 class PlayerFilters(PaginationArgs):
     has_team = ma.Bool(missing=None)
+    order = ma.Str(missing="desc", validate=OneOf(['asc', 'desc']))
+    order_by = ma.Str(missing="id", validate=OneOf(
+        ['id', 'name', 'user', 'slap_id', 'rookie', 'first_season', 'current_team', 'awards']))
 
 
 class TeamFilters(PaginationArgs):
@@ -316,6 +319,8 @@ class SimpleMatchSchema(ma.SQLAlchemySchema):
         away_team = ma.URL()
 
     id = ma.auto_field()
+    season = ma.Str()
+    division = ma.Str()
     home_team = ma.Nested(SimpleTeamSchema())
     away_team = ma.Nested(SimpleTeamSchema())
     result = ma.Str()
@@ -737,6 +742,7 @@ class ViewMatchSchema(ma.SQLAlchemySchema):
     scheduled_time = ma.DateTime()
     current_lobby = ma.Nested(CurrentLobby())
     results = ma.Nested(MatchResultSchema())
+    has_data = ma.Bool()
     has_review = ma.Bool()
     _links = ma.Nested(MatchLinks())
 
@@ -1306,6 +1312,7 @@ class SeasonApplicationsList(ma.Schema):
         divisions = ma.List(ma.Nested(SeasonApplicationDivision()))
     team_applications = ma.List(ma.Nested(SeasonApplicationList()))
     free_agent_applications = ma.List(ma.Nested(SeasonApplicationList()))
+    recently_accepted = ma.List(ma.Nested(SeasonApplicationList()))
 
 
 class MatchesListSchema(ma.Schema):
