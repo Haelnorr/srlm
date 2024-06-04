@@ -52,10 +52,6 @@ def get_players(filters):
     search = filters['search']
     order = filters['order']
     order_by = filters['order_by']
-    log.info(page)
-    log.info(per_page)
-    log.info(order)
-    log.info(order_by)
 
     if order_by == 'name':
         order_by = 'player_name'
