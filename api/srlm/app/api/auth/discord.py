@@ -60,7 +60,7 @@ def auth_by_discord(data):
         raise UserAuthError()
 
     response_json = {
-        'token': discord_db.user.token,
+        'token': discord_db.user.get_token(),
         'expires': discord_db.user.token_expiration
     }
 
