@@ -75,6 +75,24 @@ def handle_app_auth_error(e):
     return error_response(e.code, 'Invalid or missing app and/or user tokens')
 
 
+class InsufficientPermissionsError(HTTPException):
+    code = 403
+
+
+@bp.errorhandler(InsufficientPermissionsError)
+def handle_insufficient_permissions_error(e):
+    return error_response(e.code, 'Insufficient permissions to access that resource')
+
+
+class SuperDualAuthError(HTTPException):
+    code = 403
+
+
+@bp.errorhandler(SuperDualAuthError)
+def handle_super_dual_auth_error(e):
+    return error_response(e.code, 'Insufficient permissions to access that resource, or missing User token')
+
+
 class ResourceNotFound(HTTPException):
     code = 404
 

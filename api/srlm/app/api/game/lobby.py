@@ -2,7 +2,7 @@
 from apifairy import body, response, authenticate, other_responses
 from flask import Blueprint
 from api.srlm.app.api import bp
-from api.srlm.app.api.auth.utils import app_auth
+from api.srlm.app.api.auth.utils import app_auth, super_auth
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import force_fields, ensure_exists
 from api.srlm.app.fairy.errors import unauthorized, bad_request, not_found
@@ -19,7 +19,7 @@ bp.register_blueprint(lobby, url_prefix='/lobby')
 @lobby.route('', methods=['POST'])
 @body(GenerateLobbySchema())
 @response(LinkSuccessSchema(), status_code=201)
-@authenticate(app_auth)
+@authenticate(super_auth)
 @other_responses(unauthorized | bad_request | not_found)
 def create_lobby(data):
     """Generate a new in-game lobby"""

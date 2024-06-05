@@ -5,12 +5,15 @@ from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth
 from api.srlm.api_access.models import AuthorizedApp
 from api.srlm.app import db
 from api.srlm.app.models import User
-from api.srlm.app.api.utils.errors import error_response, AppAuthError, UserAuthError, DualAuthError
+from api.srlm.app.api.utils.errors import error_response, AppAuthError, UserAuthError, DualAuthError, \
+    InsufficientPermissionsError, SuperDualAuthError
 
 basic_auth = HTTPBasicAuth()
 user_auth = HTTPTokenAuth()
 app_auth = HTTPTokenAuth()
 dual_auth = HTTPTokenAuth()
+super_auth = HTTPTokenAuth()
+super_dual_auth = HTTPTokenAuth()
 
 
 @basic_auth.verify_password
@@ -47,6 +50,24 @@ def app_auth_error():
     raise AppAuthError()
 
 
+@super_auth.verify_token
+def verify_super_token(token):
+    app_token = token[:34]
+    if not app_token:
+        return
+    authorized_app = AuthorizedApp.check_token(app_token)
+    if not authorized_app:
+        return
+    if not authorized_app.srlm_access:
+        return
+    return authorized_app
+
+
+@super_auth.error_handler
+def super_auth_error():
+    raise InsufficientPermissionsError()
+
+
 @dual_auth.verify_token
 def verify_dual_token(token):
     app_token = token[:34]
@@ -57,15 +78,30 @@ def verify_dual_token(token):
         return None
 
 
+@dual_auth.error_handler
+def dual_auth_error():
+    raise DualAuthError()
+
+
+@super_dual_auth.verify_token
+def verify_super_dual_token(token):
+    app_token = token[:34]
+    user_token = token[34:]
+    if app_token and user_token and app_token.srlm_access:
+        return User.check_token(user_token)
+    else:
+        return None
+
+
+@super_dual_auth.error_handler
+def super_dual_auth_error():
+    raise SuperDualAuthError()
+
+
 def get_discord_info(token):
     api = 'https://discord.com/api/v9/users/@me'
     headers = {"Authorization": f"Bearer {token}"}
     return requests.get(api, headers=headers)
-
-
-@dual_auth.error_handler
-def dual_auth_error():
-    raise DualAuthError()
 
 
 def get_basic_token(headers):

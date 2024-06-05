@@ -1,8 +1,9 @@
 """Endpoint for linking a users steam account"""
+
 from apifairy import body, response, authenticate, other_responses
 from flask import Blueprint
 from api.srlm.app import db
-from api.srlm.app.api.auth.utils import app_auth
+from api.srlm.app.api.auth.utils import super_auth
 from api.srlm.app.api.users import users_bp
 from api.srlm.app.api.utils import responses
 from api.srlm.app.api.utils.functions import ensure_exists, force_fields
@@ -19,7 +20,7 @@ users_bp.register_blueprint(steam)
 @steam.route('/<int:user_id>/steam', methods=['POST'])
 @body(LinkSteamSchema())
 @response(LinkSuccessSchema())
-@authenticate(app_auth)
+@authenticate(super_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def link_user_steam(data, user_id):
     """Link a users steam account. Will connect the user to player data using their SlapID"""

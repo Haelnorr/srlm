@@ -12,7 +12,7 @@ from api.srlm.app.task_manager.tasks import cancel_task
 from api.srlm.app import db, cache
 from api.srlm.app.api import bp
 from api.srlm.app.api.utils import responses
-from api.srlm.app.api.auth.utils import get_bearer_token, app_auth, dual_auth, user_auth
+from api.srlm.app.api.auth.utils import get_bearer_token, app_auth, dual_auth, super_dual_auth
 from api.srlm.app.api.utils.errors import BadRequest
 from api.srlm.app.api.utils.functions import force_fields, ensure_exists, clean_data, force_unique
 from api.srlm.app.fairy.errors import unauthorized, bad_request, not_found
@@ -268,7 +268,7 @@ def get_match_stats(match_id):
 @match.route('/<int:match_id>/review', methods=['POST'])
 @body(NewMatchFlag())
 @response(LinkSuccessSchema(), status_code=201)
-@authenticate(dual_auth)
+@authenticate(super_dual_auth)
 @other_responses(unauthorized | not_found | bad_request)
 def report_issue(data, match_id):
     """Reports an issue with a match. Requires user token
