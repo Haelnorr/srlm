@@ -1,0 +1,10 @@
+#!/bin/bash
+sudo git config pull.rebase true
+git update-index --assume-unchanged ./api/config/logger.config
+git update-index --assume-unchanged ./api/config/mail.config
+git update-index --assume-unchanged envars.txt
+mkdir .envfiles
+rand=$(echo $rand | tr -dc A-Za-z0-9 </dev/urandom | head -c 32)
+{ echo -n "$rand\n"; cat envars.txt; } > .envfiles/.prod-env
+rm envars.txt
+docker compose --file compose-release.yaml create --build

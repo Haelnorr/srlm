@@ -1,0 +1,6 @@
+#!/bin/bash
+git stash
+git pull
+docker compose --file compose-release.yaml down
+docker compose --file compose-release.yaml create --build
+docker compose --file compose-release.yaml up --no-build --detach
