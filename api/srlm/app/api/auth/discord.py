@@ -33,14 +33,10 @@ def auth_by_discord(data):
     if discord_request.status_code == 200:
         data = discord_request.json()
         discord_db = ensure_exists(Discord, return_none=True, discord_id=data['id'])
+        now = datetime.now(timezone.utc)
         if not discord_db:
-            now = datetime.now(timezone.utc)
             discord_db = Discord()
-            discord_db.access_token = access_token
-            discord_db.refresh_token = refresh_token
-            discord_db.token_expiration = now + timedelta(seconds=expires_in)
             discord_db.discord_id = data['id']
-
             user = User()
             user_name = data['global_name']
             existing = ensure_exists(User, return_none=True, username=user_name)
@@ -55,12 +51,18 @@ def auth_by_discord(data):
             user.get_token()
             db.session.add(user)
             db.session.add(discord_db)
-            db.session.commit()
+        else:
+            discord_db.user.get_token()
+
+        discord_db.token_expiration = now + timedelta(seconds=expires_in)
+        discord_db.access_token = access_token
+        discord_db.refresh_token = refresh_token
+        db.session.commit()
     else:
         raise UserAuthError()
 
     response_json = {
-        'token': discord_db.user.get_token(),
+        'token': discord_db.user.token,
         'expires': discord_db.user.token_expiration
     }
 

@@ -132,7 +132,6 @@ class User(PaginatedAPIMixin, UserMixin, db.Model, LeagueManagerTable):
         self.token = secrets.token_hex(16)
         self.token_expiration = now + timedelta(seconds=expires_in)
         db.session.add(self)
-        db.session.commit()
         return self.token
 
     def revoke_token(self):
