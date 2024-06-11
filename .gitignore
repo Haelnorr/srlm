@@ -1,4 +1,5 @@
 /venv/
+/.venv/
 /logs/api/*.log
 /.idea/
 /mail.bat
@@ -11,3 +12,4 @@
 /api/test.bat
 /api/test.py
 /.env
+/.vscode/
