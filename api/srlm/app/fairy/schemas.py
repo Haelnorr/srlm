@@ -1304,6 +1304,12 @@ class SeasonApplicationSchema(ma.Schema):
     division_id = ma.Int()
 
 
+class ReassignSeasonApplicationSchema(ma.Schema):
+    application_id = ma.Int(required=True)
+    division_id = ma.Int()
+    purge_data = ma.Bool()
+
+
 class SeasonApplicationsList(ma.Schema):
     class SeasonApplicationList(SeasonApplicationsSchema):
         class SeasonApplicationDivision(ma.Schema):

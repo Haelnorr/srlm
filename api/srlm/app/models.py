@@ -1991,6 +1991,21 @@ class SeasonRegistration(db.Model, LeagueManagerTable):
         self.status = 'Completed'
         db.session.commit()
 
+    def remove_from_division(self, reallocate=False):
+        if not reallocate:
+            self.withdraw()
+
+        season_division_entry = db.session.query(SeasonDivisionTeam) \
+            .filter(SeasonDivisionTeam.team_id == self.team_id) \
+            .join(SeasonDivision) \
+            .join(Season) \
+            .join(Division) \
+            .filter(Season.id == self.season_id) \
+            .filter(Division.id == self.division_id).first()
+        db.session.query(SeasonDivisionTeam)\
+            .filter(SeasonDivisionTeam.id == season_division_entry.id)\
+            .delete()
+        db.session.commit()
 
 class TeamInvites(db.Model, LeagueManagerTable):
     id = db.Column(db.Integer, primary_key=True)

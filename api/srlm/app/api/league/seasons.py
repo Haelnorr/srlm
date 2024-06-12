@@ -12,7 +12,7 @@ from api.srlm.app.api.utils.cache import force_refresh
 from api.srlm.app.api.utils.errors import ResourceNotFound
 from api.srlm.app.api.utils.functions import force_fields, clean_data, force_unique, ensure_exists
 from api.srlm.app.fairy.errors import unauthorized, not_found, bad_request
-from api.srlm.app.fairy.schemas import PaginationArgs, SeasonSchema, LinkSuccessSchema, SeasonCollection, \
+from api.srlm.app.fairy.schemas import PaginationArgs, ReassignSeasonApplicationSchema, SeasonSchema, LinkSuccessSchema, SeasonCollection, \
     DivisionsInSeason, SeasonFilters, SeasonLookup, EditSeasonSchema, SeasonApplicationSchema, BasicSuccessSchema, \
     SeasonApplicationsList
 from api.srlm.app.models import Season, League, SeasonDivision, Matchtype, SeasonRegistration, Division
@@ -242,6 +242,33 @@ def action_application(data):
     return responses.request_success(f'Application {action}ed')
 
 
+@seasons.route('/applications/reassign', methods=['POST'])
+@body(ReassignSeasonApplicationSchema())
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def reassign_application(data):
+    """Reassign a team that has been accepted into a division for a season"""
+    application = ensure_exists(SeasonRegistration, id=data['application_id'])
+    division = ensure_exists(Division, id=data['division_id'])
+    if data['purge_data']:
+        application.remove_from_division(reallocate=True)
+
+    application.allocate_to_division(division)
+    return responses.request_success('Application reassigned')
+
+
+@seasons.route('/applications/<int:app_id>/remove', methods=['POST'])
+@response(BasicSuccessSchema())
+@authenticate(app_auth)
+@other_responses(unauthorized | not_found)
+def remove_team_from_division(app_id):
+    """Remove a team from the allocated division and withdraw their application"""
+    application = ensure_exists(SeasonRegistration, id=app_id)
+    application.remove_from_division()
+    return responses.request_success('Application withdrawn')
+    
+
 @seasons.route('/applications', methods=['GET'])
 @response(SeasonApplicationsList())
 @authenticate(app_auth)
@@ -295,8 +322,6 @@ def get_applications_for_season(season_id):
     applications_query = db.session.query(SeasonRegistration) \
         .filter(SeasonRegistration.status.in_(['Pending', 'Accepted', 'Completed'])) \
         .filter(SeasonRegistration.season_id == season_id)
-
-    log.info(applications_query)
 
     seasons_list = {}
 

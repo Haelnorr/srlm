@@ -13,3 +13,4 @@
 /api/test.py
 /.env
 /.vscode/
+__pycache__
